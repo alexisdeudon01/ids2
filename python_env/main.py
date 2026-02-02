@@ -16,6 +16,8 @@ from vector_manager import VectorManager
 from suricata_manager import SuricataManager
 from metrics_server import MetricsServer
 from git_workflow import GitWorkflow
+from suricata_rules_manager import SuricataRulesManager # Import du nouveau module
+from base_component import BaseComponent
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(processName)s - %(levelname)s - %(message)s')
 
@@ -37,31 +39,31 @@ class AgentSupervisor:
             'pipeline_ok': False,
             'docker_healthy': False,
             'last_error': '',
+            'ingestion_rate_increment': 0,
+            'error_increment': 0,
+            'redis_queue_depth': 0,
+            'suricata_rules_updated': False, # Ajout pour le suivi des règles
         })
-        self.shutdown_event = multiprocessing.Event() # Gérer l'événement d'arrêt séparément
+        self.shutdown_event = multiprocessing.Event()
         self.processes = []
         self.process_map = {
             "ResourceController": ResourceController,
             "ConnectivityAsync": ConnectivityAsync,
             "MetricsServer": MetricsServer,
-            # "VerificationProcess": VerificationProcess, # Optionnel, à implémenter plus tard
+            "SuricataRulesManager": SuricataRulesManager, # Ajout du gestionnaire de règles
+            # "VerificationProcess": VerificationProcess,
         }
-        self.docker_manager = DockerManager(self.config_manager, self.shared_state)
-        self.vector_manager = VectorManager(self.config_manager, self.shared_state)
-        self.suricata_manager = SuricataManager(self.config_manager, self.shared_state)
-        self.git_workflow = GitWorkflow(self.config_manager)
+        self.docker_manager = DockerManager(self.shared_state, self.config_manager)
+        self.vector_manager = VectorManager(self.shared_state, self.config_manager)
+        self.suricata_manager = SuricataManager(self.shared_state, self.config_manager)
+        self.git_workflow = GitWorkflow(self.shared_state, self.config_manager)
 
     def _start_child_process(self, name, target_class):
         """
         Démarre un processus enfant et l'ajoute à la liste des processus.
         Passe l'événement d'arrêt aux processus enfants.
         """
-        # Les processus ResourceController et MetricsServer n'ont pas besoin de l'événement d'arrêt directement
-        # car ils sont gérés par le superviseur. ConnectivityAsync pourrait en avoir besoin pour des arrêts plus fins.
-        if name == "ConnectivityAsync":
-            instance = target_class(self.shared_state, self.config_manager, self.shutdown_event)
-        else:
-            instance = target_class(self.shared_state, self.config_manager)
+        instance = target_class(self.shared_state, self.config_manager, self.shutdown_event)
         
         process = multiprocessing.Process(target=instance.run, name=name)
         self.processes.append(process)
@@ -128,6 +130,7 @@ class AgentSupervisor:
         # Démarrer les processus de contrôle et de métriques tôt
         self._start_child_process("ResourceController", ResourceController)
         self._start_child_process("MetricsServer", MetricsServer)
+        self._start_child_process("SuricataRulesManager", SuricataRulesManager) # Démarrer le gestionnaire de règles
 
         # Attendre que la pile Docker soit saine (séquentiel)
         logging.info("Attente de la santé de la pile Docker...")

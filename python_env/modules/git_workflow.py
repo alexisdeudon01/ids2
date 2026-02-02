@@ -1,16 +1,17 @@
 import subprocess
 import logging
 import os
+from base_component import BaseComponent # Import de BaseComponent
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(processName)s - %(levelname)s - %(message)s')
 
-class GitWorkflow:
+class GitWorkflow(BaseComponent): # Hériter de BaseComponent
     """
     Gère les opérations Git pour le dépôt du projet.
     """
-    def __init__(self, config_manager):
-        self.config = config_manager
-        self.target_branch = self.config.get('git.branch', 'dev')
+    def __init__(self, shared_state, config_manager, shutdown_event=None): # Ajuster l'ordre des arguments
+        super().__init__(shared_state, config_manager, shutdown_event) # Appel du constructeur parent
+        self.target_branch = self.get_config('git.branch', 'dev')
 
     def _run_git_command(self, command_args):
         """
@@ -20,73 +21,72 @@ class GitWorkflow:
         try:
             result = subprocess.run(cmd, check=True, capture_output=True, text=True)
             if result.stdout:
-                logging.info(f"Sortie Git : {result.stdout.strip()}")
+                self.logger.info(f"Sortie Git : {result.stdout.strip()}")
             if result.stderr:
-                logging.warning(f"Erreurs/Avertissements Git : {result.stderr.strip()}")
+                self.logger.warning(f"Erreurs/Avertissements Git : {result.stderr.strip()}")
             return True
         except subprocess.CalledProcessError as e:
-            logging.error(f"Échec de la commande Git '{' '.join(cmd)}' : {e.stderr.strip()}")
+            self.log_error(f"Échec de la commande Git '{' '.join(cmd)}' : {e.stderr.strip()}", e)
             return False
         except FileNotFoundError:
-            logging.error("La commande 'git' n'a pas été trouvée. Assurez-vous que Git est installé.")
+            self.log_error("La commande 'git' n'a pas été trouvée. Assurez-vous que Git est installé.")
             return False
         except Exception as e:
-            logging.error(f"Erreur inattendue lors de l'exécution de Git : {e}")
+            self.log_error(f"Erreur inattendue lors de l'exécution de Git", e)
             return False
 
     def check_branch(self):
         """
         Vérifie si la branche actuelle est la branche cible.
         """
-        logging.info(f"Vérification de la branche Git actuelle. Branche cible : '{self.target_branch}'")
+        self.logger.info(f"Vérification de la branche Git actuelle. Branche cible : '{self.target_branch}'")
         try:
             result = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True, capture_output=True, text=True)
             current_branch = result.stdout.strip()
             if current_branch == self.target_branch:
-                logging.info(f"La branche actuelle est '{current_branch}', ce qui correspond à la branche cible.")
+                self.logger.info(f"La branche actuelle est '{current_branch}', ce qui correspond à la branche cible.")
                 return True
             else:
-                logging.error(f"La branche actuelle est '{current_branch}', mais la branche cible est '{self.target_branch}'.")
+                self.log_error(f"La branche actuelle est '{current_branch}', mais la branche cible est '{self.target_branch}'.")
                 return False
         except subprocess.CalledProcessError as e:
-            logging.error(f"Impossible de déterminer la branche Git actuelle : {e.stderr.strip()}")
+            self.log_error(f"Impossible de déterminer la branche Git actuelle : {e.stderr.strip()}", e)
             return False
 
     def commit_and_push_changes(self, message="chore(dev): agent bootstrap/update"):
         """
         Ajoute, committe et pousse les changements vers la branche cible.
         """
-        logging.info("Ajout de tous les fichiers modifiés/nouveaux à Git.")
+        self.logger.info("Ajout de tous les fichiers modifiés/nouveaux à Git.")
         if not self._run_git_command(["add", "-A"]):
             return False
         
-        logging.info(f"Création du commit avec le message : '{message}'")
-        if not self._run_git_command(["commit", "-m", message]):
-            # Si aucun changement à committer, la commande commit échouera.
-            # Vérifier si l'erreur indique "nothing to commit"
-            try:
-                subprocess.run(["git", "commit", "-m", message], check=True, capture_output=True, text=True)
-            except subprocess.CalledProcessError as e:
-                if "nothing to commit" in e.stderr.lower():
-                    logging.info("Aucun changement à committer.")
-                    return True # Considérer comme un succès si rien à committer
-                else:
-                    logging.error(f"Échec du commit Git : {e.stderr.strip()}")
-                    return False
-            except Exception as e:
-                logging.error(f"Erreur inattendue lors du commit Git : {e}")
+        self.logger.info(f"Création du commit avec le message : '{message}'")
+        # Tenter le commit et vérifier si l'erreur est "nothing to commit"
+        try:
+            subprocess.run(["git", "commit", "-m", message], check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as e:
+            if "nothing to commit" in e.stderr.lower():
+                self.logger.info("Aucun changement à committer.")
+                return True # Considérer comme un succès si rien à committer
+            else:
+                self.log_error(f"Échec du commit Git : {e.stderr.strip()}", e)
                 return False
+        except Exception as e:
+            self.log_error(f"Erreur inattendue lors du commit Git", e)
+            return False
         
-        logging.info(f"Push des changements vers 'origin/{self.target_branch}'")
+        self.logger.info(f"Push des changements vers 'origin/{self.target_branch}'")
         if not self._run_git_command(["push", "origin", self.target_branch]):
             return False
         
-        logging.info("Changements Git poussés avec succès.")
+        self.logger.info("Changements Git poussés avec succès.")
         return True
 
 # Exemple d'utilisation (pour les tests)
 if __name__ == "__main__":
     from config_manager import ConfigManager
+    import multiprocessing
     
     # Créer un fichier config.yaml temporaire pour le test
     temp_config_content = """
@@ -111,7 +111,13 @@ if __name__ == "__main__":
 
     try:
         config_mgr = ConfigManager(config_path='../temp_config.yaml')
-        git_workflow = GitWorkflow(config_mgr)
+        manager = multiprocessing.Manager()
+        shared_state = manager.dict({
+            'last_error': ''
+        })
+        shutdown_event = multiprocessing.Event()
+
+        git_workflow = GitWorkflow(shared_state, config_mgr, shutdown_event)
 
         print("\nTest de vérification de la branche...")
         print(f"Branche correcte : {git_workflow.check_branch()}")
@@ -120,7 +126,6 @@ if __name__ == "__main__":
         with open('test_file.txt', 'a') as f:
             f.write("\nAdded new line.")
         
-        # Le push échouera car la remote n'est pas réelle, mais le commit devrait fonctionner
         print(f"Commit et push réussis (le push échouera pour le test) : {git_workflow.commit_and_push_changes()}")
 
     except Exception as e:

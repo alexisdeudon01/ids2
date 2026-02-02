@@ -1,5 +1,24 @@
 version: '3.8'
 services:
+  suricata:
+    image: oisf/suricata:6.0.10 # Utiliser une image Suricata stable
+    command: ["-i", "eth0", "-c", "/etc/suricata/suricata.yaml", "--set", "outputs.0.eve-log.filename=/mnt/ram_logs/eve.json"]
+    network_mode: "host" # Pour capturer le trafic sur l'interface hôte
+    volumes:
+      - ./suricata.yaml:/etc/suricata/suricata.yaml:ro
+      - /mnt/ram_logs:/mnt/ram_logs # Volume pour les logs Suricata (RAM disk)
+      - ./rules:/etc/suricata/rules:ro # Volume pour les règles Suricata
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    privileged: true # Nécessaire pour la capture de paquets en mode host
+    deploy:
+      resources:
+        limits:
+          cpus: "${DOCKER_SURICATA_CPU:-3.0}" # 3 cœurs pour Suricata
+          memory: "${DOCKER_SURICATA_RAM_MB:-4096}M" # ~4 GB RAM pour Suricata
+    restart: unless-stopped
+
   vector:
     image: timberio/vector:0.34.0-alpine
     command: ["vector", "--config", "/etc/vector/vector.toml"]
@@ -18,10 +37,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${DOCKER_VECTOR_CPU:-1.0}"
-          memory: "${DOCKER_VECTOR_RAM_MB:-1024}M"
+          cpus: "${DOCKER_VECTOR_CPU:-1.0}" # 1 cœur pour Vector
+          memory: "${DOCKER_VECTOR_RAM_MB:-1024}M" # ~1 GB RAM pour Vector
     depends_on:
       - redis # Vector dépend de Redis pour le fallback
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -31,15 +51,16 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${DOCKER_REDIS_CPU:-0.5}"
-          memory: "${DOCKER_REDIS_RAM_MB:-512}M"
+          cpus: "${DOCKER_REDIS_CPU:-0.5}" # Faible utilisation CPU
+          memory: "${DOCKER_REDIS_RAM_MB:-512}M" # ~512 MB RAM pour Redis
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:v2.47.0
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--web.enable-lifecycle' # Permet le rechargement de la config via API
+      - '--web.enable-lifecycle'
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -48,8 +69,12 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${DOCKER_PROMETHEUS_CPU:-0.5}"
-          memory: "${DOCKER_PROMETHEUS_RAM_MB:-512}M"
+          cpus: "${DOCKER_PROMETHEUS_CPU:-0.2}" # Faible utilisation CPU
+          memory: "${DOCKER_PROMETHEUS_RAM_MB:-256}M" # Ajusté pour être plus faible
+    depends_on:
+      - node_exporter # Prometheus scrape node_exporter
+      - cadvisor # Prometheus scrape cadvisor
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:10.1.5
@@ -60,13 +85,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${DOCKER_GRAFANA_CPU:-0.5}"
-          memory: "${DOCKER_GRAFANA_RAM_MB:-512}M"
+          cpus: "${DOCKER_GRAFANA_CPU:-0.2}" # Faible utilisation CPU
+          memory: "${DOCKER_GRAFANA_RAM_MB:-256}M" # Ajusté pour être plus faible
     depends_on:
       - prometheus
+    restart: unless-stopped
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.0 # Image cAdvisor
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:rw
@@ -79,11 +105,12 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${DOCKER_CADVISOR_CPU:-0.2}"
-          memory: "${DOCKER_CADVISOR_RAM_MB:-128}M"
+          cpus: "${DOCKER_CADVISOR_CPU:-0.1}" # Ajusté pour être plus faible
+          memory: "${DOCKER_CADVISOR_RAM_MB:-64}M" # Ajusté pour être plus faible
+    restart: unless-stopped
 
   node_exporter:
-    image: prom/node-exporter:v1.6.1 # Image Node Exporter
+    image: prom/node-exporter:v1.6.1
     command:
       - '--path.rootfs=/host'
     volumes:
@@ -97,6 +124,7 @@ services:
         limits:
           cpus: "${DOCKER_NODE_EXPORTER_CPU:-0.1}"
           memory: "${DOCKER_NODE_EXPORTER_RAM_MB:-64}M"
+    restart: unless-stopped
 
 volumes:
   redis_data:

@@ -1,11 +1,13 @@
 uvloop
-asyncio
-redis
+aioredis
 boto3
 prometheus_client
 PyYAML
 docker
 psutil
 opensearch-py
-orjson 
+orjson
 requests_aws4auth
+GitPython
+msgpack-python
+aiohttp

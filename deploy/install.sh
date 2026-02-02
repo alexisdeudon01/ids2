@@ -65,6 +65,23 @@ systemctl daemon-reload
 systemctl enable network-eth0-only.service
 systemctl start network-eth0-only.service
 
+echo "Création et montage du RAM disk pour les logs Suricata..."
+# Chemin du RAM disk et taille (2GB comme spécifié dans le README)
+RAMDISK_PATH="/mnt/ram_logs"
+RAMDISK_SIZE="2G" # 2 GB
+
+# Créer le répertoire si non existant
+mkdir -p $RAMDISK_PATH
+
+# Monter le RAM disk
+mount -t tmpfs -o size=$RAMDISK_SIZE tmpfs $RAMDISK_PATH
+
+# Ajouter au fstab pour persistance après redémarrage (optionnel, dépend si les logs doivent survivre un reboot)
+# Pour un RAM disk, il est généralement recréé à chaque démarrage.
+# Si la persistance est nécessaire, il faudrait une autre stratégie.
+# Pour l'instant, nous nous basons sur la recréation au démarrage.
+# echo "tmpfs $RAMDISK_PATH tmpfs nodev,nosuid,size=$RAMDISK_SIZE 0 0" >> /etc/fstab
+
 echo "Installation et configuration initiales terminées."
 echo "Veuillez redémarrer votre Raspberry Pi pour que tous les changements prennent effet."
 echo "Après le redémarrage, vous pouvez démarrer l'agent avec : sudo deploy/start_agent.sh"

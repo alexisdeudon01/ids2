@@ -5,50 +5,77 @@ aws:
   domain_name: "suricata-prod"
   opensearch_endpoint: "" # Sera rempli après le provisioning du domaine
 
-sensor:
+raspberry_pi: # Renommé de 'sensor' pour être plus générique
   home_net: "192.168.178.0/24"
   pi_ip: "192.168.178.66"
-  eth_interface: "eth0"
-  ramdisk_path: "/mnt/ram_logs/eve.json"
+  network_interface: "eth0" # Renommé de 'eth_interface' pour être cohérent
   cpu_limit_percent: 70
   ram_limit_percent: 70
   swap_size_gb: 2
+  cpu_limit_medium_percent: 75 # Seuil configurable pour la régulation
+  ram_limit_medium_percent: 75 # Seuil configurable pour la régulation
+  cpu_limit_high_percent: 80 # Seuil configurable pour la régulation
+  ram_limit_high_percent: 80 # Seuil configurable pour la régulation
+
+resource_controller:
+  check_interval: 1 # Intervalle de vérification pour ResourceController
+
+suricata:
+  log_path: "/mnt/ram_logs/eve.json"
+  config_path: "suricata/suricata.yaml"
+  rules_path: "suricata/rules" # Chemin pour les règles Suricata
+  eve_log_options: # Options configurables pour eve-log
+    payload: no
+    packet: no
+    http: yes
+    dns: yes
+    tls: yes
 
 vector:
-  index_pattern: "suricata-%Y.%m.%d"
+  index_pattern: "suricata-ids2-%Y.%m.%d" # Pattern d'index plus spécifique
   config_path: "vector/vector.toml"
   log_read_path: "/mnt/ram_logs/eve.json"
+  disk_buffer_max_size: "100 GiB" # Taille maximale du tampon disque principal
+  redis_buffer_max_size: "10 GiB" # Taille maximale du tampon disque pour Redis
+  opensearch_buffer_max_size: "50 GiB" # Taille maximale du tampon disque pour OpenSearch
+  batch_max_events: 500 # Taille de lot optimisée pour Pi
+  batch_timeout_secs: 2 # Timeout de lot
 
 redis:
-  host: "redis" # Nom du service Docker Compose
+  host: "redis"
   port: 6379
   db: 0
 
 prometheus:
   port: 9100 # Port pour l'exporteur de métriques de l'agent
   docker_port: 9090 # Port pour le serveur Prometheus dans Docker
+  update_interval: 5 # Intervalle de mise à jour des métriques de l'agent
 
 grafana:
   docker_port: 3000 # Port pour le serveur Grafana dans Docker
 
 docker:
-  redis: true
-  prometheus: true
-  grafana: true
+  compose_file: "docker/docker-compose.yml" # Chemin du fichier docker-compose
+  required_services: ["suricata", "vector", "redis", "prometheus", "grafana", "cadvisor", "node_exporter"] # Tous les services
+  suricata_cpu: 3.0 # Limites CPU pour Suricata
+  suricata_ram_mb: 4096 # Limites RAM pour Suricata
   vector_cpu: 1.0
   vector_ram_mb: 1024
   redis_cpu: 0.5
   redis_ram_mb: 512
-  prometheus_cpu: 0.5
-  prometheus_ram_mb: 512
-  grafana_cpu: 0.5
-  grafana_ram_mb: 512
-  cadvisor_cpu: 0.2 # Nouvelle entrée pour cAdvisor
-  cadvisor_ram_mb: 128 # Nouvelle entrée pour cAdvisor
-  node_exporter_cpu: 0.1 # Nouvelle entrée pour Node Exporter
-  node_exporter_ram_mb: 64 # Nouvelle entrée pour Node Exporter
+  prometheus_cpu: 0.2 # Ajusté
+  prometheus_ram_mb: 256 # Ajusté
+  grafana_cpu: 0.2 # Ajusté
+  grafana_ram_mb: 256 # Ajusté
+  cadvisor_cpu: 0.1 # Ajusté
+  cadvisor_ram_mb: 64 # Ajusté
+  node_exporter_cpu: 0.1
+  node_exporter_ram_mb: 64
 
 git:
   branch: "dev"
 
-connectivity_check_interval: 5 # Intervalle en secondes pour les vérifications de connectivité
+connectivity: # Nouvelle section pour les paramètres de connectivité
+  check_interval: 10 # Intervalle en secondes pour les vérifications de connectivité
+  max_retries: 5
+  initial_backoff: 1

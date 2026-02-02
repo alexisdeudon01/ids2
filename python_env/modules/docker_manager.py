@@ -2,18 +2,21 @@ import docker
 import logging
 import time
 import os
+import subprocess
+from docker.errors import NotFound # Import spécifique de NotFound
+from base_component import BaseComponent
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(processName)s - %(levelname)s - %(message)s')
 
-class DockerManager:
+class DockerManager(BaseComponent):
     """
     Gère le cycle de vie des conteneurs Docker et Docker Compose.
     """
-    def __init__(self, config_manager, shared_state):
-        self.config = config_manager
-        self.shared_state = shared_state
-        self.docker_compose_path = "docker/docker-compose.yml"
+    def __init__(self, shared_state, config_manager, shutdown_event=None):
+        super().__init__(shared_state, config_manager, shutdown_event)
+        self.docker_compose_path = self.get_config('docker.compose_file', 'docker/docker-compose.yml')
         self.client = docker.from_env()
+        self.required_services = self.get_config('docker.required_services', ["vector", "redis", "prometheus", "grafana"])
 
     def _check_docker_daemon(self):
         """
@@ -21,46 +24,40 @@ class DockerManager:
         """
         try:
             self.client.ping()
-            logging.info("Le démon Docker est en cours d'exécution.")
+            self.logger.info("Le démon Docker est en cours d'exécution.")
             return True
         except Exception as e:
-            logging.error(f"Le démon Docker n'est pas accessible : {e}")
-            self.shared_state['last_error'] = f"Docker daemon not accessible: {e}"
+            self.log_error(f"Le démon Docker n'est pas accessible", e)
             return False
 
     def _run_docker_compose_command(self, command, detach=False):
         """
-        Exécute une commande docker-compose.
+        Exécute une commande docker compose.
         """
         if not os.path.exists(self.docker_compose_path):
-            logging.error(f"Fichier docker-compose.yml non trouvé à : {self.docker_compose_path}")
-            self.shared_state['last_error'] = f"docker-compose.yml not found: {self.docker_compose_path}"
+            self.log_error(f"Fichier docker-compose.yml non trouvé à : {self.docker_compose_path}")
             return False
 
-        cmd = f"docker compose -f {self.docker_compose_path} {command}"
+        # Utiliser 'docker compose' (nouvelle syntaxe)
+        cmd = ["docker", "compose", "-f", self.docker_compose_path, command]
         if detach:
-            cmd += " -d"
+            cmd.append("-d")
         
-        logging.info(f"Exécution de la commande Docker Compose : {cmd}")
+        self.logger.info(f"Exécution de la commande Docker Compose : {' '.join(cmd)}")
         try:
-            # Utiliser subprocess pour exécuter docker-compose car le client Python Docker ne gère pas compose directement
-            import subprocess
-            result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
-            logging.info(f"Sortie Docker Compose :\n{result.stdout}")
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            self.logger.info(f"Sortie Docker Compose :\n{result.stdout}")
             if result.stderr:
-                logging.warning(f"Erreurs/Avertissements Docker Compose :\n{result.stderr}")
+                self.logger.warning(f"Erreurs/Avertissements Docker Compose :\n{result.stderr}")
             return True
         except subprocess.CalledProcessError as e:
-            logging.error(f"Échec de la commande Docker Compose '{command}' : {e.stderr}")
-            self.shared_state['last_error'] = f"Docker Compose failed: {e.stderr}"
+            self.log_error(f"Échec de la commande Docker Compose '{command}' : {e.stderr.strip()}", e)
             return False
         except FileNotFoundError:
-            logging.error("La commande 'docker compose' n'a pas été trouvée. Assurez-vous que Docker Compose est installé.")
-            self.shared_state['last_error'] = "Docker Compose command not found."
+            self.log_error("La commande 'docker compose' n'a pas été trouvée. Assurez-vous que Docker Compose est installé et dans le PATH.")
             return False
         except Exception as e:
-            logging.error(f"Erreur inattendue lors de l'exécution de Docker Compose : {e}")
-            self.shared_state['last_error'] = f"Unexpected Docker Compose error: {e}"
+            self.log_error(f"Erreur inattendue lors de l'exécution de Docker Compose", e)
             return False
 
     def prepare_docker_stack(self):
@@ -70,13 +67,13 @@ class DockerManager:
         if not self._check_docker_daemon():
             return False
         
-        logging.info("Préparation de la pile Docker...")
+        self.logger.info("Préparation de la pile Docker...")
         if not self._run_docker_compose_command("build"):
             return False
         if not self._run_docker_compose_command("up", detach=True):
             return False
         
-        logging.info("Pile Docker démarrée avec succès.")
+        self.logger.info("Pile Docker démarrée avec succès.")
         return True
 
     def stop_docker_stack(self):
@@ -86,59 +83,74 @@ class DockerManager:
         if not self._check_docker_daemon():
             return False
         
-        logging.info("Arrêt de la pile Docker...")
+        self.logger.info("Arrêt de la pile Docker...")
         if not self._run_docker_compose_command("down"):
             return False
         
-        logging.info("Pile Docker arrêtée et supprimée.")
+        self.logger.info("Pile Docker arrêtée et supprimée.")
         return True
 
     def check_stack_health(self):
         """
-        Vérifie la santé des services Docker.
+        Vérifie la santé des services Docker en utilisant les Healthchecks si disponibles.
         """
         if not self._check_docker_daemon():
             return False
         
-        try:
-            # Obtenir la liste des services définis dans docker-compose.yml
-            # Pour cela, il faudrait parser le fichier ou utiliser 'docker compose ps --services'
-            # Pour l'instant, nous allons vérifier si les conteneurs sont en cours d'exécution.
-            
-            # Une approche plus robuste serait de vérifier l'état de santé de chaque service
-            # via 'docker inspect <container_id>' et son Healthcheck si défini.
-            
-            # Pour ce POC, nous allons simplement vérifier si les conteneurs sont démarrés.
-            required_services = ["vector", "redis", "prometheus", "grafana"] # Basé sur le prompt
-            all_healthy = True
-            for service_name in required_services:
-                try:
-                    container = self.client.containers.get(f"oi-{service_name}-1") # Nom par défaut de docker compose
-                    if container.status != 'running':
-                        logging.warning(f"Le service Docker '{service_name}' n'est pas en cours d'exécution. Statut: {container.status}")
-                        all_healthy = False
-                        break
-                    else:
-                        logging.info(f"Le service Docker '{service_name}' est en cours d'exécution.")
-                except docker.errors.NotFound: # Correction: docker.errors.NotFound est la bonne façon d'accéder à l'exception
-                    logging.warning(f"Le conteneur pour le service Docker '{service_name}' n'a pas été trouvé.")
-                    all_healthy = False
-                    break
-                except Exception as e:
-                    logging.error(f"Erreur lors de la vérification du service Docker '{service_name}' : {e}")
-                    all_healthy = False
-                    break
-            
-            self.shared_state['docker_healthy'] = all_healthy
-            if not all_healthy:
-                self.shared_state['last_error'] = "Docker stack not healthy."
-            return all_healthy
+        all_healthy = True
+        for service_name in self.required_services:
+            try:
+                # Tenter d'obtenir le conteneur par son nom de service Docker Compose
+                # Le nom réel du conteneur peut varier, mais 'docker compose ps -q <service_name>' est plus fiable
+                result = subprocess.run(
+                    ["docker", "compose", "-f", self.docker_compose_path, "ps", "-q", service_name],
+                    check=True, capture_output=True, text=True
+                )
+                container_id = result.stdout.strip()
 
-        except Exception as e:
-            logging.error(f"Erreur lors de la vérification de la santé de la pile Docker : {e}")
-            self.shared_state['docker_healthy'] = False
-            self.shared_state['last_error'] = f"Docker health check error: {e}"
-            return False
+                if not container_id:
+                    self.logger.warning(f"Le conteneur pour le service Docker '{service_name}' n'a pas été trouvé.")
+                    all_healthy = False
+                    break
+
+                container = self.client.containers.get(container_id)
+                
+                # Vérifier le statut du conteneur
+                if container.status != 'running':
+                    self.logger.warning(f"Le service Docker '{service_name}' n'est pas en cours d'exécution. Statut: {container.status}")
+                    all_healthy = False
+                    break
+                
+                # Vérifier le Healthcheck si défini
+                container_info = self.client.api.inspect_container(container_id)
+                health_status = container_info.get('State', {}).get('Health', {}).get('Status')
+
+                if health_status and health_status != 'healthy':
+                    self.logger.warning(f"Le service Docker '{service_name}' n'est pas sain. Statut de santé: {health_status}")
+                    all_healthy = False
+                    break
+                elif health_status == 'healthy':
+                    self.logger.info(f"Le service Docker '{service_name}' est sain.")
+                else:
+                    self.logger.info(f"Le service Docker '{service_name}' est en cours d'exécution (pas de Healthcheck défini ou non disponible).")
+
+            except docker.errors.NotFound:
+                self.logger.warning(f"Le conteneur pour le service Docker '{service_name}' n'a pas été trouvé.")
+                all_healthy = False
+                break
+            except subprocess.CalledProcessError as e:
+                self.log_error(f"Erreur lors de la récupération de l'ID du conteneur pour '{service_name}' : {e.stderr.strip()}", e)
+                all_healthy = False
+                break
+            except Exception as e:
+                self.log_error(f"Erreur lors de la vérification du service Docker '{service_name}'", e)
+                all_healthy = False
+                break
+        
+        self.update_shared_state('docker_healthy', all_healthy)
+        if not all_healthy:
+            self.log_error("La pile Docker n'est pas saine.")
+        return all_healthy
 
 # Exemple d'utilisation (pour les tests)
 if __name__ == "__main__":
@@ -148,6 +160,8 @@ if __name__ == "__main__":
     # Créer un fichier config.yaml temporaire pour le test
     temp_config_content = """
     docker:
+      compose_file: "docker/docker-compose.yml"
+      required_services: ["test_service"]
       vector_cpu: 1.0
       vector_ram_mb: 1024
       redis_cpu: 0.5
@@ -167,6 +181,11 @@ services:
   test_service:
     image: alpine/git
     command: ["sh", "-c", "echo 'Hello from Docker!' && sleep 30"]
+    healthcheck:
+      test: ["CMD", "echo", "healthy"]
+      interval: 5s
+      timeout: 1s
+      retries: 3
     deploy:
       resources:
         limits:
@@ -184,13 +203,14 @@ services:
             'docker_healthy': False,
             'last_error': ''
         })
+        shutdown_event = multiprocessing.Event()
 
-        docker_mgr = DockerManager(config_mgr, shared_state)
+        docker_mgr = DockerManager(shared_state, config_mgr, shutdown_event)
 
         print("\nTest de préparation de la pile Docker...")
         if docker_mgr.prepare_docker_stack():
-            print("Pile Docker préparée. Attente de 5 secondes pour la santé...")
-            time.sleep(5)
+            print("Pile Docker préparée. Attente de 10 secondes pour la santé...")
+            time.sleep(10) # Laisser le temps au healthcheck de s'exécuter
             print(f"Santé de la pile Docker : {docker_mgr.check_stack_health()}")
         
         print("\nTest d'arrêt de la pile Docker...")
@@ -204,4 +224,4 @@ services:
         if os.path.exists('docker/docker-compose.yml'):
             os.remove('docker/docker-compose.yml')
         if os.path.exists('docker'):
-            os.rmdir('docker')
+            subprocess.run(["rm", "-rf", "docker"], check=True, capture_output=True, text=True) # Utiliser rm -rf pour supprimer le répertoire non vide
