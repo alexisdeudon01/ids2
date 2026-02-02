@@ -11,3 +11,7 @@ requests_aws4auth
 GitPython
 msgpack-python
 aiohttp
+fastapi
+uvicorn[standard]
+python-multipart
+jinja2

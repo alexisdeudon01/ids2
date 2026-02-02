@@ -3,7 +3,12 @@ import os
 import subprocess
 import time
 from base_component import BaseComponent
-from docker_manager import DockerManager # Pour interagir avec le conteneur Suricata
+import logging
+import os
+import subprocess
+import time
+import signal # Import du module signal
+from base_component import BaseComponent
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(processName)s - %(levelname)s - %(message)s')
 
@@ -23,7 +28,7 @@ class SuricataManager(BaseComponent):
             'dns': True,
             'tls': True,
         })
-        self.docker_manager = DockerManager(shared_state, config_manager, shutdown_event) # Initialiser DockerManager
+        self.suricata_process = None # Initialiser le processus Suricata à None
 
     def generate_suricata_config(self):
         """
@@ -66,36 +71,56 @@ outputs:
             self.log_error(f"Erreur lors de l'écriture du fichier de configuration Suricata", e)
             return False
 
-    def start_suricata_container(self):
+    def start_suricata(self):
         """
-        Démarre le conteneur Suricata via Docker Compose.
+        Démarre le processus Suricata sur l'hôte.
         """
-        self.logger.info("Démarrage du conteneur Suricata...")
-        return self.docker_manager._run_docker_compose_command("up suricata", detach=True)
+        self.logger.info("Démarrage du processus Suricata sur l'hôte...")
+        try:
+            cmd = ["suricata", "-i", self.network_interface, "-c", self.suricata_config_path, "--set", f"outputs.0.eve-log.filename={self.log_output_path}"]
+            self.suricata_process = subprocess.Popen(cmd, preexec_fn=os.setsid)
+            self.logger.info(f"Processus Suricata démarré avec PID: {self.suricata_process.pid}")
+            return True
+        except FileNotFoundError:
+            self.log_error("La commande 'suricata' n'a pas été trouvée. Assurez-vous que Suricata est installé sur l'hôte.")
+            return False
+        except Exception as e:
+            self.log_error(f"Erreur lors du démarrage de Suricata", e)
+            return False
 
-    def stop_suricata_container(self):
+    def stop_suricata(self):
         """
-        Arrête le conteneur Suricata via Docker Compose.
+        Arrête le processus Suricata sur l'hôte.
         """
-        self.logger.info("Arrêt du conteneur Suricata...")
-        return self.docker_manager._run_docker_compose_command("stop suricata")
+        if self.suricata_process and self.suricata_process.poll() is None:
+            self.logger.info("Arrêt du processus Suricata...")
+            try:
+                os.killpg(os.getpgid(self.suricata_process.pid), signal.SIGTERM)
+                self.suricata_process.wait(timeout=5)
+                self.logger.info("Processus Suricata arrêté.")
+                return True
+            except Exception as e:
+                self.log_error(f"Erreur lors de l'arrêt de Suricata", e)
+                return False
+        self.logger.info("Le processus Suricata n'était pas en cours d'exécution.")
+        return True
 
-    def restart_suricata_container(self):
+    def restart_suricata(self):
         """
-        Redémarre le conteneur Suricata via Docker Compose.
+        Redémarre le processus Suricata sur l'hôte.
         """
-        self.logger.info("Redémarrage du conteneur Suricata...")
-        return self.docker_manager._run_docker_compose_command("restart suricata")
+        self.logger.info("Redémarrage du processus Suricata...")
+        self.stop_suricata()
+        time.sleep(2)
+        return self.start_suricata()
 
     def run(self):
         """
-        Méthode principale pour le SuricataManager (peut être vide si l'orchestration est dans main.py).
+        Méthode principale pour le SuricataManager.
         """
         self.logger.info("SuricataManager démarré. La génération de la configuration est appelée par le superviseur.")
-        # Le superviseur appelle generate_suricata_config() et gère le démarrage du conteneur.
-        # Ce processus pourrait surveiller l'état de Suricata si nécessaire.
         while not self.is_shutdown_requested():
-            time.sleep(5) # Simple boucle d'attente
+            time.sleep(5)
         self.logger.info("SuricataManager arrêté.")
 
 
@@ -114,46 +139,18 @@ if __name__ == "__main__":
       eve_log_options:
         payload: yes
         http: yes
-    docker: # Nécessaire pour DockerManager
-      compose_file: "docker/docker-compose.yml"
-      required_services: ["suricata"]
     """
     with open('temp_config.yaml', 'w') as f:
         f.write(temp_config_content)
 
-    # Créer un docker-compose.yml temporaire pour le test
-    os.makedirs('docker', exist_ok=True)
-    with open('docker/docker-compose.yml', 'w') as f:
-        f.write("""
-version: '3.8'
-services:
-  suricata:
-    image: oisf/suricata:6.0.10
-    command: ["-i", "eth0", "-c", "/etc/suricata/suricata.yaml", "--set", "outputs.0.eve-log.filename=/mnt/ram_logs/eve.json"]
-    network_mode: "host"
-    volumes:
-      - ./suricata.yaml:/etc/suricata/suricata.yaml:ro
-      - /mnt/ram_logs:/mnt/ram_logs
-      - ./rules:/etc/suricata/rules:ro
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    privileged: true
-    deploy:
-      resources:
-        limits:
-          cpus: '0.1'
-          memory: 64M
-""")
-    os.makedirs('suricata', exist_ok=True) # Créer le répertoire pour suricata.yaml
-    os.makedirs('suricata/rules', exist_ok=True) # Créer le répertoire pour les règles
+    os.makedirs('suricata', exist_ok=True)
+    os.makedirs('suricata/rules', exist_ok=True)
 
     try:
         config_mgr = ConfigManager(config_path='temp_config.yaml')
         manager = multiprocessing.Manager()
         shared_state = manager.dict({
-            'last_error': '',
-            'docker_healthy': False # Ajout pour DockerManager
+            'last_error': ''
         })
         shutdown_event = multiprocessing.Event()
 
@@ -165,15 +162,15 @@ services:
             with open(suricata_mgr.suricata_config_path, 'r') as f:
                 print(f.read())
 
-        print("\nTest de démarrage du conteneur Suricata (simulé)...")
-        # Le démarrage réel nécessiterait un démon Docker fonctionnel
-        # if suricata_mgr.start_suricata_container():
-        #     print("Conteneur Suricata démarré.")
-        #     time.sleep(5)
-        #     print("Arrêt du conteneur Suricata...")
-        #     suricata_mgr.stop_suricata_container()
+        print("\nTest de démarrage/arrêt de Suricata (simulé)...")
+        # Pour un test réel, Suricata devrait être installé sur l'hôte
+        # if suricata_mgr.start_suricata():
+        #     print("Suricata démarré. Attente de 10 secondes...")
+        #     time.sleep(10)
+        #     print("Arrêt de Suricata...")
+        #     suricata_mgr.stop_suricata()
         # else:
-        #     print("Échec du démarrage du conteneur Suricata.")
+        #     print("Échec du démarrage de Suricata.")
 
     except Exception as e:
         logging.error(f"Erreur lors du test de SuricataManager: {e}")
@@ -183,10 +180,6 @@ services:
         if os.path.exists('suricata/suricata.yaml'):
             os.remove('suricata/suricata.yaml')
         if os.path.exists('suricata/rules'):
-            os.rmdir('suricata/rules')
+            subprocess.run(["rm", "-rf", "suricata/rules"], check=True, capture_output=True, text=True)
         if os.path.exists('suricata'):
             os.rmdir('suricata')
-        if os.path.exists('docker/docker-compose.yml'):
-            os.remove('docker/docker-compose.yml')
-        if os.path.exists('docker'):
-            subprocess.run(["rm", "-rf", "docker"], check=True, capture_output=True, text=True)
