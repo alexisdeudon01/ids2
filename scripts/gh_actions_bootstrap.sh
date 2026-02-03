@@ -18,6 +18,7 @@ Options:
   --repo OWNER/REPO     Target repository (default: current repo)
   --pi-ip IP            Pi Tailscale IP (e.g., 100.x.x.x)
   --pi-user USER        Pi SSH user (e.g., pi)
+  --tskey KEY           Tailscale auth key (TSKEY...)
   --ts-oauth-id ID      Tailscale OAuth client ID
   --ts-oauth-secret KEY Tailscale OAuth client secret
   --ts-oauth-tags TAGS  Tailscale tags (e.g., "tag:ci")
@@ -33,6 +34,7 @@ USAGE
 REPO=""
 PI_IP="${PI_IP:-}"
 PI_USER="${PI_USER:-}"
+TSKEYAUTH="${TSKEYAUTH:-}"
 TS_OAUTH_CLIENT_ID="${TS_OAUTH_CLIENT_ID:-}"
 TS_OAUTH_CLIENT_SECRET="${TS_OAUTH_CLIENT_SECRET:-}"
 TS_OAUTH_TAGS="${TS_OAUTH_TAGS:-}"
@@ -54,6 +56,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --pi-user)
       PI_USER="$2"
+      shift 2
+      ;;
+    --tskey)
+      TSKEYAUTH="$2"
       shift 2
       ;;
     --ts-oauth-id)
@@ -127,19 +133,31 @@ fi
 if [[ -z "$PI_USER" ]]; then
   read -rp "Pi SSH user: " PI_USER
 fi
-if [[ -z "$TS_OAUTH_CLIENT_ID" ]]; then
-  read -rp "Tailscale OAuth client ID: " TS_OAUTH_CLIENT_ID
-fi
-if [[ -z "$TS_OAUTH_CLIENT_SECRET" ]]; then
-  read -rsp "Tailscale OAuth client secret: " TS_OAUTH_CLIENT_SECRET
-  echo
-fi
-if [[ -z "$TS_OAUTH_TAGS" ]]; then
-  read -rp "Tailscale tags (e.g., tag:ci): " TS_OAUTH_TAGS
+
+if [[ -z "$TS_OAUTH_CLIENT_ID" && -z "$TS_OAUTH_CLIENT_SECRET" && -z "$TS_OAUTH_TAGS" ]]; then
+  if [[ -z "$TSKEYAUTH" ]]; then
+    read -rsp "Tailscale auth key (tskey-auth-...): " TSKEYAUTH
+    echo
+  fi
+else
+  if [[ -z "$TS_OAUTH_CLIENT_ID" ]]; then
+    read -rp "Tailscale OAuth client ID: " TS_OAUTH_CLIENT_ID
+  fi
+  if [[ -z "$TS_OAUTH_CLIENT_SECRET" ]]; then
+    read -rsp "Tailscale OAuth client secret: " TS_OAUTH_CLIENT_SECRET
+    echo
+  fi
+  if [[ -z "$TS_OAUTH_TAGS" ]]; then
+    read -rp "Tailscale tags (e.g., tag:ci): " TS_OAUTH_TAGS
+  fi
 fi
 
-if [[ -z "$PI_IP" || -z "$PI_USER" || -z "$TS_OAUTH_CLIENT_ID" || -z "$TS_OAUTH_CLIENT_SECRET" || -z "$TS_OAUTH_TAGS" ]]; then
-  echo "PI_IP, PI_USER, TS_OAUTH_CLIENT_ID, TS_OAUTH_CLIENT_SECRET, and TS_OAUTH_TAGS are required." >&2
+if [[ -z "$PI_IP" || -z "$PI_USER" ]]; then
+  echo "PI_IP and PI_USER are required." >&2
+  exit 1
+fi
+if [[ -z "$TSKEYAUTH" && ( -z "$TS_OAUTH_CLIENT_ID" || -z "$TS_OAUTH_CLIENT_SECRET" || -z "$TS_OAUTH_TAGS" ) ]]; then
+  echo "Provide TSKEYAUTH or the full OAuth set (TS_OAUTH_CLIENT_ID, TS_OAUTH_CLIENT_SECRET, TS_OAUTH_TAGS)." >&2
   exit 1
 fi
 
@@ -174,14 +192,35 @@ fi
 SECRET_ARGS=(--app codespaces --repo "$REPO")
 printf '%s' "$PI_IP" | gh secret set PI_IP "${SECRET_ARGS[@]}"
 printf '%s' "$PI_USER" | gh secret set PI_USER "${SECRET_ARGS[@]}"
-printf '%s' "$TS_OAUTH_CLIENT_ID" | gh secret set TS_OAUTH_CLIENT_ID "${SECRET_ARGS[@]}"
-printf '%s' "$TS_OAUTH_CLIENT_SECRET" | gh secret set TS_OAUTH_CLIENT_SECRET "${SECRET_ARGS[@]}"
-printf '%s' "$TS_OAUTH_TAGS" | gh secret set TS_OAUTH_TAGS "${SECRET_ARGS[@]}"
+if [[ -n "$TSKEYAUTH" ]]; then
+  printf '%s' "$TSKEYAUTH" | gh secret set TSKEYAUTH "${SECRET_ARGS[@]}"
+fi
+if [[ -n "$TS_OAUTH_CLIENT_ID" ]]; then
+  printf '%s' "$TS_OAUTH_CLIENT_ID" | gh secret set TS_OAUTH_CLIENT_ID "${SECRET_ARGS[@]}"
+fi
+if [[ -n "$TS_OAUTH_CLIENT_SECRET" ]]; then
+  printf '%s' "$TS_OAUTH_CLIENT_SECRET" | gh secret set TS_OAUTH_CLIENT_SECRET "${SECRET_ARGS[@]}"
+fi
+if [[ -n "$TS_OAUTH_TAGS" ]]; then
+  printf '%s' "$TS_OAUTH_TAGS" | gh secret set TS_OAUTH_TAGS "${SECRET_ARGS[@]}"
+fi
 gh secret set PI "${SECRET_ARGS[@]}" < "$SSH_KEY_PATH"
 
-echo "Codespaces secrets set: PI_IP, PI_USER, TS_OAUTH_CLIENT_ID, TS_OAUTH_CLIENT_SECRET, TS_OAUTH_TAGS, PI"
+echo "Codespaces secrets set: PI_IP, PI_USER, TSKEYAUTH, TS_OAUTH_CLIENT_ID, TS_OAUTH_CLIENT_SECRET, TS_OAUTH_TAGS, PI"
 
-export PI_IP PI_USER TS_OAUTH_CLIENT_ID TS_OAUTH_CLIENT_SECRET TS_OAUTH_TAGS
+export PI_IP PI_USER
+if [[ -n "$TSKEYAUTH" ]]; then
+  export TSKEYAUTH
+fi
+if [[ -n "$TS_OAUTH_CLIENT_ID" ]]; then
+  export TS_OAUTH_CLIENT_ID
+fi
+if [[ -n "$TS_OAUTH_CLIENT_SECRET" ]]; then
+  export TS_OAUTH_CLIENT_SECRET
+fi
+if [[ -n "$TS_OAUTH_TAGS" ]]; then
+  export TS_OAUTH_TAGS
+fi
 export PI="$(cat "$SSH_KEY_PATH")"
 "$ROOT_DIR/scripts/gh_actions_sync_secrets.sh" --repo "$REPO"
 
