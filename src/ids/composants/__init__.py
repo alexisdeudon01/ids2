@@ -5,6 +5,12 @@ from .connectivity import ConnectivityTester
 from .docker_manager import DockerManager
 from .metrics_server import MetricsCollector, MetricsServer
 from .resource_controller import ResourceController
+from .tailscale_manager import (
+    TailscaleManager,
+    DeploymentCapabilities,
+    deployment_strategy,
+    handles_node_type,
+)
 from .vector_manager import VectorManager
 
 # Backward-compatible alias
@@ -18,5 +24,9 @@ __all__ = [
     "MetricsCollector",
     "MetricsServer",
     "ResourceController",
+    "TailscaleManager",
+    "DeploymentCapabilities",
+    "deployment_strategy",
+    "handles_node_type",
     "VectorManager",
 ]

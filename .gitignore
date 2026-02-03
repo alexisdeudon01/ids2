@@ -1,2 +1,22 @@
 .venv/
 scripts/actions_secrets.map
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Test and coverage artifacts
+.coverage
+.pytest_cache/
+htmlcov/
+tests/pytest.log
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/

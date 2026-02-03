@@ -1,0 +1,28 @@
+[Unit]
+Description=Tailscale node daemon for IDS2
+Documentation=https://tailscale.com/kb/
+Wants=network-pre.target
+After=network-pre.target NetworkManager.service systemd-resolved.service
+
+[Service]
+ExecStartPre=/usr/sbin/tailscaled --cleanup
+ExecStart=/usr/sbin/tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/run/tailscale/tailscaled.sock --port=41641
+ExecStopPost=/usr/sbin/tailscaled --cleanup
+
+# Resource limits
+CPUQuota=10%
+MemoryMax=256M
+MemoryHigh=200M
+
+# Security hardening
+NoNewPrivileges=false
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=true
+
+# Restart policy
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

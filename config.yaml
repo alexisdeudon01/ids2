@@ -79,3 +79,18 @@ connectivity:
 fastapi: # Nouvelle section pour la configuration FastAPI
   port: 8080
   host: "0.0.0.0"
+
+tailscale: # Configuration Tailscale pour la gestion du réseau
+  # tailnet: "example.com"  # Nom du tailnet (organization ou domaine)
+  # api_key: ""  # Clé API Tailscale (dans secret.json de préférence)
+  # oauth_client_id: ""  # OAuth client ID (dans secret.json)
+  # oauth_client_secret: ""  # OAuth client secret (dans secret.json)
+  # auth_key: ""  # Clé d'authentification pré-générée (dans secret.json)
+  default_tags:
+    - "ci"
+    - "ids2"
+  dns_enabled: true
+  magic_dns: true
+  exit_node_enabled: false
+  subnet_routes: []  # Routes à annoncer, ex: ["192.168.178.0/24"]
+  deployment_mode: "auto"  # auto, linux_service, docker, docker_compose, sidecar
