@@ -1,0 +1,5 @@
+INFO     ids.infrastructure.aws_manager:decorateurs.py:69 Appel: creer_domaine((<ids.infrastructure.aws_manager.AWSOpenSearchManager object at 0x7f976a9f74d0>,), {})
+WARNING  ids.infrastructure.aws_manager:decorateurs.py:225 Tentative 1/2 échouée pour creer_domaine, nouvelle tentative dans 1.0s
+ERROR    ids.infrastructure.aws_manager:decorateurs.py:233 creer_domaine échoué après 2 tentatives
+DEBUG    ids.infrastructure.aws_manager:decorateurs.py:122 aws.opensearch.create_domain: 1.001s
+ERROR    ids.infrastructure.aws_manager:decorateurs.py:77 Exception dans creer_domaine: Nom de domaine OpenSearch non configure

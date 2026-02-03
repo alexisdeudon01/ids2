@@ -16,6 +16,16 @@ from .exceptions import (
     ErreurAWS,
     AlerteSourceIndisponible,
 )
+from .tailscale import (
+    DeploymentMode,
+    NodeStatus,
+    NodeType,
+    TailscaleNode,
+    TailscaleAuthKey,
+    TailnetConfig,
+    TailscaleDeploymentConfig,
+    DeploymentResult,
+)
 
 __all__ = [
     "SeveriteAlerte",
@@ -29,4 +39,13 @@ __all__ = [
     "ErreurSuricata",
     "ErreurAWS",
     "AlerteSourceIndisponible",
+    # Tailscale domain models
+    "DeploymentMode",
+    "NodeStatus",
+    "NodeType",
+    "TailscaleNode",
+    "TailscaleAuthKey",
+    "TailnetConfig",
+    "TailscaleDeploymentConfig",
+    "DeploymentResult",
 ]
