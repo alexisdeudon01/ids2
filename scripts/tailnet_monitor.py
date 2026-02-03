@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 import networkx as nx
 import requests
-from pyvis.network import Network
+from pyvis.network import Network  # type: ignore
 
 
 @dataclass

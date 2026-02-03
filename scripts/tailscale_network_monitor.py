@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
-from pyvis.network import Network
+from pyvis.network import Network  # type: ignore
 
 # --- 1. NETWORK REPRESENTATION DATASTRUCTURES ---
 
