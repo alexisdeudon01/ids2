@@ -18,11 +18,115 @@ env:
 
 jobs:
   # =========================================================================
-  # Job 1: Tests Unitaires & Intégration
+  # Job 1: Tests de connectivité (Tailscale + Pi + AWS)
+  # =========================================================================
+  connectivity:
+    name: Connectivity Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Install connectivity dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install tailscale boto3
+
+      - name: 🔐 Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+          version: 1.56.1
+          args: --advertise-exit-node
+
+      - name: ✅ Connectivity checks (Tailscale + Pi + AWS)
+        env:
+          TAILSCALE_TAILNET: ${{ secrets.TAILSCALE_TAILNET }}
+          TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
+          RASPBERRY_PI_TAILSCALE_IP: ${{ secrets.RASPBERRY_PI_TAILSCALE_IP }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          python - <<'PY'
+          import asyncio
+          import os
+          import subprocess
+          import sys
+
+          import boto3
+          from tailscale import Tailscale
+
+          def require_env(name: str) -> str:
+              value = os.getenv(name)
+              if not value:
+                  raise SystemExit(f"Missing required secret: {name}")
+              return value
+
+          async def check_tailscale() -> None:
+              tailnet = require_env("TAILSCALE_TAILNET")
+              api_key = require_env("TAILSCALE_API_KEY")
+              target_ip = require_env("RASPBERRY_PI_TAILSCALE_IP")
+
+              async with Tailscale(tailnet=tailnet, api_key=api_key) as tailscale:
+                  devices = await tailscale.devices()
+                  for device in devices.devices.values():
+                      if target_ip in (device.addresses or []):
+                          if not device.authorized:
+                              raise SystemExit(f"Tailscale device not authorized: {device.name}")
+                          print(f"Tailscale device found: {device.name} ({target_ip})")
+                          break
+                  else:
+                      raise SystemExit(f"Tailscale device not found for IP: {target_ip}")
+
+              subprocess.run(
+                  ["tailscale", "ping", "-c", "4", target_ip],
+                  check=True,
+                  text=True,
+              )
+
+          def check_aws() -> None:
+              access_key = os.getenv("AWS_ACCESS_KEY_ID")
+              secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+              if not access_key or not secret_key:
+                  print("AWS credentials missing; skipping AWS check.")
+                  return
+              region = os.getenv("AWS_REGION") or "us-east-1"
+              session_token = os.getenv("AWS_SESSION_TOKEN")
+
+              session = boto3.Session(
+                  aws_access_key_id=access_key,
+                  aws_secret_access_key=secret_key,
+                  aws_session_token=session_token,
+                  region_name=region,
+              )
+              sts = session.client("sts")
+              identity = sts.get_caller_identity()
+              print(f"AWS identity OK: {identity.get('Arn')}")
+
+          async def main() -> None:
+              await check_tailscale()
+              check_aws()
+              print("Connectivity checks passed.")
+
+          asyncio.run(main())
+          PY
+
+  # =========================================================================
+  # Job 2: Tests Unitaires & Intégration
   # =========================================================================
   test:
     name: Tests & Analyse Code
     runs-on: ubuntu-latest
+    needs: [connectivity]
     timeout-minutes: 30
     
     strategy:
@@ -79,6 +183,7 @@ jobs:
   code-quality:
     name: Qualité Code (Linting, Type Checking)
     runs-on: ubuntu-latest
+    needs: [connectivity]
     continue-on-error: true
     
     steps:
