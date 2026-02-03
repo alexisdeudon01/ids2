@@ -342,7 +342,8 @@ GitHub Actions. Pour lancer le workflow CI/CD depuis un Codespace :
 
 1. Copiez `scripts/actions_secrets.map.example` en `scripts/actions_secrets.map`
    et ajustez les noms des variables source.
-   * Tailscale utilise OAuth : `TAILSCALE_OAUTH_CLIENT_ID`,
+   * Sans tags : utilisez `TAILSCALE_AUTHKEY`.
+   * Avec OAuth : `TAILSCALE_OAUTH_CLIENT_ID`,
      `TAILSCALE_OAUTH_CLIENT_SECRET`, `TAILSCALE_OAUTH_TAGS`.
 2. Synchronisez vos secrets vers le dépôt :
    `scripts/gh_actions_sync_secrets.sh --repo OWNER/REPO`
