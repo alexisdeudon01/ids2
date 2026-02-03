@@ -8,6 +8,9 @@ on:
       - 'src/**'
       - 'scripts/generate_architecture.py'
       - '.github/workflows/architecture.yml'
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:  # Manual trigger
 
 env:
