@@ -1,0 +1,207 @@
+name: UML Diagrams - Auto-generation Pipeline
+
+on:
+  push:
+    branches: [main, dev, develop]
+    paths:
+      - 'src/**/*.py'
+      - 'scripts/generate_uml.py'
+      - '.github/workflows/uml-generation.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'src/**/*.py'
+  workflow_dispatch:  # Manual trigger
+    inputs:
+      force_regenerate:
+        description: 'Force regenerate all diagrams'
+        required: false
+        default: 'true'
+
+env:
+  PYTHON_VERSION: '3.12'
+  UML_OUTPUT_DIR: 'docs/uml'
+
+jobs:
+  # =========================================================================
+  # Job 1: Generate UML Diagrams
+  # =========================================================================
+  generate-uml:
+    name: Generate UML Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for accurate diagrams
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: 📦 Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          dot -V
+      
+      - name: 📦 Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint>=3.0.0
+          pyreverse --version
+      
+      - name: 🎨 Generate UML diagrams
+        run: |
+          python scripts/generate_uml.py --output-dir ${{ env.UML_OUTPUT_DIR }}
+      
+      - name: 📊 Verify generated diagrams
+        run: |
+          echo "Generated UML diagrams:"
+          ls -lh ${{ env.UML_OUTPUT_DIR }}/*.png || echo "No PNG files found"
+          
+          # Check that key diagrams were generated
+          test -f ${{ env.UML_OUTPUT_DIR }}/classes_ids_detailed.png || exit 1
+          test -f ${{ env.UML_OUTPUT_DIR }}/packages_ids_packages.png || exit 1
+          
+          echo "✅ All key diagrams generated successfully"
+      
+      - name: 📈 Calculate diagram metrics
+        id: metrics
+        run: |
+          DIAGRAM_COUNT=$(ls -1 ${{ env.UML_OUTPUT_DIR }}/*.png 2>/dev/null | wc -l)
+          TOTAL_SIZE=$(du -sh ${{ env.UML_OUTPUT_DIR }} | cut -f1)
+          
+          echo "diagram_count=$DIAGRAM_COUNT" >> $GITHUB_OUTPUT
+          echo "total_size=$TOTAL_SIZE" >> $GITHUB_OUTPUT
+          
+          echo "📊 Metrics:"
+          echo "  - Diagrams generated: $DIAGRAM_COUNT"
+          echo "  - Total size: $TOTAL_SIZE"
+      
+      - name: 📤 Upload UML diagrams as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uml-diagrams
+          path: ${{ env.UML_OUTPUT_DIR }}/*.png
+          retention-days: 90
+      
+      - name: 📤 Upload UML index
+        uses: actions/upload-artifact@v4
+        with:
+          name: uml-index
+          path: ${{ env.UML_OUTPUT_DIR }}/INDEX.md
+          retention-days: 90
+      
+      - name: 💾 Commit and push UML diagrams
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add ${{ env.UML_OUTPUT_DIR }}/*.png ${{ env.UML_OUTPUT_DIR }}/INDEX.md
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "🎨 Auto-generate UML diagrams [skip ci]"
+            git push
+          fi
+      
+      - name: 📝 Generate summary
+        run: |
+          echo "## 🎨 UML Diagram Generation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Successfully generated **${{ steps.metrics.outputs.diagram_count }}** UML diagrams" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📁 Total size: **${{ steps.metrics.outputs.total_size }}**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Generated Diagrams" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Module | Class Diagram | Package Diagram |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------------|----------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Overall | classes_ids_detailed.png | packages_ids_packages.png |" >> $GITHUB_STEP_SUMMARY
+          echo "| Domain | classes_ids_domain.png | packages_ids_domain.png |" >> $GITHUB_STEP_SUMMARY
+          echo "| Interfaces | classes_ids_interfaces.png | packages_ids_interfaces.png |" >> $GITHUB_STEP_SUMMARY
+          echo "| Composants | classes_ids_composants.png | packages_ids_composants.png |" >> $GITHUB_STEP_SUMMARY
+          echo "| Infrastructure | classes_ids_infrastructure.png | packages_ids_infrastructure.png |" >> $GITHUB_STEP_SUMMARY
+          echo "| Suricata | classes_ids_suricata.png | packages_ids_suricata.png |" >> $GITHUB_STEP_SUMMARY
+          echo "| App | classes_ids_app.png | packages_ids_app.png |" >> $GITHUB_STEP_SUMMARY
+          echo "| Config | classes_ids_config.png | packages_ids_config.png |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy | classes_ids_deploy.png | packages_ids_deploy.png |" >> $GITHUB_STEP_SUMMARY
+  
+  # =========================================================================
+  # Job 2: Code Quality Analysis (runs in parallel)
+  # =========================================================================
+  code-quality-check:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint>=3.0.0
+          pip install -r requirements.txt || true
+      
+      - name: 🔍 Run pylint analysis
+        id: pylint
+        run: |
+          pylint src/ids --output-format=text --exit-zero > pylint-report.txt
+          SCORE=$(grep "Your code has been rated" pylint-report.txt | sed 's/.*rated at \([0-9.]*\).*/\1/')
+          echo "score=$SCORE" >> $GITHUB_OUTPUT
+          cat pylint-report.txt
+        continue-on-error: true
+      
+      - name: 📤 Upload pylint report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pylint-report
+          path: pylint-report.txt
+          retention-days: 30
+      
+      - name: 📝 Add quality summary
+        run: |
+          echo "## 🔍 Code Quality Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Pylint Score:** ${{ steps.pylint.outputs.score }}/10.0" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See the full report in the artifacts." >> $GITHUB_STEP_SUMMARY
+  
+  # =========================================================================
+  # Job 3: Notify completion
+  # =========================================================================
+  notify-completion:
+    name: Pipeline Completion
+    runs-on: ubuntu-latest
+    needs: [generate-uml, code-quality-check]
+    if: always()
+    
+    steps:
+      - name: ✅ Success notification
+        if: needs.generate-uml.result == 'success'
+        run: |
+          echo "✅ UML generation pipeline completed successfully!"
+          echo "📁 Diagrams are available as artifacts"
+          echo "🔗 View in Actions artifacts tab"
+      
+      - name: ❌ Failure notification
+        if: needs.generate-uml.result == 'failure'
+        run: |
+          echo "❌ UML generation pipeline failed"
+          echo "Please check the logs above for details"
+          exit 1

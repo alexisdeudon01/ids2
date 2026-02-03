@@ -23,6 +23,7 @@ L’architecture est conçue pour fonctionner **24/7**, sous contraintes de ress
 13. Automatisation et déploiement
 14. Exploitation et cycle de vie
 15. Résumé final
+16. **[Documentation UML / Architecture](docs/uml/README.md)** 🎨
 
 ---
 

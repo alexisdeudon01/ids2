@@ -1,0 +1,30 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting pylint
+  Downloading pylint-4.0.4-py3-none-any.whl.metadata (12 kB)
+Collecting graphviz
+  Downloading graphviz-0.21-py3-none-any.whl.metadata (12 kB)
+Collecting astroid<=4.1.dev0,>=4.0.2 (from pylint)
+  Downloading astroid-4.0.3-py3-none-any.whl.metadata (4.4 kB)
+Collecting dill>=0.3.6 (from pylint)
+  Downloading dill-0.4.1-py3-none-any.whl.metadata (10 kB)
+Collecting isort!=5.13,<8,>=5 (from pylint)
+  Downloading isort-7.0.0-py3-none-any.whl.metadata (11 kB)
+Collecting mccabe<0.8,>=0.6 (from pylint)
+  Downloading mccabe-0.7.0-py2.py3-none-any.whl.metadata (5.0 kB)
+Requirement already satisfied: platformdirs>=2.2 in /usr/local/lib/python3.12/dist-packages (from pylint) (4.5.1)
+Collecting tomlkit>=0.10.1 (from pylint)
+  Downloading tomlkit-0.14.0-py3-none-any.whl.metadata (2.8 kB)
+Downloading pylint-4.0.4-py3-none-any.whl (536 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 536.4/536.4 kB 83.4 MB/s eta 0:00:00
+Downloading graphviz-0.21-py3-none-any.whl (47 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 47.3/47.3 kB 16.2 MB/s eta 0:00:00
+Downloading astroid-4.0.3-py3-none-any.whl (276 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 276.4/276.4 kB 62.7 MB/s eta 0:00:00
+Downloading dill-0.4.1-py3-none-any.whl (120 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 120.0/120.0 kB 39.8 MB/s eta 0:00:00
+Downloading isort-7.0.0-py3-none-any.whl (94 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 94.7/94.7 kB 32.0 MB/s eta 0:00:00
+Downloading mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+Downloading tomlkit-0.14.0-py3-none-any.whl (39 kB)
+Installing collected packages: tomlkit, mccabe, isort, graphviz, dill, astroid, pylint
+Successfully installed astroid-4.0.3 dill-0.4.1 graphviz-0.21 isort-7.0.0 mccabe-0.7.0 pylint-4.0.4 tomlkit-0.14.0
