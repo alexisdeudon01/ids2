@@ -47,9 +47,9 @@ except ImportError as e:
 
 @dataclass 
 class Config:
-    api_key: str = "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"
+    api_key: str = field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY", ""))
     model: str = "claude-sonnet-4-20250514"
-    root_dir: str = "/home/tor/Downloads/ids2"
+    root_dir: str = field(default_factory=lambda: os.getcwd())
     cache_file: str = "workflow_analysis_cache.json"
     output_html: str = "workflow_analysis.html"
     
@@ -192,6 +192,8 @@ class ResourceMonitor:
 class WorkflowAnalyzer:
     def __init__(self, cfg: Config = None):
         self.cfg = cfg or Config()
+        if not self.cfg.api_key:
+            raise ValueError("ANTHROPIC_API_KEY environment variable is required. Set it with: export ANTHROPIC_API_KEY=your_key")
         self.client = Anthropic(api_key=self.cfg.api_key)
         self.G = nx.DiGraph()
         self.cache = self._load_cache()

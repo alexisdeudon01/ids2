@@ -4,7 +4,7 @@ SQLAlchemy models for IDS dashboard configuration and telemetry.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, Float, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped
@@ -13,11 +13,18 @@ from .database import Base
 
 
 class TimestampMixin:
-    created_at: Mapped[datetime] = Column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class Secrets(Base, TimestampMixin):
+    """
+    Secrets storage model.
+    
+    WARNING: Sensitive data is stored as plain text. For production use,
+    implement field-level encryption or use an external secret management system
+    (e.g., AWS Secrets Manager, HashiCorp Vault, or encrypted columns).
+    """
     __tablename__ = "secrets"
 
     id: Mapped[int] = Column(Integer, primary_key=True)

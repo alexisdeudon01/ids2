@@ -20,6 +20,9 @@ resource_controller:
   check_interval: 1 # Intervalle de vérification pour ResourceController
 
 suricata:
+  # WARNING: log_path assumes RAM disk is mounted at /mnt/ram_logs
+  # If RAM disk is not mounted, this path will not exist and Suricata will fail
+  # Ensure RAM disk is mounted before starting Suricata or change this path
   log_path: "/mnt/ram_logs/eve.json"
   config_path: "suricata/suricata.yaml"
   rules_path: "suricata/rules" # Chemin pour les règles Suricata

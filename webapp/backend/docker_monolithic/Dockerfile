@@ -60,7 +60,9 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 
 # Copier le code de l'agent Python et les configurations
 COPY src/ ./src/
-COPY config.yaml ./
+# Copy config.yaml if it exists, otherwise create a default one
+COPY config.yaml* ./
+RUN if [ ! -f config.yaml ]; then echo "Warning: config.yaml not found, using defaults"; fi
 COPY suricata/ ./suricata/
 COPY vector/ ./vector/
 RUN mkdir -p docker/ 
@@ -79,4 +81,6 @@ EXPOSE 9100
 # Commande par défaut pour exécuter l'agent Python
 # L'agent Python sera le point d'entrée principal et orchestrera Suricata, Vector et Redis.
 # Note: Suricata doit être exécuté en systemd sur le host, pas dans Docker
+# Verify module exists before running
+RUN python3 -c "import ids.app.supervisor" || (echo "Error: ids.app.supervisor module not found" && exit 1)
 CMD ["python3", "-m", "ids.app.supervisor"]

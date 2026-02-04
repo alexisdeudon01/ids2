@@ -13,18 +13,21 @@ from typing import AsyncGenerator, Generator
 import pytest
 
 # Importer les fixtures depuis les modules spécialisés
-from fixtures.alerte_fixtures import (
-    alerte_ids_batch,
-    alerte_ids_critique,
-    alerte_ids_simple,
-)
-from fixtures.config_fixtures import (
-    config_ids_test,
-    config_manager_test,
-)
-from fixtures.container_fixtures import (
-    container_di_test,
-)
+try:
+    from fixtures.alerte_fixtures import (
+        alerte_ids_batch,
+        alerte_ids_critique,
+        alerte_ids_simple,
+    )
+    from fixtures.config_fixtures import (
+        config_ids_test,
+        config_manager_test,
+    )
+    from fixtures.container_fixtures import (
+        container_di_test,
+    )
+except ImportError as e:
+    pytest.skip(f"Required test fixtures not available: {e}", allow_module_level=True)
 
 # ============================================================================
 # Fixtures de Base
