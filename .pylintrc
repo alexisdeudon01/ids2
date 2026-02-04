@@ -1,0 +1,67 @@
+[MAIN]
+# Specify a score threshold to be exceeded before program exits with error
+fail-under=8.0
+
+# Files or directories to be skipped. They should be base names, not paths.
+ignore=CVS,.git,__pycache__,.venv,venv
+
+# Add files or directories matching the regex patterns to the ignore list.
+ignore-patterns=test_.*\.py
+
+# Use multiple processes to speed up Pylint
+jobs=0
+
+[MESSAGES CONTROL]
+# Disable specific messages
+disable=
+    # Too few public methods is expected for protocols/interfaces
+    too-few-public-methods,
+    # We use ... in protocols intentionally
+    unnecessary-ellipsis,
+    # Pass is needed in abstract methods
+    unnecessary-pass,
+    # Line too long - handled by black
+    line-too-long,
+    # Missing module docstring - not always needed
+    missing-module-docstring,
+    # Duplicate code detection is noisy
+    duplicate-code,
+    # Import outside toplevel can be intentional for optional deps
+    import-outside-toplevel,
+    # Implicit string concatenation is valid Python
+    implicit-str-concat,
+
+[FORMAT]
+# Maximum number of characters on a single line.
+max-line-length=100
+
+# Expected format of line ending, e.g. empty (any line ending), LF or CRLF.
+expected-line-ending-format=LF
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=10
+
+# Maximum number of positional arguments for function / method
+max-positional-arguments=10
+
+# Maximum number of attributes for a class (see R0902).
+max-attributes=15
+
+# Maximum number of public methods for a class (see R0904).
+max-public-methods=25
+
+[SIMILARITIES]
+# Minimum lines number of a similarity.
+min-similarity-lines=10
+
+# Ignore imports when computing similarities.
+ignore-imports=yes
+
+[TYPECHECK]
+# List of module names for which member attributes should not be checked
+ignored-modules=pyvis,tailscale
+
+[LOGGING]
+# Format style used to check logging format string.
+logging-format-style=new
