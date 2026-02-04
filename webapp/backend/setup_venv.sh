@@ -3,7 +3,7 @@
 echo "--- Configuration de l'environnement virtuel ---"
 
 # 1. Se déplacer dans le répertoire du projet
-cd /home/tor/Downloads/ids2
+#cd /home/tor/Downloads/ids2
 
 # 2. Créer l'environnement virtuel nommé 'venv'
 # Assurez-vous d'avoir 'python3-venv' installé si nécessaire (sudo apt install python3-venv)

@@ -110,143 +110,133 @@
     "hash": "8c1d5fb5019d30286d081cfa3b056027",
     "data": {
       "role": "utility",
-      "description": "Downloads, compiles, and installs the pigpio library from source code, then sets up and starts the pigpiod daemon service.",
-      "purpose": "Provides GPIO control functionality for Raspberry Pi by installing pigpio library when package manager versions are incompatible (specifically for Debian Trixie compatibility)",
+      "description": "Downloads, compiles, and installs pigpio library from source code with systemd service setup for GPIO control on Raspberry Pi.",
+      "purpose": "Provides GPIO control functionality by building pigpio from source for Debian Trixie compatibility when package manager versions are unavailable",
       "execution_order": 7,
       "is_executable": true,
       "is_standalone": true,
       "calls": [
         {
-          "file": "apt-get",
-          "method": "subprocess",
-          "when": "startup",
-          "line": 9,
-          "critical": true
-        },
-        {
-          "file": "wget",
-          "method": "subprocess",
+          "file": "pigpio.zip",
+          "method": "exec",
           "when": "runtime",
-          "line": 19,
+          "line": 17,
           "critical": true
         },
         {
-          "file": "unzip",
-          "method": "subprocess",
-          "when": "runtime",
-          "line": 20,
-          "critical": true
-        },
-        {
-          "file": "make",
-          "method": "subprocess",
-          "when": "runtime",
-          "line": 29,
-          "critical": true
-        },
-        {
-          "file": "systemctl",
-          "method": "subprocess",
+          "file": "/etc/systemd/system/pigpiod.service",
+          "method": "exec",
           "when": "conditional",
-          "line": 37,
+          "line": 42,
           "critical": false
+        },
+        {
+          "file": "Makefile",
+          "method": "exec",
+          "when": "runtime",
+          "line": 28,
+          "critical": true
         }
       ],
       "called_by_likely": [
-        "main installation script",
+        "00-main-installer.sh",
         "setup.sh",
-        "dependency installer"
+        "install-dependencies.sh"
       ],
       "requires_before": [
-        "system update scripts",
-        "basic package installation"
+        "01-update-system.sh",
+        "package manager updates"
       ],
       "produces_after": [
-        "GPIO-dependent scripts",
-        "pigpio client applications"
+        "GPIO control scripts",
+        "pigpio-dependent applications",
+        "hardware interface scripts"
       ],
       "category": "install",
       "inputs": [
-        "PIGPIO_ARCHIVE_URL environment variable",
         "internet connection",
-        "root privileges",
-        "build tools availability"
+        "PIGPIO_ARCHIVE_URL environment variable",
+        "apt package manager",
+        "systemd (optional)",
+        "build tools"
       ],
       "outputs": [
         "pigpio library binaries",
-        "pigpiod daemon binary",
+        "pigpiod daemon",
         "systemd service file",
-        "/usr/local/lib pigpio libraries"
+        "GPIO control capability"
       ],
       "potential_bugs": [
         {
           "type": "missing_dependency",
-          "description": "No check if running on Raspberry Pi - pigpio is Pi-specific",
+          "description": "Script assumes apt-get is available but doesn't verify package manager type",
           "severity": "high",
-          "line": 1,
-          "suggestion": "Add check for Raspberry Pi hardware before installation",
+          "line": 8,
+          "suggestion": "Check if apt-get exists before using it",
           "file": "07-install-pigpio.sh"
         },
         {
           "type": "no_error_handling",
-          "description": "Network failures during wget are not handled gracefully",
+          "description": "Network download has no retry mechanism or timeout handling",
           "severity": "medium",
-          "line": 19,
-          "suggestion": "Add retry logic and better error messages for network failures",
+          "line": 17,
+          "suggestion": "Add wget timeout and retry options",
           "file": "07-install-pigpio.sh"
         },
         {
           "type": "race_condition",
-          "description": "systemctl commands run in parallel could conflict",
-          "severity": "low",
-          "line": 58,
-          "suggestion": "Remove parallel execution operators and run commands sequentially",
+          "description": "Multiple instances could create conflicting temp directories or systemd services",
+          "severity": "medium",
+          "line": 11,
+          "suggestion": "Add file locking mechanism",
           "file": "07-install-pigpio.sh"
         },
         {
           "type": "hardcoded_path",
           "description": "Hardcoded /etc/systemd/system path may not exist on all systems",
           "severity": "medium",
-          "line": 41,
-          "suggestion": "Check if systemd directory exists before creating service file",
+          "line": 42,
+          "suggestion": "Check if systemd directory exists before creating service",
           "file": "07-install-pigpio.sh"
         },
         {
           "type": "missing_dependency",
-          "description": "No verification that extracted source contains expected files beyond Makefile",
-          "severity": "medium",
-          "line": 22,
-          "suggestion": "Add more comprehensive source validation",
+          "description": "No verification that system supports GPIO hardware before installing",
+          "severity": "low",
+          "line": 1,
+          "suggestion": "Add hardware compatibility check",
           "file": "07-install-pigpio.sh"
         },
         {
           "type": "no_error_handling",
-          "description": "make install could fail due to permissions but continues silently",
-          "severity": "high",
-          "line": 31,
-          "suggestion": "Add explicit check for successful installation",
+          "description": "find command could fail silently if extraction creates unexpected structure",
+          "severity": "medium",
+          "line": 20,
+          "suggestion": "Add more robust directory detection with explicit error messages",
           "file": "07-install-pigpio.sh"
         },
         {
-          "type": "unreachable",
-          "description": "Service creation logic assumes systemd but doesn't validate service file creation success",
+          "type": "missing_env",
+          "description": "DEBIAN_FRONTEND export may not persist in all shell environments",
           "severity": "low",
-          "line": 54,
-          "suggestion": "Add validation that service file was written successfully",
+          "line": 4,
+          "suggestion": "Set DEBIAN_FRONTEND inline with apt commands",
           "file": "07-install-pigpio.sh"
         }
       ],
       "fsm_state": {
         "state_name": "INSTALLING_GPIO_LIBRARY",
         "preconditions": [
-          "root privileges available",
+          "system updated",
           "internet connectivity",
-          "apt package manager available"
+          "root privileges",
+          "build tools available"
         ],
         "postconditions": [
           "pigpio library installed",
-          "pigpiod service running",
-          "GPIO functionality available"
+          "pigpiod daemon available",
+          "GPIO control enabled",
+          "systemd service configured"
         ],
         "can_fail": true,
         "on_failure": "abort",
@@ -698,151 +688,154 @@
     }
   },
   "workflow_analyzer.py": {
-    "hash": "4ec436a810e6b0943f31fa9636ffba85",
+    "hash": "6af0f75d97fb4df620d931308bd724eb",
     "data": {
-      "role": "entry_point",
-      "description": "A comprehensive workflow analyzer that examines project files, detects bugs, generates finite state machines, and creates interactive HTML visualizations using AI analysis.",
-      "purpose": "To analyze complex codebases, identify execution workflows, detect potential issues, and provide visual insights into project structure and dependencies",
-      "execution_order": 1,
+      "role": "utility",
+      "description": "An advanced workflow analyzer that uses AI to analyze project files, detect bugs, generate finite state machines, and create interactive HTML reports. It combines static code analysis with resource monitoring and parallel processing.",
+      "purpose": "To provide comprehensive project analysis, bug detection, workflow visualization, and FSM generation for understanding complex codebases and their execution patterns",
+      "execution_order": 15,
       "is_executable": true,
       "is_standalone": true,
       "calls": [
         {
-          "file": "networkx",
-          "method": "import",
-          "when": "startup",
-          "line": 47,
-          "critical": true
-        },
-        {
           "file": "anthropic",
           "method": "import",
           "when": "startup",
-          "line": 48,
+          "line": 32,
+          "critical": true
+        },
+        {
+          "file": "networkx",
+          "method": "import",
+          "when": "startup",
+          "line": 31,
           "critical": true
         },
         {
           "file": "psutil",
           "method": "import",
-          "when": "startup",
-          "line": 15,
+          "when": "runtime",
+          "line": 21,
           "critical": true
         },
         {
           "file": "workflow_analysis_cache.json",
-          "method": "call",
-          "when": "runtime",
-          "line": 62,
+          "method": "source",
+          "when": "startup",
+          "line": 50,
           "critical": false
         },
         {
           "file": "workflow_analysis.html",
-          "method": "call",
+          "method": "exec",
           "when": "runtime",
-          "line": 63,
+          "line": 51,
           "critical": false
         }
       ],
       "called_by_likely": [
-        "manual execution",
-        "CI/CD pipelines",
+        "main.py",
+        "analyze.py",
+        "setup.py",
         "development scripts"
       ],
-      "requires_before": [],
+      "requires_before": [
+        "pip install networkx anthropic psutil"
+      ],
       "produces_after": [
         "workflow_analysis.html",
-        "workflow_analysis_cache.json"
+        "workflow_analysis_cache.json",
+        "analysis reports"
       ],
       "category": "util",
       "inputs": [
         "ANTHROPIC_API_KEY environment variable or hardcoded key",
-        "Source code files in /home/tor/Downloads/ids2",
-        "Project directory structure",
-        "Cache file for previous analysis"
+        "root_dir directory to analyze (/home/tor/Downloads/ids2)",
+        "Project files with extensions: .py, .sh, .yml, .yaml, .service, .bash",
+        "Special files: Dockerfile, Makefile, docker-compose.yml"
       ],
       "outputs": [
-        "workflow_analysis.html - Interactive visualization",
-        "workflow_analysis_cache.json - Analysis cache",
-        "Console output with progress and results",
-        "Finite state machine diagrams",
-        "Bug reports and recommendations"
+        "workflow_analysis.html - Interactive multi-tab HTML report",
+        "workflow_analysis_cache.json - Cached analysis results",
+        "Console output with colored logging",
+        "Browser window (auto-opened)"
       ],
       "potential_bugs": [
         {
           "type": "hardcoded_path",
           "description": "Hardcoded API key exposed in source code",
           "severity": "critical",
-          "line": 60,
-          "suggestion": "Move API key to environment variable or secure config file",
+          "line": 46,
+          "suggestion": "Move API key to environment variable or config file, never commit secrets to code",
           "file": "workflow_analyzer.py"
         },
         {
           "type": "hardcoded_path",
-          "description": "Hardcoded root directory path '/home/tor/Downloads/ids2' may not exist on other systems",
+          "description": "Hardcoded root directory path '/home/tor/Downloads/ids2' won't work on other systems",
           "severity": "high",
-          "line": 61,
-          "suggestion": "Make root_dir configurable via command line argument or environment variable",
+          "line": 48,
+          "suggestion": "Use os.getcwd() or accept path as command line argument",
           "file": "workflow_analyzer.py"
         },
         {
           "type": "missing_dependency",
-          "description": "Hard exit on missing imports without graceful degradation",
+          "description": "Missing error handling for failed imports - script exits immediately",
           "severity": "medium",
-          "line": 50,
-          "suggestion": "Provide fallback functionality or better error messages for missing dependencies",
-          "file": "workflow_analyzer.py"
-        },
-        {
-          "type": "no_error_handling",
-          "description": "Resource monitor thread operations lack comprehensive error handling",
-          "severity": "medium",
-          "line": 183,
-          "suggestion": "Add try-catch blocks around psutil operations and thread management",
+          "line": 33,
+          "suggestion": "Add graceful degradation or better error messages for missing dependencies",
           "file": "workflow_analyzer.py"
         },
         {
           "type": "race_condition",
-          "description": "Multiple threads accessing shared _stats dictionary could cause race conditions despite lock",
+          "description": "ThreadPoolExecutor with shared resource monitoring could cause race conditions",
           "severity": "medium",
-          "line": 174,
-          "suggestion": "Use thread-safe data structures or implement more granular locking",
+          "line": 21,
+          "suggestion": "Ensure proper thread synchronization for shared state access",
+          "file": "workflow_analyzer.py"
+        },
+        {
+          "type": "no_error_handling",
+          "description": "No validation of API key format or network connectivity before making API calls",
+          "severity": "high",
+          "line": 46,
+          "suggestion": "Add API key validation and network error handling",
           "file": "workflow_analyzer.py"
         },
         {
           "type": "missing_env",
-          "description": "No validation that API key is valid or that API service is accessible",
-          "severity": "high",
-          "line": 60,
-          "suggestion": "Add API key validation and connection testing at startup",
+          "description": "API key hardcoded instead of using environment variable",
+          "severity": "critical",
+          "line": 46,
+          "suggestion": "Use os.getenv('ANTHROPIC_API_KEY') with fallback or error",
           "file": "workflow_analyzer.py"
         },
         {
-          "type": "unreachable",
-          "description": "File content appears truncated, ResourceMonitor._loop method incomplete",
-          "severity": "high",
-          "line": 198,
-          "suggestion": "Complete the implementation of the resource monitoring loop",
+          "type": "resource_leak",
+          "description": "ThreadPoolExecutor and monitoring threads may not clean up properly on exit",
+          "severity": "medium",
+          "line": 150,
+          "suggestion": "Add proper cleanup in finally blocks or context managers",
           "file": "workflow_analyzer.py"
         }
       ],
       "fsm_state": {
         "state_name": "ANALYZING",
         "preconditions": [
-          "Required Python packages installed",
-          "Valid Anthropic API key available",
+          "Python 3.x installed",
+          "Required packages installed (networkx, anthropic, psutil)",
           "Target directory exists and is readable",
-          "Sufficient system resources available"
+          "Valid Anthropic API key available"
         ],
         "postconditions": [
-          "Analysis results cached to JSON",
-          "HTML report generated",
-          "Bug reports identified",
-          "FSM diagrams created",
-          "Resource monitoring completed"
+          "HTML analysis report generated",
+          "Cache file updated",
+          "Bug analysis completed",
+          "FSM visualizations created",
+          "Browser opened to results"
         ],
         "can_fail": true,
         "on_failure": "abort",
-        "timeout_seconds": 1800
+        "timeout_seconds": 300
       }
     }
   },
@@ -962,124 +955,121 @@
     }
   },
   "unified_executor.py": {
-    "hash": "cb097b54d57c6eba52b7852353ede705",
+    "hash": "d39b8a6017a7049d608f57effca6575c",
     "data": {
       "role": "entry_point",
-      "description": "Auto-generated unified execution orchestrator that runs all project scripts in optimal order with FSM state management and error handling.",
-      "purpose": "Provides centralized execution control for the entire project workflow with proper state tracking, retry logic, and failure handling",
+      "description": "A unified execution orchestrator that runs all project scripts in optimal order with FSM state management, error handling, and retry logic.",
+      "purpose": "Provides a single entry point to execute the entire project workflow with proper dependency ordering, timeout management, and failure handling",
       "execution_order": 1,
       "is_executable": true,
       "is_standalone": true,
       "calls": [
         {
+          "file": "dynamic",
+          "method": "subprocess",
+          "when": "runtime",
+          "line": 92,
+          "critical": true
+        },
+        {
           "file": "unified_execution.log",
           "method": "exec",
           "when": "startup",
-          "line": 24,
+          "line": 20,
           "critical": false
-        },
-        {
-          "file": "dynamic_scripts",
-          "method": "subprocess",
-          "when": "runtime",
-          "line": 80,
-          "critical": true
         }
       ],
       "called_by_likely": [
         "main.py",
-        "start.sh",
-        "deploy.py",
-        "workflow_analyzer.py"
+        "run.sh",
+        "start.py",
+        "deploy.py"
       ],
-      "requires_before": [
-        "workflow_analyzer.py"
-      ],
+      "requires_before": [],
       "produces_after": [
-        "all_project_scripts"
+        "all project scripts based on EXECUTION_STEPS configuration"
       ],
       "category": "core",
       "inputs": [
         "project_dir",
         "EXECUTION_STEPS configuration",
-        "PYTHONPATH environment",
-        "start_from parameter"
+        "environment variables",
+        "script files in project"
       ],
       "outputs": [
         "unified_execution.log",
-        "execution_log data",
-        "system state changes",
-        "process exit codes"
+        "execution state changes",
+        "orchestrated script results"
       ],
       "potential_bugs": [
         {
           "type": "missing_dependency",
           "description": "EXECUTION_STEPS list is empty - no scripts will be executed",
           "severity": "critical",
-          "line": 51,
-          "suggestion": "Populate EXECUTION_STEPS with actual project scripts or validate it's populated by workflow analyzer",
-          "file": "unified_executor.py"
-        },
-        {
-          "type": "race_condition",
-          "description": "No file locking when multiple instances might run simultaneously",
-          "severity": "high",
-          "line": 60,
-          "suggestion": "Add file locking or PID checking to prevent concurrent executions",
+          "line": 54,
+          "suggestion": "Populate EXECUTION_STEPS with actual project scripts",
           "file": "unified_executor.py"
         },
         {
           "type": "hardcoded_path",
-          "description": "Hardcoded log file path 'unified_execution.log' might conflict in different environments",
+          "description": "Hardcoded log filename 'unified_execution.log' without path validation",
           "severity": "medium",
-          "line": 24,
-          "suggestion": "Make log file path configurable or use temp directory",
+          "line": 21,
+          "suggestion": "Use configurable log path with validation",
           "file": "unified_executor.py"
         },
         {
-          "type": "no_error_handling",
-          "description": "Signal handling imported but never used - no graceful shutdown on SIGINT/SIGTERM",
-          "severity": "medium",
-          "line": 14,
-          "suggestion": "Implement signal handlers for graceful shutdown",
+          "type": "race_condition",
+          "description": "No file locking mechanism for concurrent executions",
+          "severity": "high",
+          "line": 65,
+          "suggestion": "Add file locking to prevent multiple simultaneous executions",
           "file": "unified_executor.py"
         },
         {
           "type": "unreachable",
-          "description": "Code after line 165 is cut off, potentially unreachable _print_summary method",
-          "severity": "medium",
-          "line": 165,
-          "suggestion": "Complete the implementation and ensure all methods are reachable",
-          "file": "unified_executor.py"
-        },
-        {
-          "type": "missing_env",
-          "description": "PYTHONPATH manipulation might fail if project_dir is invalid",
-          "severity": "medium",
-          "line": 93,
-          "suggestion": "Validate project_dir exists and is readable before setting PYTHONPATH",
+          "description": "Code after line 152 is cut off, method incomplete",
+          "severity": "critical",
+          "line": 152,
+          "suggestion": "Complete the run() method implementation",
           "file": "unified_executor.py"
         },
         {
           "type": "no_error_handling",
-          "description": "No validation that step.script is actually executable",
+          "description": "Missing signal handler cleanup despite importing signal",
           "severity": "medium",
-          "line": 67,
-          "suggestion": "Check file permissions and executable bit before attempting execution",
+          "line": 13,
+          "suggestion": "Add proper signal handlers for graceful shutdown",
+          "file": "unified_executor.py"
+        },
+        {
+          "type": "missing_dependency",
+          "description": "Assumes bash and python executables exist without checking",
+          "severity": "medium",
+          "line": 85,
+          "suggestion": "Add executable existence checks before subprocess calls",
+          "file": "unified_executor.py"
+        },
+        {
+          "type": "hardcoded_path",
+          "description": "PYTHONPATH hardcoded to project_dir might conflict with existing paths",
+          "severity": "low",
+          "line": 95,
+          "suggestion": "Append to existing PYTHONPATH instead of overriding",
           "file": "unified_executor.py"
         }
       ],
       "fsm_state": {
         "state_name": "ORCHESTRATING",
         "preconditions": [
-          "project_dir exists",
-          "EXECUTION_STEPS populated",
-          "no other unified executor running"
+          "project directory exists",
+          "EXECUTION_STEPS configured",
+          "required scripts exist"
         ],
         "postconditions": [
           "all configured scripts executed",
-          "execution log written",
-          "final state set to SUCCESS or ERROR"
+          "execution log created",
+          "final state reached"
         ],
         "can_fail": true,
         "on_failure": "abort",
@@ -3724,8 +3714,8 @@
     "hash": "2f027674eea10ea2c6e95e1db157c9f1",
     "data": {
       "role": "library",
-      "description": "Package initialization file that exposes the public API for the storage layer of an IDS dashboard, providing database session management and data models.",
-      "purpose": "Centralizes imports and defines the public interface for the storage layer, making database functionality easily accessible to other parts of the webapp",
+      "description": "Storage layer package initialization file that exposes database components, models, and schemas for the IDS dashboard. Acts as a public API interface for the storage subsystem.",
+      "purpose": "Centralizes and exposes the storage layer's core components (database connections, models, schemas) to other parts of the webapp, providing a clean import interface",
       "execution_order": 15,
       "is_executable": false,
       "is_standalone": false,
@@ -3734,30 +3724,30 @@
           "file": "webapp/db/storage/database.py",
           "method": "import",
           "when": "startup",
-          "line": 5,
+          "line": 4,
           "critical": true
         },
         {
           "file": "webapp/db/storage/models.py",
           "method": "import",
           "when": "startup",
-          "line": 6,
+          "line": 5,
           "critical": true
         },
         {
           "file": "webapp/db/storage/schemas.py",
           "method": "import",
           "when": "startup",
-          "line": 6,
+          "line": 5,
           "critical": true
         }
       ],
       "called_by_likely": [
         "webapp/main.py",
-        "webapp/app.py",
         "webapp/api/routes.py",
         "webapp/services/*.py",
-        "webapp/controllers/*.py"
+        "webapp/db/migration_scripts.py",
+        "webapp/tests/test_db.py"
       ],
       "requires_before": [
         "webapp/db/storage/database.py",
@@ -3765,9 +3755,9 @@
         "webapp/db/storage/schemas.py"
       ],
       "produces_after": [
-        "webapp/api/routes.py",
-        "webapp/services/ids_service.py",
-        "webapp/controllers/dashboard_controller.py"
+        "webapp/api/endpoints.py",
+        "webapp/services/data_service.py",
+        "webapp/tests/integration_tests.py"
       ],
       "category": "db",
       "inputs": [
@@ -3776,56 +3766,60 @@
         "webapp/db/storage/schemas.py module"
       ],
       "outputs": [
-        "Exposed database API (Base, SessionLocal, get_session, init_db)",
-        "Exposed models and schemas modules",
-        "Centralized storage layer interface"
+        "Exposed Base SQLAlchemy declarative base",
+        "Exposed SessionLocal database session factory",
+        "Exposed get_session dependency injection function",
+        "Exposed init_db database initialization function",
+        "Exposed models module for ORM classes",
+        "Exposed schemas module for Pydantic models"
       ],
       "potential_bugs": [
         {
           "type": "missing_dependency",
-          "description": "No error handling if database.py fails to import - could crash entire webapp startup",
-          "severity": "high",
-          "line": 5,
-          "suggestion": "Add try/except blocks around imports with graceful fallback or clear error messages",
-          "file": "__init__.py"
-        },
-        {
-          "type": "missing_dependency",
-          "description": "models and schemas imports could fail silently if files don't exist, breaking functionality later",
-          "severity": "medium",
-          "line": 6,
-          "suggestion": "Add explicit import validation or use importlib with error handling",
+          "description": "No error handling if database.py, models.py, or schemas.py files don't exist or have import errors",
+          "severity": "critical",
+          "line": 4,
+          "suggestion": "Wrap imports in try-catch blocks and provide meaningful error messages for missing dependencies",
           "file": "__init__.py"
         },
         {
           "type": "circular_call",
-          "description": "Potential circular import if models.py or schemas.py try to import from this __init__.py",
-          "severity": "medium",
-          "line": 6,
-          "suggestion": "Ensure models and schemas only import from database.py directly, not from package root",
+          "description": "Potential circular import if models.py imports from this __init__.py or if database.py depends on models that import this module",
+          "severity": "high",
+          "line": 5,
+          "suggestion": "Review import dependencies to ensure no circular references between database, models, and this init file",
           "file": "__init__.py"
         },
         {
           "type": "missing_dependency",
-          "description": "No validation that imported functions actually exist in database.py before exposing them",
-          "severity": "low",
-          "line": 5,
-          "suggestion": "Add hasattr checks or use __import__ with validation",
+          "description": "No validation that imported functions/classes actually exist in their respective modules",
+          "severity": "medium",
+          "line": 4,
+          "suggestion": "Add runtime checks or use explicit import statements to catch AttributeError early",
+          "file": "__init__.py"
+        },
+        {
+          "type": "unreachable",
+          "description": "If any of the imported modules fail to load, the __all__ list becomes misleading as some items won't be available",
+          "severity": "medium",
+          "line": 7,
+          "suggestion": "Dynamically build __all__ list based on successfully imported components",
           "file": "__init__.py"
         }
       ],
       "fsm_state": {
         "state_name": "CONFIGURING",
         "preconditions": [
-          "Python interpreter initialized",
-          "webapp/db/storage/database.py exists and is valid",
-          "webapp/db/storage/models.py exists",
-          "webapp/db/storage/schemas.py exists"
+          "Python interpreter is running",
+          "webapp/db/storage/ directory exists",
+          "database.py, models.py, schemas.py files exist in storage directory",
+          "Required database libraries (SQLAlchemy, etc.) are installed"
         ],
         "postconditions": [
-          "Storage layer API is exposed and available for import",
-          "Database session management functions accessible",
-          "Data models and schemas available to application"
+          "Storage layer components are available for import",
+          "Database session management is accessible",
+          "ORM models and schemas are exposed",
+          "Other modules can import storage functionality"
         ],
         "can_fail": true,
         "on_failure": "abort",
@@ -4803,6 +4797,514 @@
         "can_fail": true,
         "on_failure": "abort",
         "timeout_seconds": 10
+      }
+    }
+  },
+  "crud.py": {
+    "hash": "e4c15684e4472c675163f938c88abbf9",
+    "data": {
+      "role": "library",
+      "description": "Provides CRUD utility functions for database operations, specifically for dashboard configuration management. Contains helper functions for singleton pattern implementation and model updates.",
+      "purpose": "Abstracts common database operations like get-or-create singleton instances and updating model attributes from dictionaries, reducing code duplication across the web application.",
+      "execution_order": 40,
+      "is_executable": false,
+      "is_standalone": false,
+      "calls": [
+        {
+          "file": "webapp/db/storage/database.py",
+          "method": "import",
+          "when": "startup",
+          "line": 8,
+          "critical": true
+        },
+        {
+          "file": "sqlalchemy/orm/__init__.py",
+          "method": "import",
+          "when": "startup",
+          "line": 6,
+          "critical": true
+        }
+      ],
+      "called_by_likely": [
+        "webapp/api/dashboard.py",
+        "webapp/services/config.py",
+        "webapp/controllers/settings.py",
+        "webapp/models/dashboard.py"
+      ],
+      "requires_before": [
+        "webapp/db/storage/database.py",
+        "database connection setup",
+        "SQLAlchemy models definition"
+      ],
+      "produces_after": [
+        "dashboard configuration endpoints",
+        "settings management views",
+        "configuration API services"
+      ],
+      "category": "db",
+      "inputs": [
+        "SQLAlchemy Session objects",
+        "SQLAlchemy model classes",
+        "dictionary payloads for updates",
+        "database connection"
+      ],
+      "outputs": [
+        "model instances",
+        "database state changes",
+        "committed transactions"
+      ],
+      "potential_bugs": [
+        {
+          "type": "no_error_handling",
+          "description": "get_or_create_singleton has no error handling for database exceptions during commit/refresh operations",
+          "severity": "high",
+          "line": 15,
+          "suggestion": "Add try-catch block around session.commit() and session.refresh() calls",
+          "file": "crud.py"
+        },
+        {
+          "type": "no_error_handling",
+          "description": "update_model doesn't validate payload keys or handle attribute setting errors",
+          "severity": "medium",
+          "line": 23,
+          "suggestion": "Add validation for allowed attributes and try-catch for setattr operations",
+          "file": "crud.py"
+        },
+        {
+          "type": "race_condition",
+          "description": "get_or_create_singleton could create duplicate instances in concurrent environments between query and create",
+          "severity": "high",
+          "line": 13,
+          "suggestion": "Use database-level unique constraints and handle IntegrityError exceptions",
+          "file": "crud.py"
+        },
+        {
+          "type": "missing_dependency",
+          "description": "No explicit validation that the model parameter extends Base class at runtime",
+          "severity": "medium",
+          "line": 12,
+          "suggestion": "Add isinstance check to ensure model is subclass of Base",
+          "file": "crud.py"
+        },
+        {
+          "type": "no_error_handling",
+          "description": "Session is not closed or rolled back on errors, potential resource leak",
+          "severity": "medium",
+          "line": 15,
+          "suggestion": "Use context managers or explicit session cleanup in error cases",
+          "file": "crud.py"
+        }
+      ],
+      "fsm_state": {
+        "state_name": "DATABASE_OPERATIONS",
+        "preconditions": [
+          "database connection established",
+          "SQLAlchemy models defined",
+          "active database session"
+        ],
+        "postconditions": [
+          "model instances created or updated",
+          "database state synchronized",
+          "session committed"
+        ],
+        "can_fail": true,
+        "on_failure": "abort",
+        "timeout_seconds": 30
+      }
+    }
+  },
+  "schemas.py": {
+    "hash": "d11627615f5aa460120c7cc300a08112",
+    "data": {
+      "role": "library",
+      "description": "Defines Pydantic schemas for dashboard configuration, providing type validation and serialization for various system components. Contains schema classes for secrets, AWS, Raspberry Pi, Suricata, Vector, Tailscale, and FastAPI configurations.",
+      "purpose": "Provides type-safe configuration models with validation for the dashboard application, ensuring data integrity and proper structure for system configurations",
+      "execution_order": 10,
+      "is_executable": false,
+      "is_standalone": false,
+      "calls": [
+        {
+          "file": "pydantic",
+          "method": "import",
+          "when": "startup",
+          "line": 6,
+          "critical": true
+        },
+        {
+          "file": "__future__",
+          "method": "import",
+          "when": "startup",
+          "line": 4,
+          "critical": true
+        }
+      ],
+      "called_by_likely": [
+        "webapp/api/endpoints.py",
+        "webapp/config/settings.py",
+        "webapp/main.py",
+        "webapp/services/config_service.py"
+      ],
+      "requires_before": [
+        "pydantic package installation",
+        "python environment setup"
+      ],
+      "produces_after": [
+        "webapp/services/config_service.py",
+        "webapp/api/config_endpoints.py",
+        "webapp/models/config.py"
+      ],
+      "category": "db",
+      "inputs": [
+        "pydantic library",
+        "typing annotations",
+        "python runtime"
+      ],
+      "outputs": [
+        "configuration schema classes",
+        "type validation",
+        "serialization models"
+      ],
+      "potential_bugs": [
+        {
+          "type": "hardcoded_path",
+          "description": "Hardcoded paths like '/mnt/ram_logs/eve.json' and 'suricata/suricata.yaml' may not exist on all systems",
+          "severity": "medium",
+          "line": 40,
+          "suggestion": "Make paths configurable or validate existence at runtime",
+          "file": "schemas.py"
+        },
+        {
+          "type": "hardcoded_path",
+          "description": "Default network '192.168.178.0/24' is hardcoded and may not match actual network topology",
+          "severity": "low",
+          "line": 25,
+          "suggestion": "Auto-detect network or make configurable",
+          "file": "schemas.py"
+        },
+        {
+          "type": "missing_dependency",
+          "description": "No validation that AWS region 'eu-central-1' is valid or accessible",
+          "severity": "low",
+          "line": 20,
+          "suggestion": "Add AWS region validation",
+          "file": "schemas.py"
+        },
+        {
+          "type": "no_error_handling",
+          "description": "No validation for IP address format in pi_ip field",
+          "severity": "medium",
+          "line": 24,
+          "suggestion": "Add IP address format validation using pydantic validators",
+          "file": "schemas.py"
+        },
+        {
+          "type": "no_error_handling",
+          "description": "Port numbers not validated for valid range (1-65535)",
+          "severity": "medium",
+          "line": 80,
+          "suggestion": "Add port range validation using Field constraints",
+          "file": "schemas.py"
+        },
+        {
+          "type": "missing_env",
+          "description": "Secret fields are optional but no indication of which are required for functionality",
+          "severity": "medium",
+          "line": 10,
+          "suggestion": "Add documentation or validation for required secret combinations",
+          "file": "schemas.py"
+        },
+        {
+          "type": "hardcoded_path",
+          "description": "Log paths assume specific mount points that may not exist",
+          "severity": "high",
+          "line": 40,
+          "suggestion": "Add path existence validation or make paths environment-dependent",
+          "file": "schemas.py"
+        }
+      ],
+      "fsm_state": {
+        "state_name": "SCHEMA_DEFINED",
+        "preconditions": [
+          "pydantic installed",
+          "python imports available"
+        ],
+        "postconditions": [
+          "configuration schemas available for validation",
+          "type hints ready for runtime"
+        ],
+        "can_fail": true,
+        "on_failure": "abort",
+        "timeout_seconds": 5
+      }
+    }
+  },
+  "conftest.py": {
+    "hash": "88c7879e7938068ab5a2962f22b333fb",
+    "data": {
+      "role": "config",
+      "description": "Global pytest configuration file that centralizes reusable fixtures, hooks, and test configuration for the entire test suite. Sets up logging, temporary directories, event loops, and imports specialized fixtures from other modules.",
+      "purpose": "To provide a centralized testing infrastructure that automatically configures pytest behavior, manages test resources, and makes shared fixtures available to all test modules in the project",
+      "execution_order": 5,
+      "is_executable": false,
+      "is_standalone": false,
+      "calls": [
+        {
+          "file": "fixtures/alerte_fixtures.py",
+          "method": "import",
+          "when": "startup",
+          "line": 15,
+          "critical": true
+        },
+        {
+          "file": "fixtures/config_fixtures.py",
+          "method": "import",
+          "when": "startup",
+          "line": 19,
+          "critical": true
+        },
+        {
+          "file": "fixtures/container_fixtures.py",
+          "method": "import",
+          "when": "startup",
+          "line": 22,
+          "critical": true
+        },
+        {
+          "file": "fixtures/infra_fixtures.py",
+          "method": "import",
+          "when": "startup",
+          "line": 135,
+          "critical": true
+        }
+      ],
+      "called_by_likely": [
+        "pytest",
+        "all test files in the project",
+        "test runners",
+        "CI/CD pipelines"
+      ],
+      "requires_before": [
+        "fixtures/alerte_fixtures.py",
+        "fixtures/config_fixtures.py",
+        "fixtures/container_fixtures.py",
+        "fixtures/infra_fixtures.py"
+      ],
+      "produces_after": [
+        "all test files that depend on these fixtures"
+      ],
+      "category": "test",
+      "inputs": [
+        "pytest configuration",
+        "fixture modules",
+        "test data directory",
+        "temporary path factory"
+      ],
+      "outputs": [
+        "global test fixtures",
+        "pytest configuration",
+        "logging setup",
+        "temporary directories",
+        "async event loops"
+      ],
+      "potential_bugs": [
+        {
+          "type": "missing_dependency",
+          "description": "Import statements for fixture modules could fail if those files don't exist",
+          "severity": "critical",
+          "line": 15,
+          "suggestion": "Add try-catch blocks around imports or ensure fixture files exist",
+          "file": "conftest.py"
+        },
+        {
+          "type": "no_error_handling",
+          "description": "Event loop fixture doesn't handle loop creation failure properly",
+          "severity": "medium",
+          "line": 49,
+          "suggestion": "Add proper exception handling for asyncio loop operations",
+          "file": "conftest.py"
+        },
+        {
+          "type": "dead_code",
+          "description": "Empty pass statements in pytest hooks serve no purpose",
+          "severity": "low",
+          "line": 81,
+          "suggestion": "Either implement the hooks or remove them",
+          "file": "conftest.py"
+        },
+        {
+          "type": "race_condition",
+          "description": "Cleanup fixtures might conflict if tests run in parallel and share temp directories",
+          "severity": "medium",
+          "line": 73,
+          "suggestion": "Ensure temp directories are uniquely named per test",
+          "file": "conftest.py"
+        },
+        {
+          "type": "missing_dependency",
+          "description": "shutil import is done inside fixture function, could fail at runtime",
+          "severity": "medium",
+          "line": 74,
+          "suggestion": "Move shutil import to module level",
+          "file": "conftest.py"
+        },
+        {
+          "type": "unreachable",
+          "description": "Logic in pytest_collection_modifyitems for 'slow' marker check seems incorrect",
+          "severity": "medium",
+          "line": 93,
+          "suggestion": "Fix marker detection logic: item.get_closest_marker('slow') returns marker object, not string",
+          "file": "conftest.py"
+        }
+      ],
+      "fsm_state": {
+        "state_name": "CONFIGURING",
+        "preconditions": [
+          "pytest framework installed",
+          "fixture modules available",
+          "test environment initialized"
+        ],
+        "postconditions": [
+          "pytest configured with custom fixtures",
+          "logging configured",
+          "async support enabled",
+          "temp directories available"
+        ],
+        "can_fail": true,
+        "on_failure": "abort",
+        "timeout_seconds": 30
+      }
+    }
+  },
+  "ids-dashboard.service": {
+    "hash": "2f7cb9239d0f8e925969b31034e69d0f",
+    "data": {
+      "role": "service",
+      "description": "SystemD service unit file that defines how to run the IDS Dashboard as a system service. Configures service startup, restart behavior, and environment settings.",
+      "purpose": "Enables the IDS Dashboard application to run as a managed system service with automatic restart capabilities and proper service lifecycle management",
+      "execution_order": 95,
+      "is_executable": false,
+      "is_standalone": false,
+      "calls": [
+        {
+          "file": "/usr/bin/python3",
+          "method": "exec",
+          "when": "startup",
+          "line": 7,
+          "critical": true
+        },
+        {
+          "file": "ids.dashboard.main",
+          "method": "import",
+          "when": "startup",
+          "line": 7,
+          "critical": true
+        }
+      ],
+      "called_by_likely": [
+        "systemctl",
+        "service",
+        "deployment scripts",
+        "install scripts"
+      ],
+      "requires_before": [
+        "ids.dashboard.main module",
+        "python3 installation",
+        "network.target"
+      ],
+      "produces_after": [
+        "running IDS dashboard service",
+        "system service registration"
+      ],
+      "category": "deploy",
+      "inputs": [
+        "/opt/ids-dashboard directory",
+        "ids.dashboard.main Python module",
+        "/usr/bin/python3",
+        "network.target service",
+        "PYTHONUNBUFFERED environment variable"
+      ],
+      "outputs": [
+        "running system service",
+        "service logs",
+        "automatic service restart on failure",
+        "multi-user.target dependency"
+      ],
+      "potential_bugs": [
+        {
+          "type": "hardcoded_path",
+          "description": "WorkingDirectory hardcoded to /opt/ids-dashboard may not exist during deployment",
+          "severity": "high",
+          "line": 6,
+          "suggestion": "Ensure deployment scripts create this directory or make path configurable",
+          "file": "ids-dashboard.service"
+        },
+        {
+          "type": "missing_dependency",
+          "description": "No verification that ids.dashboard.main module exists before service start",
+          "severity": "high",
+          "line": 7,
+          "suggestion": "Add ExecStartPre to verify module availability",
+          "file": "ids-dashboard.service"
+        },
+        {
+          "type": "hardcoded_path",
+          "description": "Python path /usr/bin/python3 may not exist on all systems",
+          "severity": "medium",
+          "line": 7,
+          "suggestion": "Use /usr/bin/env python3 or verify python3 location during installation",
+          "file": "ids-dashboard.service"
+        },
+        {
+          "type": "missing_dependency",
+          "description": "No User/Group specified - service runs as root by default",
+          "severity": "medium",
+          "line": 5,
+          "suggestion": "Add User= and Group= directives for security",
+          "file": "ids-dashboard.service"
+        },
+        {
+          "type": "no_error_handling",
+          "description": "No ExecStartPre checks for prerequisites like directory existence or module availability",
+          "severity": "medium",
+          "line": 5,
+          "suggestion": "Add ExecStartPre=/bin/bash -c 'test -d /opt/ids-dashboard'",
+          "file": "ids-dashboard.service"
+        },
+        {
+          "type": "missing_dependency",
+          "description": "RestartSec of 5 seconds may be too aggressive for certain failure modes",
+          "severity": "low",
+          "line": 9,
+          "suggestion": "Consider exponential backoff or longer initial delay",
+          "file": "ids-dashboard.service"
+        },
+        {
+          "type": "missing_env",
+          "description": "Only PYTHONUNBUFFERED is set - application may need additional environment variables",
+          "severity": "low",
+          "line": 10,
+          "suggestion": "Review application requirements for additional environment variables",
+          "file": "ids-dashboard.service"
+        }
+      ],
+      "fsm_state": {
+        "state_name": "DEPLOYING",
+        "preconditions": [
+          "systemd is available",
+          "/opt/ids-dashboard directory exists",
+          "ids.dashboard.main module is installed",
+          "python3 is available",
+          "network.target is available"
+        ],
+        "postconditions": [
+          "IDS Dashboard service is registered",
+          "service can be started with systemctl",
+          "service will auto-restart on failure",
+          "service runs after network is available"
+        ],
+        "can_fail": true,
+        "on_failure": "abort",
+        "timeout_seconds": 30
       }
     }
   }

@@ -1,57 +1,28 @@
-# IDS Agent - Multi-stage Dockerfile
-# Stage 1: Builder
-FROM python:3.11-slim AS builder
-
+FROM python:3.12-slim-bookworm AS builder
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libffi-dev && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt ./
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libffi-dev \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:3.12-slim-bookworm AS runtime
+LABEL maintainer="SIXT R&D Team <dev@sixt.com>" \
+      description="IDS Agent for Raspberry Pi" \
+      version="2.0.0"
 
-# Copy requirements first for caching
-COPY requirements.txt pyproject.toml ./
-
-# Install dependencies system-wide
-RUN pip install --no-cache-dir --upgrade pip wheel setuptools \
-    && pip install --no-cache-dir -r requirements.txt
-
-# Stage 2: Runtime
-FROM python:3.11-slim AS runtime
-
-LABEL maintainer="SIXT R&D Team <dev@sixt.com>"
-LABEL description="IDS Agent for Raspberry Pi - Security monitoring with Suricata"
-LABEL version="2.0.0"
-
-# Create non-root user for security
-RUN groupadd -r ids && useradd -r -g ids ids
-
+RUN groupadd -r ids && useradd -r -g ids ids && mkdir -p /var/log/ids /var/lib/ids
 WORKDIR /app
-
-# Copy Python dependencies from builder
 COPY --from=builder /usr/local /usr/local
+COPY --chown=ids:ids src/ ./src/
+COPY --chown=ids:ids config.yaml ./
 
-# Copy application code
-COPY src/ ./src/
-COPY tests/ ./tests/
-COPY config.yaml pyproject.toml ./
-
-# Set Python environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src
 
-# Create directories for logs and data
-RUN mkdir -p /var/log/ids /var/lib/ids \
-    && chown -R ids:ids /app /var/log/ids /var/lib/ids
-
-# Switch to non-root user
+RUN chown -R ids:ids /var/log/ids /var/lib/ids
 USER ids
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import sys; sys.exit(0)"
 
-# Default command - run agent
 CMD ["python", "-m", "ids.app.supervisor", "/app/config.yaml"]

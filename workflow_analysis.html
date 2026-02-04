@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Workflow Analysis - ids2</title>
-    <meta http-equiv='refresh' content='5'>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -316,24 +316,24 @@
     </style>
 </head>
 <body>
-    <div class="live-indicator">🔄 Analyse en cours... (refresh auto)</div>
+    
     
     <div class="header">
         <h1>🔄 Workflow Analysis - ids2</h1>
         <div class="stats">
-            <div class="stat">Fichiers: <span>23</span></div>
+            <div class="stat">Fichiers: <span>28</span></div>
             <div class="stat ok">Workflows: <span>18</span></div>
-            <div class="stat bugs">Bugs: <span>152</span></div>
-            <div class="stat">Orphelins: <span>1</span></div>
+            <div class="stat bugs">Bugs: <span>187</span></div>
+            <div class="stat">Orphelins: <span>0</span></div>
         </div>
     </div>
     
     <div class="tabs">
         <div class="tab active" onclick="showTab('overview')">📊 Vue d'ensemble</div>
         <div class="tab" onclick="showTab('wf-0')">unified_executor.py</div><div class="tab" onclick="showTab('wf-1')">setup.sh</div><div class="tab" onclick="showTab('wf-2')">setup_venv.sh</div><div class="tab" onclick="showTab('wf-3')">00-check-apt-sources</div><div class="tab" onclick="showTab('wf-4')">01-update-upgrade.sh</div><div class="tab" onclick="showTab('wf-5')">05-install-docker.sh</div><div class="tab" onclick="showTab('wf-6')">06-install-suricata.</div><div class="tab" onclick="showTab('wf-7')">07-install-pigpio.sh</div><div class="tab" onclick="showTab('wf-8')">08-install-sqlite.sh</div><div class="tab" onclick="showTab('wf-9')">09-configure-network</div><div class="tab" onclick="showTab('wf-10')">workflow_analyzer.py</div><div class="tab" onclick="showTab('wf-11')">02-install-base.sh</div><div class="tab" onclick="showTab('wf-12')">10-install-backend-d</div><div class="tab" onclick="showTab('wf-13')">03-install-python.sh</div><div class="tab" onclick="showTab('wf-14')">04-install-node.sh</div><div class="tab" onclick="showTab('wf-15')">main.py</div><div class="tab" onclick="showTab('wf-16')">11-install-frontend-</div><div class="tab" onclick="showTab('wf-17')">deploy.py</div>
-        <div class="tab bugs" onclick="showTab('bugs')">🐛 Bugs (152)</div>
+        <div class="tab bugs" onclick="showTab('bugs')">🐛 Bugs (187)</div>
         <div class="tab fsm" onclick="showTab('fsm')">⚙️ FSM</div>
-        <div class="tab" onclick="showTab('orphans')">👻 Orphelins (1)</div>
+        <div class="tab" onclick="showTab('orphans')">👻 Orphelins (0)</div>
         <div class="tab unified" onclick="showTab('unified')">📜 Script Unifié</div>
     </div>
     
@@ -1971,6 +1971,50 @@
                 <p>Code after line 207 is cut off, potential incomplete implementation</p>
                 <div class="suggestion">💡 Complete the render_env_file function implementation</div>
             </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">models.py</span>
+                    (ligne 115)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>File appears to be truncated - DockerConfig class definition is incomplete</p>
+                <div class="suggestion">💡 Complete the DockerConfig class definition and ensure file is not corrupted</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">models.py</span>
+                    (ligne 18)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>Secrets stored in database without encryption - sensitive data like AWS keys, passwords stored as plain text</p>
+                <div class="suggestion">💡 Implement field-level encryption for sensitive data or use external secret management</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">__init__.py</span>
+                    (ligne 4)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No error handling if database.py, models.py, or schemas.py files don't exist or have import errors</p>
+                <div class="suggestion">💡 Wrap imports in try-catch blocks and provide meaningful error messages for missing dependencies</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">conftest.py</span>
+                    (ligne 15)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Import statements for fixture modules could fail if those files don't exist</p>
+                <div class="suggestion">💡 Add try-catch blocks around imports or ensure fixture files exist</div>
+            </div>
             </div>
         
         
@@ -2282,6 +2326,83 @@
                 <p><strong>Type:</strong> no_error_handling</p>
                 <p>_build_engine() doesn't handle database connection errors</p>
                 <div class="suggestion">💡 Add try/except around create_engine() calls</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">models.py</span>
+                    (ligne 45)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Multiple hardcoded default paths that may not exist on target systems (/mnt/ram_logs/eve.json, suricata/suricata.yaml, suricata/rules)</p>
+                <div class="suggestion">💡 Make paths configurable through environment variables or validate existence</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">crud.py</span>
+                    (ligne 15)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>get_or_create_singleton has no error handling for database exceptions during commit/refresh operations</p>
+                <div class="suggestion">💡 Add try-catch block around session.commit() and session.refresh() calls</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">crud.py</span>
+                    (ligne 13)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>get_or_create_singleton could create duplicate instances in concurrent environments between query and create</p>
+                <div class="suggestion">💡 Use database-level unique constraints and handle IntegrityError exceptions</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">schemas.py</span>
+                    (ligne 40)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Log paths assume specific mount points that may not exist</p>
+                <div class="suggestion">💡 Add path existence validation or make paths environment-dependent</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">__init__.py</span>
+                    (ligne 5)
+                </h4>
+                <p><strong>Type:</strong> circular_call</p>
+                <p>Potential circular import if models.py imports from this __init__.py or if database.py depends on models that import this module</p>
+                <div class="suggestion">💡 Review import dependencies to ensure no circular references between database, models, and this init file</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">ids-dashboard.service</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>WorkingDirectory hardcoded to /opt/ids-dashboard may not exist during deployment</p>
+                <div class="suggestion">💡 Ensure deployment scripts create this directory or make path configurable</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">ids-dashboard.service</span>
+                    (ligne 7)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No verification that ids.dashboard.main module exists before service start</p>
+                <div class="suggestion">💡 Add ExecStartPre to verify module availability</div>
             </div>
             </div>
         
@@ -3123,6 +3244,215 @@
                 <p>_resolve_db_url() function is defined but its logic seems flawed - it replaces a relative path with absolute but uses the same relative path</p>
                 <div class="suggestion">💡 Fix path resolution logic or remove if unused</div>
             </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">models.py</span>
+                    (ligne 35)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No validation constraints on critical fields like IP addresses, ports, or file paths</p>
+                <div class="suggestion">💡 Add CheckConstraints for IP address formats, port ranges, and path validation</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">models.py</span>
+                    (ligne 14)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Uses datetime.utcnow which is deprecated in Python 3.12+</p>
+                <div class="suggestion">💡 Use datetime.now(timezone.utc) instead of datetime.utcnow</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">models.py</span>
+                    (ligne 30)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No unique constraints on configuration tables - could lead to multiple conflicting configurations</p>
+                <div class="suggestion">💡 Add unique constraints or implement singleton pattern for configuration tables</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">crud.py</span>
+                    (ligne 23)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>update_model doesn't validate payload keys or handle attribute setting errors</p>
+                <div class="suggestion">💡 Add validation for allowed attributes and try-catch for setattr operations</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">crud.py</span>
+                    (ligne 12)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No explicit validation that the model parameter extends Base class at runtime</p>
+                <div class="suggestion">💡 Add isinstance check to ensure model is subclass of Base</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">crud.py</span>
+                    (ligne 15)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>Session is not closed or rolled back on errors, potential resource leak</p>
+                <div class="suggestion">💡 Use context managers or explicit session cleanup in error cases</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">schemas.py</span>
+                    (ligne 40)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded paths like '/mnt/ram_logs/eve.json' and 'suricata/suricata.yaml' may not exist on all systems</p>
+                <div class="suggestion">💡 Make paths configurable or validate existence at runtime</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">schemas.py</span>
+                    (ligne 24)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No validation for IP address format in pi_ip field</p>
+                <div class="suggestion">💡 Add IP address format validation using pydantic validators</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">schemas.py</span>
+                    (ligne 80)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>Port numbers not validated for valid range (1-65535)</p>
+                <div class="suggestion">💡 Add port range validation using Field constraints</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">schemas.py</span>
+                    (ligne 10)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>Secret fields are optional but no indication of which are required for functionality</p>
+                <div class="suggestion">💡 Add documentation or validation for required secret combinations</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">__init__.py</span>
+                    (ligne 4)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No validation that imported functions/classes actually exist in their respective modules</p>
+                <div class="suggestion">💡 Add runtime checks or use explicit import statements to catch AttributeError early</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">__init__.py</span>
+                    (ligne 7)
+                </h4>
+                <p><strong>Type:</strong> unreachable</p>
+                <p>If any of the imported modules fail to load, the __all__ list becomes misleading as some items won't be available</p>
+                <div class="suggestion">💡 Dynamically build __all__ list based on successfully imported components</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">conftest.py</span>
+                    (ligne 49)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>Event loop fixture doesn't handle loop creation failure properly</p>
+                <div class="suggestion">💡 Add proper exception handling for asyncio loop operations</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">conftest.py</span>
+                    (ligne 73)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Cleanup fixtures might conflict if tests run in parallel and share temp directories</p>
+                <div class="suggestion">💡 Ensure temp directories are uniquely named per test</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">conftest.py</span>
+                    (ligne 74)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>shutil import is done inside fixture function, could fail at runtime</p>
+                <div class="suggestion">💡 Move shutil import to module level</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">conftest.py</span>
+                    (ligne 93)
+                </h4>
+                <p><strong>Type:</strong> unreachable</p>
+                <p>Logic in pytest_collection_modifyitems for 'slow' marker check seems incorrect</p>
+                <div class="suggestion">💡 Fix marker detection logic: item.get_closest_marker('slow') returns marker object, not string</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">ids-dashboard.service</span>
+                    (ligne 7)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Python path /usr/bin/python3 may not exist on all systems</p>
+                <div class="suggestion">💡 Use /usr/bin/env python3 or verify python3 location during installation</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">ids-dashboard.service</span>
+                    (ligne 5)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No User/Group specified - service runs as root by default</p>
+                <div class="suggestion">💡 Add User= and Group= directives for security</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">ids-dashboard.service</span>
+                    (ligne 5)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No ExecStartPre checks for prerequisites like directory existence or module availability</p>
+                <div class="suggestion">💡 Add ExecStartPre=/bin/bash -c 'test -d /opt/ids-dashboard'</div>
+            </div>
             </div>
         
         
@@ -3479,6 +3809,61 @@
                 <p>Multiple processes could try to create data/ directory simultaneously</p>
                 <div class="suggestion">💡 Add file locking or check-and-create atomically</div>
             </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">schemas.py</span>
+                    (ligne 25)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Default network '192.168.178.0/24' is hardcoded and may not match actual network topology</p>
+                <div class="suggestion">💡 Auto-detect network or make configurable</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">schemas.py</span>
+                    (ligne 20)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No validation that AWS region 'eu-central-1' is valid or accessible</p>
+                <div class="suggestion">💡 Add AWS region validation</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">conftest.py</span>
+                    (ligne 81)
+                </h4>
+                <p><strong>Type:</strong> dead_code</p>
+                <p>Empty pass statements in pytest hooks serve no purpose</p>
+                <div class="suggestion">💡 Either implement the hooks or remove them</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">ids-dashboard.service</span>
+                    (ligne 9)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>RestartSec of 5 seconds may be too aggressive for certain failure modes</p>
+                <div class="suggestion">💡 Consider exponential backoff or longer initial delay</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">ids-dashboard.service</span>
+                    (ligne 10)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>Only PYTHONUNBUFFERED is set - application may need additional environment variables</p>
+                <div class="suggestion">💡 Review application requirements for additional environment variables</div>
+            </div>
             </div>
         
     </div>
@@ -3488,6 +3873,132 @@
         <h2 style="color: #a371f7; margin-bottom: 20px;">⚙️ Final State Machine</h2>
         <div class="fsm-container">
             
+            <div class="fsm-state initial">
+                <h4>🟢 START</h4>
+                <p><strong>Démarrage</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Point de départ du système</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ ORCHESTRATING</h4>
+                <p><strong>unified_executor.py</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">A unified execution orchestrator that runs all project scripts in optimal order </p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ DEPLOYING</h4>
+                <p><strong>setup.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Remote deployment script that packages and installs an IDS (Intrusion Detection </p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ INSTALLING_BASE_PACKAGES</h4>
+                <p><strong>02-install-base.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Installs base system packages required for the project using apt-get with non-in</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ INSTALLING</h4>
+                <p><strong>setup_venv.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Sets up a Python virtual environment named 'venv', installs dependencies from re</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ VALIDATING_APT_SOURCES</h4>
+                <p><strong>00-check-apt-sources.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Validates that APT package manager sources are properly configured by checking f</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ UPDATING_SYSTEM</h4>
+                <p><strong>01-update-upgrade.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Updates APT package lists and upgrades all installed Debian/Ubuntu packages to t</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ INSTALLING_DOCKER</h4>
+                <p><strong>05-install-docker.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Installs Docker Engine via apt with GPG key verification and adds user to docker</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ INSTALLING_SECURITY_TOOLS</h4>
+                <p><strong>06-install-suricata.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Installs Suricata network intrusion detection system and updates its rule sets o</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ INSTALLING_GPIO_LIBRARY</h4>
+                <p><strong>07-install-pigpio.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Downloads, compiles, and installs pigpio library from source code with systemd s</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ INSTALLING_SQLITE</h4>
+                <p><strong>08-install-sqlite.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Installs SQLite3 database engine using apt-get package manager on Debian/Ubuntu </p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ CONFIGURING_NETWORK</h4>
+                <p><strong>09-configure-network.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Configures network interface for traffic mirroring by disabling all interfaces e</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ ANALYZING</h4>
+                <p><strong>workflow_analyzer.py</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">An advanced workflow analyzer that uses AI to analyze project files, detect bugs</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ INSTALLING_BACKEND_DEPS</h4>
+                <p><strong>10-install-backend-deps.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Installs Python backend dependencies in a virtual environment by creating a venv</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ INSTALLING_PYTHON</h4>
+                <p><strong>03-install-python.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Installs Python 3 and related development packages on a Debian/Ubuntu system usi</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ INSTALLING_NODEJS_RUNTIME</h4>
+                <p><strong>04-install-node.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Installs Node.js and npm packages on a Debian-based system using apt-get package</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ DEPLOYING</h4>
+                <p><strong>main.py</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Main deployment script for a webapp backend that handles SSH deployment to Raspb</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ INSTALLING_FRONTEND_DEPS</h4>
+                <p><strong>11-install-frontend-deps.sh</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Installs npm dependencies for the frontend webapp by running 'npm install' in th</p>
+            </div>
+            
+            <div class="fsm-state normal">
+                <h4>⚪ DEPLOYING</h4>
+                <p><strong>deploy.py</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Deployment script that uploads code to a Raspberry Pi via SSH/SFTP and configure</p>
+            </div>
+            
+            <div class="fsm-state final">
+                <h4>🟣 END</h4>
+                <p><strong>Terminé</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Exécution complète</p>
+            </div>
+            
+            <div class="fsm-state error">
+                <h4>🔴 ERROR</h4>
+                <p><strong>Erreur</strong></p>
+                <p style="font-size: 0.75em; margin-top: 5px;">Une erreur critique est survenue</p>
+            </div>
+            
         </div>
     </div>
     
@@ -3496,7 +4007,7 @@
         <h2 style="color: #8b949e; margin-bottom: 20px;">👻 Scripts Orphelins</h2>
         <p style="margin-bottom: 15px; color: #8b949e;">Ces fichiers ne sont appelés par aucun workflow et n'appellent rien d'utile.</p>
         <div class="orphan-list">
-            <div class="orphan">__init__.py</div>
+            <p>Aucun orphelin détecté ✨</p>
         </div>
     </div>
     
@@ -3516,7 +4027,7 @@
 UNIFIED EXECUTION SCRIPT - Auto-generated by Workflow Analyzer
 =============================================================================
 Ce script exécute tous les scripts du projet dans l'ordre optimal.
-Généré le: 2026-02-04 20:26:39
+Généré le: 2026-02-04 20:27:18
 =============================================================================
 """
 
