@@ -1487,12 +1487,15 @@ if __name__ == "__main__":
             webbrowser.open(f'file://{html_path}')
         
         processed = 0
+        executor = None
         try:
             for chunk_idx, chunk in enumerate(chunks):
                 self.monitor.update(phase=f"Analyse {chunk_idx+1}/{len(chunks)}")
                 
                 # Use lock to ensure thread-safe access to shared resources
-                with ThreadPoolExecutor(max_workers=self.cfg.max_workers) as executor:
+                # Create executor with proper context manager for automatic cleanup
+                executor = ThreadPoolExecutor(max_workers=self.cfg.max_workers)
+                try:
                     futures = {executor.submit(self._process_file, f): f for f in chunk}
                     
                     for future in as_completed(futures):
@@ -1503,6 +1506,10 @@ if __name__ == "__main__":
                             future.result()
                         except Exception as e:
                             Log.err(f"Worker: {e}")
+                finally:
+                    # Ensure executor is properly shut down
+                    executor.shutdown(wait=True, cancel_futures=False)
+                    executor = None
                 
                 if (chunk_idx + 1) % self.cfg.gc_every_n_chunks == 0:
                     gc.collect()
@@ -1516,6 +1523,13 @@ if __name__ == "__main__":
             Log.warn("\n⚠️ Interruption...")
         
         finally:
+            # Ensure executor is shut down if still active
+            if executor is not None:
+                try:
+                    executor.shutdown(wait=False, cancel_futures=True)
+                except Exception as e:
+                    Log.warn(f"Error shutting down executor: {e}")
+            
             # Ensure proper cleanup of monitoring thread
             self.monitor.stop()
             # Wait a bit for thread to finish
@@ -1523,6 +1537,10 @@ if __name__ == "__main__":
             # Force cleanup if thread is still alive (check if attribute exists)
             if hasattr(self.monitor, '_thread') and self.monitor._thread and self.monitor._thread.is_alive():
                 Log.warn("Monitoring thread still alive, forcing cleanup...")
+                # Set stop event again and wait
+                self.monitor._stop.set()
+                self.monitor._thread.join(timeout=1.0)
+            
             self._save_cache()
             # Ensure all threads are cleaned up
             gc.collect()

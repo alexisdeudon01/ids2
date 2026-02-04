@@ -24,13 +24,42 @@ apt-get install -y ca-certificates make gcc unzip wget
 
 # 2) Download and extract (use a temp dir to avoid polluting /tmp)
 PIGPIO_ARCHIVE_URL="${PIGPIO_ARCHIVE_URL:-http://abyz.me.uk/rpi/pigpio/pigpio.zip}"
-workdir="$(mktemp -d -t pigpio-build-XXXXXX)"
+# Use process ID and timestamp to ensure unique temp directory
+workdir="$(mktemp -d -t pigpio-build-$$-$(date +%s)-XXXXXX)"
 cleanup() { rm -rf "$workdir" || true; }
 trap cleanup EXIT
 
 archive="${workdir}/pigpio.zip"
 echo "⬇️  Downloading pigpio source..."
-wget -qO "$archive" "$PIGPIO_ARCHIVE_URL"
+
+# Check network connectivity
+if ! ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1 && ! ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1; then
+    echo "⚠️  Warning: Network connectivity check failed. Download may fail."
+fi
+
+# Download with retry mechanism
+max_retries=3
+retry_count=0
+while [ $retry_count -lt $max_retries ]; do
+    if wget -qO "$archive" "$PIGPIO_ARCHIVE_URL" --timeout=30 --tries=1; then
+        break
+    else
+        retry_count=$((retry_count + 1))
+        if [ $retry_count -lt $max_retries ]; then
+            echo "⚠️  Download failed, retrying ($retry_count/$max_retries)..."
+            sleep 3
+        else
+            echo "❌ Failed to download pigpio source after $max_retries attempts"
+            exit 1
+        fi
+    fi
+done
+
+if [ ! -f "$archive" ]; then
+    echo "❌ Archive file not found after download"
+    exit 1
+fi
+
 unzip -q "$archive" -d "$workdir"
 
 src_dir="$(find "$workdir" -mindepth 1 -maxdepth 1 -type d -name 'pigpio-*' | head -n 1 || true)"
@@ -54,8 +83,11 @@ if ! command -v pigpiod >/dev/null 2>&1; then
 fi
 
 if command -v systemctl >/dev/null 2>&1; then
+  # Verify systemd directory exists
+  if [ ! -d "/etc/systemd/system" ]; then
+    echo "⚠️  Warning: /etc/systemd/system directory does not exist. Cannot create service file."
   # If no service exists (common when installing from source), create one.
-  if ! systemctl list-unit-files 2>/dev/null | awk '{print $1}' | grep -qx "pigpiod.service"; then
+  elif ! systemctl list-unit-files 2>/dev/null | awk '{print $1}' | grep -qx "pigpiod.service"; then
     pigpiod_path="$(command -v pigpiod)"
     cat > /etc/systemd/system/pigpiod.service <<EOF
 [Unit]

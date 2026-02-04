@@ -11,6 +11,20 @@ fi
 ORIGINAL_DEBIAN_FRONTEND="${DEBIAN_FRONTEND:-}"
 export DEBIAN_FRONTEND=noninteractive
 
+# Check for apt lock to avoid race conditions
+while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+    echo "⏳ Waiting for apt lock to be released..."
+    sleep 2
+done
+
+# Update package lists before installing
+apt-get update
+
+# Check network connectivity
+if ! ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1 && ! ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1; then
+    echo "⚠️  Warning: Network connectivity check failed. Installation may fail."
+fi
+
 apt-get install -y \
   ca-certificates \
   curl \
@@ -18,6 +32,13 @@ apt-get install -y \
   lsb-release \
   build-essential \
   jq
+
+# Verify installation
+for pkg in ca-certificates curl gnupg lsb-release build-essential jq; do
+    if ! dpkg -l | grep -q "^ii  $pkg "; then
+        echo "⚠️  Warning: Package $pkg may not have installed correctly"
+    fi
+done
 
 # Restore original DEBIAN_FRONTEND if it was set
 if [ -n "$ORIGINAL_DEBIAN_FRONTEND" ]; then

@@ -5,6 +5,7 @@ import argparse
 import getpass
 import json
 import logging
+import os
 import shlex
 import shutil
 import subprocess
@@ -60,7 +61,7 @@ class SSHConfig:
     port: int = 22
     key_path: Optional[Path] = None
     sudo_password: Optional[str] = None
-    remote_dir: Path = Path("/opt/ids2")
+    remote_dir: Path = Path(os.getenv("REMOTE_DIR", "/opt/ids-dashboard"))
     verbose: bool = False
 
 
@@ -111,13 +112,17 @@ def run_ssh(
     input_data: Optional[str] = None,
 ) -> subprocess.CompletedProcess:
     # Test SSH connectivity before executing command
+    # Skip BatchMode if key-based auth is not configured (password auth will be used)
+    ssh_test_opts = ["-o", "ConnectTimeout=5"]
+    if config.key_path and config.key_path.exists():
+        ssh_test_opts.extend(["-o", "BatchMode=yes"])
+    
     test_result = run_local(
         [
             "ssh",
             "-p",
             str(config.port),
-            "-o", "ConnectTimeout=5",
-            "-o", "BatchMode=yes",
+            *ssh_test_opts,
             *_ssh_options(config),
             f"{config.user}@{config.host}",
             "echo 'SSH connection test'",
@@ -126,7 +131,12 @@ def run_ssh(
         capture_output=True,
     )
     if test_result.returncode != 0 and check:
-        raise ConnectionError(f"Cannot connect to {config.user}@{config.host}:{config.port}. Check connectivity and credentials.")
+        error_msg = f"Cannot connect to {config.user}@{config.host}:{config.port}."
+        if test_result.stderr:
+            error_msg += f" Error: {test_result.stderr[:200]}"
+        else:
+            error_msg += " Check connectivity and credentials."
+        raise ConnectionError(error_msg)
     
     display_command = remote_command
     if sudo:

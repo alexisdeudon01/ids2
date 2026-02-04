@@ -1,13 +1,19 @@
 aws:
   region: "eu-central-1"
   domain_name: "suricata-prod"
-  opensearch_endpoint: "search-suricata-prod-wnz4vkegm72j5gefcf4vf27zne.eu-central-1.es.amazonaws.com"# Sera rempli après le provisioning du domaine
+  # OpenSearch endpoint can be overridden via OPENSEARCH_ENDPOINT environment variable
+  # Default value below will be used if environment variable is not set
+  opensearch_endpoint: "${OPENSEARCH_ENDPOINT:-search-suricata-prod-wnz4vkegm72j5gefcf4vf27zne.eu-central-1.es.amazonaws.com}"# Sera rempli après le provisioning du domaine
   # Note: access_key_id et secret_access_key sont dans secret.json
+  # Note: For production, set OPENSEARCH_ENDPOINT environment variable to override default
 
 raspberry_pi: # Renommé de 'sensor' pour être plus générique
-  home_net: "192.168.178.0/24"
-  pi_ip: "192.168.178.66"
-  network_interface: "eth0" # Renommé de 'eth_interface' pour être cohérent
+  # Network configuration can be overridden via environment variables:
+  # HOME_NET, PI_IP, NETWORK_INTERFACE
+  home_net: "${HOME_NET:-192.168.178.0/24}"
+  pi_ip: "${PI_IP:-192.168.178.66}"
+  network_interface: "${NETWORK_INTERFACE:-eth0}" # Renommé de 'eth_interface' pour être cohérent
+  # Note: For production, set environment variables to override defaults
   cpu_limit_percent: 70
   ram_limit_percent: 70
   swap_size_gb: 2
@@ -59,6 +65,11 @@ grafana:
 docker:
   compose_file: "docker/docker-compose.yml"
   required_services: ["vector", "redis", "prometheus", "grafana", "cadvisor", "node_exporter", "fastapi"] # Suricata retiré, FastAPI ajouté
+  # Service dependencies: redis should start before vector, prometheus before grafana
+  # Note: docker-compose.yml should use 'depends_on' to ensure proper startup order
+  service_dependencies:
+    vector: ["redis"]  # Vector depends on Redis
+    grafana: ["prometheus"]  # Grafana depends on Prometheus
   vector_cpu: 1.0
   vector_ram_mb: 1024
   redis_cpu: 0.5
@@ -84,6 +95,17 @@ fastapi: # Nouvelle section pour la configuration FastAPI
   host: "0.0.0.0"
 
 tailscale: # Configuration Tailscale pour la gestion du réseau
+  # REQUIRED FIELDS (must be set via environment variables or secret.json):
+  # - tailnet: Nom du tailnet (organization ou domaine)
+  # - api_key: Clé API Tailscale (dans secret.json de préférence)
+  # - auth_key: Clé d'authentification pré-générée (dans secret.json)
+  #
+  # OPTIONAL FIELDS (for OAuth-based authentication):
+  # - oauth_client_id: OAuth client ID (dans secret.json)
+  # - oauth_client_secret: OAuth client secret (dans secret.json)
+  #
+  # Note: If Tailscale is not configured, ensure these fields are set via environment
+  # variables or in secret.json. The application should validate required fields before use.
   # tailnet: "example.com"  # Nom du tailnet (organization ou domaine)
   # api_key: ""  # Clé API Tailscale (dans secret.json de préférence)
   # oauth_client_id: ""  # OAuth client ID (dans secret.json)

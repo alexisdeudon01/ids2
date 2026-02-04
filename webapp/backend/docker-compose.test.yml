@@ -82,8 +82,12 @@ services:
       sh -c "
         echo '=== Running flake8 ===' &&
         pip install flake8 --quiet &&
-        flake8 src/ --max-line-length=120 --ignore=E501,W503 || true &&
-        echo '=== Lint complete ==='
+        if flake8 src/ --max-line-length=120 --ignore=E501,W503; then
+          echo '=== Lint passed ==='
+        else
+          echo '=== Lint failed (check output above) ==='
+          exit 1
+        fi
       "
 
 networks:

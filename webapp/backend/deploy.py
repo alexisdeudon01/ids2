@@ -13,7 +13,7 @@ from typing import Any
 try:
     import paramiko
 except ImportError:
-    print("❌ paramiko is required. Install with: pip install paramiko")
+    print("❌ paramiko is required. Install with: pip install paramiko && pip install types-paramiko")
     sys.exit(1)
 
 
@@ -27,7 +27,11 @@ except ImportError:
 # instead of:
 #   /opt/ids-dashboard/backend/...
 REPO_ROOT = Path(__file__).resolve().parents[2]
+# Allow REMOTE_DIR to be overridden via environment variable
 REMOTE_DIR = os.getenv("REMOTE_DIR", "/opt/ids-dashboard")
+# Validate REMOTE_DIR is not empty
+if not REMOTE_DIR:
+    raise ValueError("REMOTE_DIR environment variable cannot be empty")
 SERVICE_NAME = "ids-dashboard.service"
 
 
@@ -161,11 +165,15 @@ def main() -> int:
         client = connect_ssh(host, user, ssh_password)
         print("✅ Connexion SSH réussie")
         
-        # Check if python3 exists on remote system
-        check_python = run_command(client, "command -v python3", sudo_password=None, check=False)
+        # Check if python3 exists on remote system (use full path check)
+        check_python = run_command(client, "command -v python3 || which python3 || /usr/bin/python3 --version", sudo_password=None, check=False)
         if check_python.returncode != 0:
             print("❌ python3 not found on remote system. Please install Python 3 first.")
             return 1
+        # Verify python3 version
+        python_version = run_command(client, "python3 --version", sudo_password=None, check=False)
+        if python_version.returncode == 0:
+            print(f"✅ Found: {python_version.stdout.strip()}")
         
         # Check remote directory permissions
         check_dir = run_command(client, f"test -w {REMOTE_DIR} || (mkdir -p {REMOTE_DIR} && chown -R {user}:{user} {REMOTE_DIR})", sudo_password=sudo_password, check=False)

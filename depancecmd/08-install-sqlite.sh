@@ -16,6 +16,20 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
+# Check for apt lock to avoid race conditions
+while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+    echo "⏳ Waiting for apt lock to be released..."
+    sleep 2
+done
+
+# Update package lists before installing
+$APT_GET_CMD update
+
+# Check network connectivity
+if ! ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1 && ! ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1; then
+    echo "⚠️  Warning: Network connectivity check failed. Installation may fail."
+fi
+
 $APT_GET_CMD install -y sqlite3
 
 # Verify installation

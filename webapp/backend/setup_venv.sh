@@ -19,8 +19,16 @@ fi
 # 1. Se déplacer dans le répertoire du projet (use script directory)
 cd "$(dirname "$0")" || exit 1
 
-# 2. Créer l'environnement virtuel nommé 'venv'
-python3 -m venv venv
+# 2. Créer l'environnement virtuel nommé 'venv' (check to avoid race conditions)
+if [ ! -d "venv" ]; then
+    python3 -m venv venv
+elif [ -d "venv" ] && [ ! -f "venv/bin/activate" ]; then
+    echo "⚠️  Warning: venv directory exists but appears incomplete. Recreating..."
+    rm -rf venv
+    python3 -m venv venv
+else
+    echo "Le répertoire 'venv' existe déjà."
+fi
 
 echo "Environnement 'venv' créé."
 

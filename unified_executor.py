@@ -22,9 +22,12 @@ from typing import Optional, List, Callable
 import logging
 
 # Configuration du logging
-def setup_logging(log_file: str = 'unified_execution.log'):
+def setup_logging(log_file: Optional[str] = None):
     """Setup logging with validated log file path."""
-    log_path = Path(log_file)
+    # Use environment variable or default to current directory
+    if log_file is None:
+        log_file = os.getenv("UNIFIED_EXECUTOR_LOG", "unified_execution.log")
+    log_path = Path(log_file).resolve()
     # Ensure log directory exists
     log_path.parent.mkdir(parents=True, exist_ok=True)
     # Validate we can write to log file
@@ -32,6 +35,10 @@ def setup_logging(log_file: str = 'unified_execution.log'):
         log_path.touch(exist_ok=True)
     except (IOError, PermissionError) as e:
         print(f"⚠️  Warning: Cannot write to log file {log_path}: {e}")
+        # Fallback to /tmp if current directory is not writable
+        log_path = Path("/tmp") / f"unified_execution_{os.getpid()}.log"
+        log_path.touch(exist_ok=True)
+        print(f"   Using fallback log file: {log_path}")
         log_file = '/tmp/unified_execution.log'
         log_path = Path(log_file)
     
@@ -305,13 +312,42 @@ class UnifiedExecutor:
         self.lock_file = self.project_dir / ".unified_executor.lock"
         self._shutdown_requested = False
         # Setup signal handlers for graceful shutdown
-        signal.signal(signal.SIGINT, self._signal_handler)
-        signal.signal(signal.SIGTERM, self._signal_handler)
+        # Register signal handlers with cleanup
+        def cleanup_handler(signum, frame):
+            """Signal handler with proper cleanup."""
+            self._signal_handler(signum, frame)
+            # Ensure cleanup happens even if handler is interrupted
+            try:
+                self.cleanup()
+            except Exception as e:
+                log.error(f"Error during cleanup: {e}")
+        
+        signal.signal(signal.SIGINT, cleanup_handler)
+        signal.signal(signal.SIGTERM, cleanup_handler)
     
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals gracefully."""
         self._shutdown_requested = True
         log.warning(f"Received signal {signum}, shutting down gracefully...")
+    
+    def cleanup(self):
+        """Cleanup resources and release lock."""
+        try:
+            if hasattr(self, 'lock_file') and self.lock_file.exists():
+                # Try to release lock if we have a file descriptor
+                try:
+                    if hasattr(self, '_lock_fd') and self._lock_fd:
+                        fcntl.flock(self._lock_fd.fileno(), fcntl.LOCK_UN)
+                        self._lock_fd.close()
+                except Exception:
+                    pass
+                # Remove lock file
+                try:
+                    self.lock_file.unlink(missing_ok=True)
+                except Exception:
+                    pass
+        except Exception as e:
+            log.warning(f"Error during cleanup: {e}")
         
     def _run_script(self, step: StepConfig) -> bool:
         """Exécute un script avec gestion des erreurs et timeout."""

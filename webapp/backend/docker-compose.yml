@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  ids-runtime:
+    image: ids2-runtime:latest
+    container_name: ids-agent
+    restart: unless-stopped
+    volumes:
+      - /var/log/ids:/var/log/ids
+      - /var/lib/ids:/var/lib/ids
+    networks:
+      - ids-network
+
+  ids-api:
+    image: ids2-api:latest
+    container_name: ids-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - ids-network
+    depends_on:
+      - ids-runtime
+
+networks:
+  ids-network:
+    driver: bridge

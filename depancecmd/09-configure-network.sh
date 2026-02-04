@@ -28,11 +28,23 @@ echo "⚠️  This may cause network disruption. Press Ctrl+C to cancel within 5
 sleep 5
 
 echo "Désactivation des interfaces autres que ${MIRROR_INTERFACE}..."
+failed_interfaces=()
 while IFS= read -r iface; do
   if [ "$iface" != "lo" ] && [ "$iface" != "$MIRROR_INTERFACE" ]; then
-    ip link set "$iface" down || true
+    if ! ip link set "$iface" down 2>/dev/null; then
+      failed_interfaces+=("$iface")
+      echo "⚠️  Warning: Failed to bring down interface $iface"
+    fi
   fi
 done < <(ip -o link show | awk -F': ' '{print $2}')
 
+if [ ${#failed_interfaces[@]} -gt 0 ]; then
+  echo "⚠️  Warning: Some interfaces could not be brought down: ${failed_interfaces[*]}"
+fi
+
 echo "Activation du mode promiscuous sur ${MIRROR_INTERFACE}..."
-ip link set "$MIRROR_INTERFACE" promisc on || true
+if ! ip link set "$MIRROR_INTERFACE" promisc on 2>/dev/null; then
+  echo "❌ Failed to enable promiscuous mode on $MIRROR_INTERFACE"
+  exit 1
+fi
+echo "✅ Promiscuous mode enabled on $MIRROR_INTERFACE"

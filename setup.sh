@@ -35,6 +35,17 @@ echo ""
 read -r -s -p "Mot de passe sudo: " SUDO_PASS
 echo ""
 
+# Security: Clear passwords from environment after use
+# Note: Passwords are still visible in process list during script execution
+# For better security, consider using SSH keys instead of passwords
+cleanup_passwords() {
+  PI_PASS=""
+  SUDO_PASS=""
+  export PI_PASS=""
+  export SUDO_PASS=""
+}
+trap cleanup_passwords EXIT
+
 REMOTE_DIR="$(prompt 'Répertoire d’installation sur le Pi' '/opt/ids-dashboard')"
 MIRROR_INTERFACE="$(prompt 'Interface miroir' 'eth0')"
 
@@ -129,6 +140,13 @@ done
 if [ ${#FAILED_SCRIPTS[@]} -gt 0 ]; then
   echo "⚠️  Warning: ${#FAILED_SCRIPTS[@]} script(s) failed: ${FAILED_SCRIPTS[*]}"
   echo "   Installation may be incomplete. Review errors above."
+  exit_code=1
+else
+  exit_code=0
 fi
 
+# Clear passwords before exit
+cleanup_passwords
+
 echo "✅ Installation terminée. Vérifiez les services et l'interface web."
+exit $exit_code

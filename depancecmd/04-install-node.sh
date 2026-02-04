@@ -15,6 +15,12 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
+# Verify apt-get is available
+if ! command -v apt-get >/dev/null 2>&1; then
+    echo "❌ apt-get not found. This script requires Debian/Ubuntu system."
+    exit 1
+fi
+
 # Check if packages are already installed
 if command -v nodejs >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
     echo "✅ nodejs and npm already installed"
@@ -22,6 +28,14 @@ if command -v nodejs >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
     npm --version
     exit 0
 fi
+
+# Check network connectivity
+if ! ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1 && ! ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1; then
+    echo "⚠️  Warning: Network connectivity check failed. Installation may fail."
+fi
+
+# Update package lists before installing
+apt-get update
 
 # Install with retry on network failures
 max_retries=3
