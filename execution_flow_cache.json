@@ -1,0 +1,3533 @@
+{
+  "h.py": {
+    "hash": "c2c2e24fcaeb7d28d7b1fd15266cb538",
+    "data": {
+      "role": "utility",
+      "description": "Generates an interactive HTML graph visualization of project dependencies using Plotly and NetworkX",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "main.py",
+        "analyze.py",
+        "visualization_runner.py"
+      ],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "07-install-pigpio.sh": {
+    "hash": "8c1d5fb5019d30286d081cfa3b056027",
+    "data": {
+      "role": "entry_point",
+      "description": "Installs pigpio GPIO library from source with Debian Trixie compatibility and sets up pigpiod service",
+      "execution_order": 7,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "main installation script",
+        "setup script",
+        "container build script"
+      ],
+      "requires_before": [
+        "package manager setup",
+        "basic system dependencies"
+      ],
+      "category": "setup"
+    }
+  },
+  "ko.py": {
+    "hash": "ad6c66ea1f44fe5aca32bb71ab0666a2",
+    "data": {
+      "role": "utility",
+      "description": "Dependency analyzer and orchestrator that discovers project files, analyzes their dependencies, creates execution order using topological sort, and executes scripts hierarchically",
+      "execution_order": 5,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "*.py",
+          "method": "subprocess",
+          "when": "runtime"
+        },
+        {
+          "file": "*.sh",
+          "method": "subprocess",
+          "when": "runtime"
+        },
+        {
+          "file": "*.bash",
+          "method": "subprocess",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [
+        "main.py",
+        "orchestrator.py",
+        "runner.py"
+      ],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "execution_flow.py": {
+    "hash": "b5d072463569f6fca38220cf2fb43efa",
+    "data": {
+      "role": "entry_point",
+      "description": "Intelligent execution flow analyzer that determines entry points, execution order, and dependencies between scripts using AI analysis",
+      "execution_order": 1,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "execution_flow_cache.json",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "execution_flow.html",
+          "method": "exec",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "project_manager.py": {
+    "hash": "222acf4b5cf9bc159f85543977dd606b",
+    "data": {
+      "role": "entry_point",
+      "description": "Main project manager script that provides unified functionality for dependency detection, system software verification, hierarchical script execution, and HTML dependency graph generation",
+      "execution_order": 1,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "run_all_dependencies.py",
+          "method": "subprocess",
+          "when": "conditional"
+        },
+        {
+          "file": "graph_interactif.py",
+          "method": "subprocess",
+          "when": "conditional"
+        },
+        {
+          "file": "generate_graph.py",
+          "method": "subprocess",
+          "when": "conditional"
+        },
+        {
+          "file": "generate_auto_graph.py",
+          "method": "subprocess",
+          "when": "conditional"
+        }
+      ],
+      "called_by": [],
+      "requires_before": [],
+      "category": "core"
+    }
+  },
+  "hh.py": {
+    "hash": "9abe49dd54434d1ec1f3a13b5a1955e6",
+    "data": {
+      "role": "utility",
+      "description": "Utility script that analyzes Python project files to identify external dependencies and generate requirements.txt suggestions",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "developer scripts",
+        "setup scripts",
+        "dependency management tools"
+      ],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "generate_graph.py": {
+    "hash": "0fd58a5da794956fe18d81820f9adba7",
+    "data": {
+      "role": "utility",
+      "description": "Analyzes project scripts and generates a dependency graph visualization using Graphviz, showing relationships between local script files",
+      "execution_order": 90,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "w.py": {
+    "hash": "f49867b24f2814620a4811260040d468",
+    "data": {
+      "role": "utility",
+      "description": "Dependency analyzer and orchestrator that discovers project files, analyzes their dependencies, resolves execution order using topological sort, and executes scripts hierarchically",
+      "execution_order": 95,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "*.py",
+          "method": "subprocess",
+          "when": "runtime"
+        },
+        {
+          "file": "*.sh",
+          "method": "subprocess",
+          "when": "runtime"
+        },
+        {
+          "file": "*.bash",
+          "method": "subprocess",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [
+        "orchestrator scripts",
+        "deployment scripts",
+        "main execution scripts"
+      ],
+      "requires_before": [
+        "all project scripts it will execute"
+      ],
+      "category": "util"
+    }
+  },
+  "aa.py": {
+    "hash": "6519a9bfc94baca6cd4309a46514ccd9",
+    "data": {
+      "role": "utility",
+      "description": "AI-powered dependency analyzer that uses Claude API to analyze project files and generate an interactive dependency graph visualization",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "as.py": {
+    "hash": "53b35a01f8f17f3b914f884c43aaf661",
+    "data": {
+      "role": "entry_point",
+      "description": "AI-powered dependency analyzer that scans project files, uses Claude API to analyze dependencies, and generates interactive network visualization",
+      "execution_order": 15,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "analysis_cache.json",
+          "method": "exec",
+          "when": "startup"
+        },
+        {
+          "file": "dependency_map_ai.html",
+          "method": "exec",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "i.py": {
+    "hash": "ad2bf0240af946d9332c0bb694ae61e6",
+    "data": {
+      "role": "utility",
+      "description": "Generates a dependency graph visualization of project scripts using graphviz, analyzing .py/.sh/.bash files and creating a PNG diagram showing script relationships",
+      "execution_order": 90,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "main.py",
+        "analyze.py",
+        "build.py"
+      ],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "setup.sh": {
+    "hash": "009bcf23d4adadae9afb40542220b7fd",
+    "data": {
+      "role": "entry_point",
+      "description": "Remote deployment script that transfers project files to a Raspberry Pi and executes installation scripts",
+      "execution_order": 1,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "depancecmd/*.sh",
+          "method": "exec",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "user command line",
+        "deployment workflows"
+      ],
+      "requires_before": [],
+      "category": "deploy"
+    }
+  },
+  "intelligent_analyzer.py": {
+    "hash": "b2b18996dac5c3f32df8e719b60c0b9e",
+    "data": {
+      "role": "entry_point",
+      "description": "Intelligent dependency analyzer script that creates visual dependency maps using AI analysis and network graphs",
+      "execution_order": 1,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "yu.py": {
+    "hash": "30f11977225d06f3f240facd376c2846",
+    "data": {
+      "role": "utility",
+      "description": "Dependency analysis tool that scans project files and generates interactive HTML visualization of file dependencies using NetworkX and Pyvis",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "main.py",
+        "analyze.py",
+        "dependency_scanner.py"
+      ],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "setup_venv.sh": {
+    "hash": "6244bd98190f2547fda4b0a3fd8394a0",
+    "data": {
+      "role": "entry_point",
+      "description": "Setup script that creates a Python virtual environment, installs dependencies from requirements.txt, and configures .gitignore",
+      "execution_order": 1,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "requirements.txt",
+          "method": "source",
+          "when": "conditional"
+        },
+        {
+          "file": ".gitignore",
+          "method": "exec",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "user manual execution",
+        "install scripts",
+        "deployment scripts"
+      ],
+      "requires_before": [],
+      "category": "setup"
+    }
+  },
+  "kl.py": {
+    "hash": "0a22f90c944d9c42e110e6d50f79eba3",
+    "data": {
+      "role": "utility",
+      "description": "Analyzes Python files in a project to identify external dependencies and generates requirements.txt suggestions",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "deployment scripts",
+        "setup scripts",
+        "maintenance scripts"
+      ],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "00-check-apt-sources.sh": {
+    "hash": "f4892b2fe1abf36e4cadc86afa3b7cbb",
+    "data": {
+      "role": "utility",
+      "description": "Validates APT package sources configuration by checking for existence of active sources.list files",
+      "execution_order": 5,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "package installation scripts",
+        "system setup scripts",
+        "deployment scripts"
+      ],
+      "requires_before": [],
+      "category": "setup"
+    }
+  },
+  "05-install-docker.sh": {
+    "hash": "dcc082a3ecf2721fe10f763eda13c563",
+    "data": {
+      "role": "entry_point",
+      "description": "Docker installation and setup script that installs Docker Engine, enables the service, and adds users to docker group",
+      "execution_order": 5,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "00-main-install.sh",
+        "bootstrap.sh",
+        "setup.sh"
+      ],
+      "requires_before": [
+        "01-system-update.sh",
+        "02-install-packages.sh"
+      ],
+      "category": "setup"
+    }
+  },
+  "09-configure-network.sh": {
+    "hash": "fa728ed1a934b924423b0952938eed1a",
+    "data": {
+      "role": "utility",
+      "description": "Network configuration script that disables non-essential interfaces and enables promiscuous mode on the mirror interface for packet capture",
+      "execution_order": 9,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "main deployment script",
+        "setup script",
+        "container initialization script"
+      ],
+      "requires_before": [
+        "network interface setup",
+        "system initialization"
+      ],
+      "category": "setup"
+    }
+  },
+  "01-update-upgrade.sh": {
+    "hash": "cdfa91ac97881e9288b29d423ab5cbf3",
+    "data": {
+      "role": "utility",
+      "description": "System update script that performs apt-get update and upgrade operations",
+      "execution_order": 1,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "setup scripts",
+        "install scripts",
+        "deployment scripts"
+      ],
+      "requires_before": [],
+      "category": "setup"
+    }
+  },
+  "06-install-suricata.sh": {
+    "hash": "8c69edb20347db2ddbc6e880f7a0e81e",
+    "data": {
+      "role": "entry_point",
+      "description": "Installs Suricata network intrusion detection system and updates its rules",
+      "execution_order": 6,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "main installation script",
+        "setup.sh",
+        "install-all.sh"
+      ],
+      "requires_before": [
+        "package manager updates",
+        "system preparation scripts"
+      ],
+      "category": "setup"
+    }
+  },
+  "10-install-backend-deps.sh": {
+    "hash": "05ab66f6937e7424ef918f416d6619d5",
+    "data": {
+      "role": "entry_point",
+      "description": "Installs Python backend dependencies in a virtual environment from requirements.txt",
+      "execution_order": 10,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "deployment script",
+        "setup script",
+        "build pipeline"
+      ],
+      "requires_before": [
+        "requirements.txt",
+        "backend source files"
+      ],
+      "category": "setup"
+    }
+  },
+  "08-install-sqlite.sh": {
+    "hash": "fa860257d917cd5cdd603979726959a7",
+    "data": {
+      "role": "entry_point",
+      "description": "Installs SQLite3 database package using apt-get package manager",
+      "execution_order": 8,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "main installation script",
+        "setup script",
+        "dependency manager"
+      ],
+      "requires_before": [
+        "package manager update scripts",
+        "system preparation scripts"
+      ],
+      "category": "setup"
+    }
+  },
+  "02-install-base.sh": {
+    "hash": "afcc9fdd6ee85c190b19998b622135db",
+    "data": {
+      "role": "entry_point",
+      "description": "Base system package installation script that installs essential system dependencies including ca-certificates, curl, gnupg, lsb-release, build-essential, and jq",
+      "execution_order": 2,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "01-setup.sh",
+        "install.sh",
+        "setup.sh",
+        "bootstrap.sh"
+      ],
+      "requires_before": [
+        "01-setup.sh"
+      ],
+      "category": "setup"
+    }
+  },
+  "03-install-python.sh": {
+    "hash": "09e3479ce2e4c58e886fdde285bb534e",
+    "data": {
+      "role": "entry_point",
+      "description": "Installs Python 3 and related packages (venv, pip, dev) on Debian/Ubuntu systems",
+      "execution_order": 3,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "main installation script",
+        "setup script",
+        "docker build script"
+      ],
+      "requires_before": [
+        "package manager update script",
+        "system initialization script"
+      ],
+      "category": "setup"
+    }
+  },
+  "04-install-node.sh": {
+    "hash": "d8744cb3510c63b6633ce59c6136335f",
+    "data": {
+      "role": "entry_point",
+      "description": "Installs Node.js and npm packages on Debian-based systems",
+      "execution_order": 4,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "main installation script",
+        "setup.sh",
+        "bootstrap script"
+      ],
+      "requires_before": [
+        "package manager update scripts",
+        "system preparation scripts"
+      ],
+      "category": "setup"
+    }
+  },
+  "11-install-frontend-deps.sh": {
+    "hash": "3291bea337a8bbcabc7f055c37b92c62",
+    "data": {
+      "role": "entry_point",
+      "description": "Installs frontend dependencies using npm for the webapp frontend directory",
+      "execution_order": 11,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "04-install-node.sh",
+          "method": "subprocess",
+          "when": "conditional"
+        }
+      ],
+      "called_by": [
+        "main installation script",
+        "setup orchestrator"
+      ],
+      "requires_before": [
+        "04-install-node.sh"
+      ],
+      "category": "setup"
+    }
+  },
+  "__init__.py": {
+    "hash": "102bc013b2b57f1d1ac78bb447fb4d74",
+    "data": {
+      "role": "library",
+      "description": "Compatibility layer that re-exports database storage modules from webapp/db/storage, providing backward compatibility for imports",
+      "execution_order": 15,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "webapp/db/storage/crud.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/db/storage/database.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/db/storage/models.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/db/storage/schemas.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "webapp/backend/src/ids/**/*.py"
+      ],
+      "requires_before": [
+        "webapp/db/storage/database.py",
+        "webapp/db/storage/models.py",
+        "webapp/db/storage/schemas.py",
+        "webapp/db/storage/crud.py"
+      ],
+      "category": "core"
+    }
+  },
+  "Dockerfile": {
+    "hash": "1dde34e7c2fa045141dc9f1c3c0238ed",
+    "data": {
+      "role": "service",
+      "description": "Docker container definition for FastAPI backend service, sets up Python environment and runs uvicorn server on port 8080",
+      "execution_order": 15,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "requirements.txt",
+          "method": "exec",
+          "when": "startup"
+        },
+        {
+          "file": "src/ids/app/api_status.py",
+          "method": "exec",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "docker-compose.yml",
+        "deploy scripts",
+        "container orchestration"
+      ],
+      "requires_before": [
+        "requirements.txt",
+        "src/ids/app/api_status.py"
+      ],
+      "category": "deploy"
+    }
+  },
+  "deploy.py": {
+    "hash": "12187beb0786e6493c4de89b323bbfae",
+    "data": {
+      "role": "entry_point",
+      "description": "Deployment script that uploads webapp code to remote server via SSH and configures systemd service",
+      "execution_order": 95,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "requirements.txt",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "deploy/ids-dashboard.service",
+          "method": "exec",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [],
+      "requires_before": [
+        "requirements.txt",
+        "deploy/ids-dashboard.service"
+      ],
+      "category": "deploy"
+    }
+  },
+  "docker-compose.test.yml": {
+    "hash": "9c6f7fd117f003767a2b0b3e70caee5e",
+    "data": {
+      "role": "config",
+      "description": "Docker Compose configuration for running various test suites including unit tests, integration tests, and linting in containerized environments",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "Dockerfile.test",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "config.yaml",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "src/",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "tests/",
+          "method": "exec",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [
+        "docker-compose",
+        "test runner scripts",
+        "CI/CD pipelines"
+      ],
+      "requires_before": [
+        "Dockerfile.test",
+        "config.yaml",
+        "src/",
+        "tests/"
+      ],
+      "category": "test"
+    }
+  },
+  "database.py": {
+    "hash": "f204dff87dfd21c6f5008cd2975863cf",
+    "data": {
+      "role": "library",
+      "description": "Database configuration and setup module that provides SQLAlchemy engine, session management, and database initialization for the IDS dashboard webapp",
+      "execution_order": 15,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "models.py",
+        "main.py",
+        "app.py",
+        "api.py",
+        "handlers.py"
+      ],
+      "requires_before": [],
+      "category": "core"
+    }
+  },
+  "config.yaml": {
+    "hash": "511d79fc88b42261c1d37d5878b47534",
+    "data": {
+      "role": "config",
+      "description": "Main configuration file for IDS webapp backend containing AWS, Raspberry Pi, Suricata, Vector, Redis, Prometheus, Docker, and Tailscale settings",
+      "execution_order": 1,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "main.py",
+        "app.py",
+        "backend/server.py",
+        "backend/config_loader.py",
+        "docker-compose.yml"
+      ],
+      "requires_before": [],
+      "category": "config"
+    }
+  },
+  "main.py": {
+    "hash": "3131febc707de991f613d665d4a9487f",
+    "data": {
+      "role": "entry_point",
+      "description": "Main launcher for IDS Dashboard that starts FastAPI backend server using uvicorn",
+      "execution_order": 5,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "app.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "run.sh",
+        "start_dashboard.py",
+        "docker-compose.yml",
+        "Dockerfile"
+      ],
+      "requires_before": [
+        "app.py",
+        "config files"
+      ],
+      "category": "core"
+    }
+  },
+  "schemas.py": {
+    "hash": "d11627615f5aa460120c7cc300a08112",
+    "data": {
+      "role": "library",
+      "description": "Pydantic schema definitions for dashboard configuration including AWS, Raspberry Pi, Suricata, Vector, Tailscale and FastAPI settings",
+      "execution_order": 10,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "webapp/db/storage/config.py",
+        "webapp/api/routes.py",
+        "webapp/main.py",
+        "webapp/services/config_service.py"
+      ],
+      "requires_before": [],
+      "category": "config"
+    }
+  },
+  "models.py": {
+    "hash": "a16d6cda064205a72c96a137f00e7d2f",
+    "data": {
+      "role": "library",
+      "description": "Pydantic data models for IDS platform components including alert events, system health, network stats, and pipeline status",
+      "execution_order": 5,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "services.py",
+        "api.py",
+        "handlers.py",
+        "monitoring.py",
+        "health_check.py"
+      ],
+      "requires_before": [],
+      "category": "core"
+    }
+  },
+  "crud.py": {
+    "hash": "e4c15684e4472c675163f938c88abbf9",
+    "data": {
+      "role": "library",
+      "description": "CRUD helper utilities for database operations, providing singleton retrieval and model update functions",
+      "execution_order": 15,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "webapp/db/storage/database.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "webapp/db/storage/repositories.py",
+        "webapp/services/dashboard_service.py",
+        "webapp/api/endpoints.py"
+      ],
+      "requires_before": [
+        "webapp/db/storage/database.py"
+      ],
+      "category": "core"
+    }
+  },
+  "conftest.py": {
+    "hash": "88c7879e7938068ab5a2962f22b333fb",
+    "data": {
+      "role": "config",
+      "description": "Pytest configuration file that centralizes test fixtures, hooks, and global test setup for the backend test suite",
+      "execution_order": 1,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "fixtures/alerte_fixtures.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "fixtures/config_fixtures.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "fixtures/container_fixtures.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "fixtures/infra_fixtures.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "pytest",
+        "test runner"
+      ],
+      "requires_before": [
+        "fixtures/alerte_fixtures.py",
+        "fixtures/config_fixtures.py",
+        "fixtures/container_fixtures.py",
+        "fixtures/infra_fixtures.py"
+      ],
+      "category": "test"
+    }
+  },
+  "tailscale.service": {
+    "hash": "e8493182e742f3e8ad79370409f4c9a4",
+    "data": {
+      "role": "service",
+      "description": "Systemd service configuration for running Tailscale VPN daemon as a background service",
+      "execution_order": 15,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [],
+      "requires_before": [],
+      "category": "deploy"
+    }
+  },
+  "install.sh": {
+    "hash": "4d50011df12725a6d7f8b48c578e4d15",
+    "data": {
+      "role": "entry_point",
+      "description": "Complete installation script for IDS2 SOC pipeline on Raspberry Pi - installs system dependencies, Docker, Python environment, and configures services",
+      "execution_order": 1,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "deploy/network_eth0_only.sh",
+          "method": "exec",
+          "when": "startup"
+        },
+        {
+          "file": "requirements.txt",
+          "method": "exec",
+          "when": "startup"
+        },
+        {
+          "file": "deploy/start_agent.sh",
+          "method": "exec",
+          "when": "conditional"
+        }
+      ],
+      "called_by": [
+        "manual execution by system administrator"
+      ],
+      "requires_before": [],
+      "category": "setup"
+    }
+  },
+  "ids-dashboard.service": {
+    "hash": "2f7cb9239d0f8e925969b31034e69d0f",
+    "data": {
+      "role": "service",
+      "description": "Systemd service configuration file for running the IDS Dashboard as a background service",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/dashboard/main.py",
+          "method": "exec",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "systemd",
+        "deployment scripts"
+      ],
+      "requires_before": [
+        "ids/dashboard/main.py",
+        "application dependencies"
+      ],
+      "category": "deploy"
+    }
+  },
+  "enable_agent.sh": {
+    "hash": "1b7541be93d1ff1dea410c56ab9fdc2f",
+    "data": {
+      "role": "entry_point",
+      "description": "Deployment script that installs and enables systemd services for IDS2 SOC agent and Suricata",
+      "execution_order": 15,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "install.sh",
+        "deploy.sh",
+        "setup.sh"
+      ],
+      "requires_before": [
+        "ids2-agent.service",
+        "suricata.service"
+      ],
+      "category": "deploy"
+    }
+  },
+  "reset.sh": {
+    "hash": "915be6ed7c2fc474d896509161c63c68",
+    "data": {
+      "role": "utility",
+      "description": "Reset script that stops services, removes Docker containers, cleans generated configuration files and logs for IDS2 SOC pipeline environment",
+      "execution_order": 95,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "docker/docker-compose.yml",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "config.yaml",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "vector/vector.toml",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "suricata/suricata.yaml",
+          "method": "exec",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [
+        "deploy.sh",
+        "install.sh"
+      ],
+      "requires_before": [],
+      "category": "deploy"
+    }
+  },
+  "deploy_pi.sh": {
+    "hash": "266593ecf9559ad6aeed44da894002ff",
+    "data": {
+      "role": "entry_point",
+      "description": "Deployment script that syncs project files to Raspberry Pi, installs dependencies, configures services, and starts the application stack",
+      "execution_order": 5,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "deploy/install.sh",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "config.yaml",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "secret.json",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "deploy/ids2-agent.service",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "deploy/suricata.service",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "docker/fastapi/Dockerfile",
+          "method": "exec",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [
+        "CI/CD pipelines",
+        "manual deployment scripts"
+      ],
+      "requires_before": [
+        "config.yaml",
+        "secret.json",
+        "deploy/install.sh",
+        "docker/fastapi/Dockerfile"
+      ],
+      "category": "deploy"
+    }
+  },
+  "push_to_pi.sh": {
+    "hash": "4c454225a61414f3b156d6671cc71414",
+    "data": {
+      "role": "entry_point",
+      "description": "Deployment script that builds Docker image, transfers it to Raspberry Pi, syncs files and activates services",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "config.yaml",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "secret.json",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "docker/.env",
+          "method": "exec",
+          "when": "runtime"
+        },
+        {
+          "file": "Dockerfile",
+          "method": "exec",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [
+        "deploy.sh",
+        "release.sh",
+        "ci_deploy.sh"
+      ],
+      "requires_before": [
+        "Dockerfile",
+        "config.yaml",
+        "secret.json"
+      ],
+      "category": "deploy"
+    }
+  },
+  "network_eth0_only.sh": {
+    "hash": "aa8f15ffc9131bb2ac3f1bcd16340f54",
+    "data": {
+      "role": "utility",
+      "description": "Network configuration script that disables all network interfaces except eth0 on Raspberry Pi, designed for SSH-safe network management",
+      "execution_order": 15,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "systemd service",
+        "deployment scripts",
+        "setup scripts"
+      ],
+      "requires_before": [
+        "network initialization",
+        "basic system setup"
+      ],
+      "category": "deploy"
+    }
+  },
+  "stop_agent.sh": {
+    "hash": "8fdbc11c9714b41227b7384ee6589a1d",
+    "data": {
+      "role": "utility",
+      "description": "Script to gracefully stop IDS2 SOC agent services including systemd services and Docker compose stack",
+      "execution_order": 95,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "deploy.sh",
+        "restart_agent.sh",
+        "maintenance.sh"
+      ],
+      "requires_before": [],
+      "category": "deploy"
+    }
+  },
+  "suricata.service": {
+    "hash": "d2449c73be3412a2b0b2fc9f77b3ef14",
+    "data": {
+      "role": "service",
+      "description": "Systemd service configuration for Suricata IDS daemon with resource limits and auto-restart",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "systemctl",
+        "deployment scripts"
+      ],
+      "requires_before": [
+        "network-eth0-only.service"
+      ],
+      "category": "deploy"
+    }
+  },
+  "start_agent.sh": {
+    "hash": "e2ea17ca1ed641ac8c7093ea0a73a7ba",
+    "data": {
+      "role": "entry_point",
+      "description": "Deployment script that starts Suricata service, loads AWS/OpenSearch configuration from config files, starts Docker Compose stack with environment variables, and launches the IDS2 agent service",
+      "execution_order": 15,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "secret.json",
+          "method": "exec",
+          "when": "startup"
+        },
+        {
+          "file": "config.yaml",
+          "method": "exec",
+          "when": "startup"
+        },
+        {
+          "file": "docker/docker-compose.yml",
+          "method": "exec",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "deployment scripts",
+        "orchestration scripts",
+        "manual execution"
+      ],
+      "requires_before": [
+        "secret.json",
+        "config.yaml",
+        "docker/docker-compose.yml"
+      ],
+      "category": "deploy"
+    }
+  },
+  "suricata.yaml": {
+    "hash": "ccdc6dbf8398859c285be62b32571a78",
+    "data": {
+      "role": "config",
+      "description": "Suricata IDS configuration file defining network monitoring settings, log outputs, and rule paths",
+      "execution_order": 5,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "suricata service startup",
+        "network monitoring service"
+      ],
+      "requires_before": [],
+      "category": "config"
+    }
+  },
+  "ids2-agent.service": {
+    "hash": "b92749575ea51f57e91f7caccc0ec828",
+    "data": {
+      "role": "service",
+      "description": "systemd service unit file that runs the IDS2 SOC Agent as a background daemon service on Raspberry Pi",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/app/supervisor.py",
+          "method": "exec",
+          "when": "startup"
+        },
+        {
+          "file": "config.yaml",
+          "method": "exec",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "systemctl",
+        "deployment scripts"
+      ],
+      "requires_before": [
+        "ids/app/supervisor.py",
+        "config.yaml"
+      ],
+      "category": "deploy"
+    }
+  },
+  "prometheus.yml": {
+    "hash": "2e9ebfa40a9fa4e8db21f27dba522e26",
+    "data": {
+      "role": "config",
+      "description": "Prometheus configuration file defining scrape targets and monitoring jobs for system metrics collection",
+      "execution_order": 25,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "docker-compose.yml",
+        "prometheus startup scripts"
+      ],
+      "requires_before": [
+        "docker-compose.yml",
+        "monitoring service definitions"
+      ],
+      "category": "monitor"
+    }
+  },
+  "docker-compose.yml": {
+    "hash": "5f80de6c482f506bcbecb7e4d67e94e1",
+    "data": {
+      "role": "entry_point",
+      "description": "Docker Compose orchestration file that defines and runs multi-container application with monitoring stack (Vector, Redis, Prometheus, Grafana, FastAPI, cAdvisor, Node Exporter)",
+      "execution_order": 15,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "vector.toml",
+          "method": "source",
+          "when": "startup"
+        },
+        {
+          "file": "prometheus.yml",
+          "method": "source",
+          "when": "startup"
+        },
+        {
+          "file": "docker/fastapi/Dockerfile",
+          "method": "exec",
+          "when": "startup"
+        },
+        {
+          "file": "ids/app/api_status.py",
+          "method": "exec",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "docker-compose",
+        "deployment scripts",
+        "infrastructure setup scripts"
+      ],
+      "requires_before": [
+        "vector.toml",
+        "prometheus.yml",
+        "docker/fastapi/Dockerfile",
+        "src/ids/app/api_status.py"
+      ],
+      "category": "deploy"
+    }
+  },
+  "manage_infrastructure.py": {
+    "hash": "23dba5e2f8f388def7aca6f3017fe9a7",
+    "data": {
+      "role": "utility",
+      "description": "Infrastructure management script for Tailscale, AWS OpenSearch, and Raspberry Pi operations with interactive CLI commands",
+      "execution_order": 70,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "ids/managers",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "deployment scripts",
+        "maintenance scripts",
+        "admin tools"
+      ],
+      "requires_before": [
+        "src/ids/managers"
+      ],
+      "category": "util"
+    }
+  },
+  "tailscale_verify.py": {
+    "hash": "055869bd473143991908eff6eb97929b",
+    "data": {
+      "role": "utility",
+      "description": "Tailscale network verification script that checks configuration and connectivity of Tailscale network using both API and CLI",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "deployment scripts",
+        "monitoring scripts",
+        "network setup scripts"
+      ],
+      "requires_before": [
+        "tailscale installation",
+        "network configuration"
+      ],
+      "category": "monitor"
+    }
+  },
+  "generate_uml.py": {
+    "hash": "25149b6bc94b21ef76ad53e12e58de66",
+    "data": {
+      "role": "utility",
+      "description": "Script that generates comprehensive UML diagrams for the IDS project using pyreverse, creating class and package diagrams for all modules",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "pyreverse",
+          "method": "subprocess",
+          "when": "runtime"
+        },
+        {
+          "file": "src/ids",
+          "method": "source",
+          "when": "runtime"
+        },
+        {
+          "file": "src/ids/domain",
+          "method": "source",
+          "when": "runtime"
+        },
+        {
+          "file": "src/ids/interfaces",
+          "method": "source",
+          "when": "runtime"
+        },
+        {
+          "file": "src/ids/composants",
+          "method": "source",
+          "when": "runtime"
+        },
+        {
+          "file": "src/ids/infrastructure",
+          "method": "source",
+          "when": "runtime"
+        },
+        {
+          "file": "src/ids/suricata",
+          "method": "source",
+          "when": "runtime"
+        },
+        {
+          "file": "src/ids/app",
+          "method": "source",
+          "when": "runtime"
+        },
+        {
+          "file": "src/ids/config",
+          "method": "source",
+          "when": "runtime"
+        },
+        {
+          "file": "src/ids/deploy",
+          "method": "source",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [
+        "documentation generation scripts",
+        "CI/CD pipelines",
+        "development workflow scripts"
+      ],
+      "requires_before": [
+        "src/ids module files must exist"
+      ],
+      "category": "util"
+    }
+  },
+  "tailscale_setup.sh": {
+    "hash": "d1ead07e8c557f621193cabc55aca395",
+    "data": {
+      "role": "utility",
+      "description": "Bash script for installing, configuring, and managing Tailscale VPN service with OS detection and interactive setup",
+      "execution_order": 15,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "deployment scripts",
+        "infrastructure setup scripts",
+        "main setup script"
+      ],
+      "requires_before": [],
+      "category": "setup"
+    }
+  },
+  "code_quality.py": {
+    "hash": "fddd91a7865651d7890c66219052b001",
+    "data": {
+      "role": "utility",
+      "description": "Comprehensive code quality analysis script that runs multiple tools (Radon, MyPy, Ruff, Pylint, etc.) and generates reports",
+      "execution_order": 80,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "build_scripts",
+        "ci_pipeline",
+        "pre_commit_hooks",
+        "quality_checks"
+      ],
+      "requires_before": [],
+      "category": "test"
+    }
+  },
+  "dashboard_setup.sh": {
+    "hash": "8e8859b62b5cd34d7ac51e341f25d7f3",
+    "data": {
+      "role": "entry_point",
+      "description": "Setup script for IDS Dashboard on Raspberry Pi - installs system dependencies, configures Suricata, creates Python virtual environment, sets up systemd service",
+      "execution_order": 1,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "requirements.txt",
+          "method": "exec",
+          "when": "startup"
+        },
+        {
+          "file": ".env",
+          "method": "exec",
+          "when": "startup"
+        },
+        {
+          "file": "ids/dashboard/main.py",
+          "method": "exec",
+          "when": "conditional"
+        }
+      ],
+      "called_by": [
+        "install.sh",
+        "setup.sh"
+      ],
+      "requires_before": [],
+      "category": "setup"
+    }
+  },
+  "generate_architecture.py": {
+    "hash": "836b234e56d9455dc229c8d20768e97d",
+    "data": {
+      "role": "utility",
+      "description": "Analyzes Python code structure and generates architecture documentation including JSON files and UML diagrams",
+      "execution_order": 95,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "subprocess",
+          "method": "subprocess",
+          "when": "runtime"
+        },
+        {
+          "file": "src/ids/*.py",
+          "method": "source",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [
+        "documentation scripts",
+        "CI/CD pipelines",
+        "developer tools"
+      ],
+      "requires_before": [
+        "src/ids module files"
+      ],
+      "category": "util"
+    }
+  },
+  "tailscale_monitor.py": {
+    "hash": "06c067f23df7084fa25f715c5a3ff466",
+    "data": {
+      "role": "entry_point",
+      "description": "CLI entry point for Tailscale network monitoring - provides interactive monitoring and device connectivity checking",
+      "execution_order": 1,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "src/ids/tailscale.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "src/ids/tailscale.py",
+          "method": "runtime",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [
+        "user",
+        "scripts/run_monitor.sh",
+        "scripts/check_network.sh"
+      ],
+      "requires_before": [
+        "src/ids/tailscale.py"
+      ],
+      "category": "monitor"
+    }
+  },
+  "analyze_architecture.py": {
+    "hash": "41f6f9ecf506d7fec9321a2e472dc8cb",
+    "data": {
+      "role": "utility",
+      "description": "Analyzes Python codebase architecture to identify issues like circular dependencies, high coupling, and complex classes for UML diagram improvements",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [],
+      "called_by": [
+        "build_scripts",
+        "quality_checks",
+        "ci_pipeline"
+      ],
+      "requires_before": [
+        "source_code_files"
+      ],
+      "category": "util"
+    }
+  },
+  "configure_infrastructure.py": {
+    "hash": "00368972915f1b88c9318b1d5990725c",
+    "data": {
+      "role": "entry_point",
+      "description": "Infrastructure configuration script that sets up Tailscale tailnet and OpenSearch/Elasticsearch domain for IDS system",
+      "execution_order": 5,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "ids/dashboard/setup.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "deployment scripts",
+        "install scripts",
+        "setup automation"
+      ],
+      "requires_before": [
+        "ids/dashboard/setup.py",
+        "config.yaml"
+      ],
+      "category": "setup"
+    }
+  },
+  "example_full_deployment.py": {
+    "hash": "b8c830b252a72a0864c08fc886435ae1",
+    "data": {
+      "role": "entry_point",
+      "description": "Full stack deployment orchestration script that coordinates Tailscale network setup, AWS OpenSearch domain creation, and Raspberry Pi deployment",
+      "execution_order": 5,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "ids/managers.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "ids/managers/opensearch_domain_manager.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "ids/managers/raspberry_pi_manager.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "ids/managers/tailscale_manager.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "deployment scripts",
+        "CI/CD pipelines",
+        "admin deployment tools"
+      ],
+      "requires_before": [
+        "ids/managers/__init__.py",
+        "ids/managers/tailscale_manager.py",
+        "ids/managers/opensearch_domain_manager.py",
+        "ids/managers/raspberry_pi_manager.py"
+      ],
+      "category": "deploy"
+    }
+  },
+  "improve_pipeline.py": {
+    "hash": "29510a37c8cd8d309b155f3671611159",
+    "data": {
+      "role": "entry_point",
+      "description": "Continuous architecture improvement pipeline that runs UML generation, architecture analysis, and tracks improvement metrics",
+      "execution_order": 90,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "scripts/generate_uml.py",
+          "method": "subprocess",
+          "when": "runtime"
+        },
+        {
+          "file": "scripts/analyze_architecture.py",
+          "method": "subprocess",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [
+        "CI/CD scripts",
+        "maintenance scripts",
+        "developer workflow scripts"
+      ],
+      "requires_before": [
+        "scripts/generate_uml.py",
+        "scripts/analyze_architecture.py"
+      ],
+      "category": "monitor"
+    }
+  },
+  "test_deploy_pi.py": {
+    "hash": "fb6aa4180b23d80ff2a77ad165550e32",
+    "data": {
+      "role": "test",
+      "description": "Integration tests for deployment to Raspberry Pi, testing SSH connectivity, Docker operations, file synchronization, and service deployment",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "pytest",
+        "test runners",
+        "CI/CD pipelines"
+      ],
+      "requires_before": [
+        "Dockerfile",
+        "config.yaml",
+        "secret.json.example",
+        "requirements.txt",
+        "docker-compose files",
+        "systemd service files"
+      ],
+      "category": "test"
+    }
+  },
+  "test_state_machine.py": {
+    "hash": "a7631fd210c5f4e81679377bafd69d98",
+    "data": {
+      "role": "test",
+      "description": "Integration test file for state machine transitions and agent states",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "pytest",
+        "test runner scripts"
+      ],
+      "requires_before": [
+        "state machine implementation files",
+        "configuration files"
+      ],
+      "category": "test"
+    }
+  },
+  "test_aws_connectivity.py": {
+    "hash": "c50368573e9ed13da9a325526bd830eb",
+    "data": {
+      "role": "test",
+      "description": "Integration tests for AWS connectivity, testing OpenSearch operations, AWS configuration validation, and SigV4 authentication with mocks",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "pytest",
+        "test runner scripts",
+        "CI/CD pipeline"
+      ],
+      "requires_before": [
+        "conftest.py",
+        "AWS configuration files",
+        "mock fixtures setup"
+      ],
+      "category": "test"
+    }
+  },
+  "infra_fixtures.py": {
+    "hash": "c717ca09ada610cb870fabb4a447272c",
+    "data": {
+      "role": "test",
+      "description": "Test fixtures for infrastructure components providing mock AWS boto3 sessions, OpenSearch clients, and configuration data for testing AWS services and config validation",
+      "execution_order": 15,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "test_aws_integration.py",
+        "test_config_validator.py",
+        "test_infrastructure.py"
+      ],
+      "requires_before": [],
+      "category": "test"
+    }
+  },
+  "config_fixtures.py": {
+    "hash": "9d684483a2a3e4637c681a357e1d0849",
+    "data": {
+      "role": "test",
+      "description": "Pytest fixtures for configuration testing - provides reusable test configuration objects and managers",
+      "execution_order": 10,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "src/ids/config/loader.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "src/ids/domain.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "test files that need configuration fixtures"
+      ],
+      "requires_before": [
+        "src/ids/config/loader.py",
+        "src/ids/domain.py"
+      ],
+      "category": "test"
+    }
+  },
+  "container_fixtures.py": {
+    "hash": "8d758c056786001a45744329702031af",
+    "data": {
+      "role": "test",
+      "description": "Test fixtures for dependency injection container setup and configuration",
+      "execution_order": 15,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/app/container.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "ids/config/loader.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "ids/domain.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "test_*.py files",
+        "conftest.py",
+        "other test fixture files"
+      ],
+      "requires_before": [
+        "ids/app/container.py",
+        "ids/config/loader.py",
+        "ids/domain.py",
+        "config fixtures providing config_dict_test"
+      ],
+      "category": "test"
+    }
+  },
+  "alerte_fixtures.py": {
+    "hash": "b110169befc81fcf81c64926554e5967",
+    "data": {
+      "role": "test",
+      "description": "Test fixtures file providing pytest fixtures for AlerteIDS domain objects with various configurations for testing purposes",
+      "execution_order": 20,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/domain.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "test files that use AlerteIDS fixtures"
+      ],
+      "requires_before": [
+        "ids/domain.py"
+      ],
+      "category": "test"
+    }
+  },
+  "test_config_loader.py": {
+    "hash": "14bb0351a04baa21b44af4b550121d7f",
+    "data": {
+      "role": "test",
+      "description": "Unit tests for the ConfigManager class, testing configuration loading, secret merging, and error handling scenarios",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/config/loader.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "ids/domain/exceptions.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "pytest",
+        "test runners",
+        "CI/CD pipelines"
+      ],
+      "requires_before": [
+        "ids/config/loader.py",
+        "ids/domain/exceptions.py"
+      ],
+      "category": "test"
+    }
+  },
+  "test_generate_architecture.py": {
+    "hash": "1e270fa30fb16188cc113ed3e57bb0cb",
+    "data": {
+      "role": "test",
+      "description": "Unit tests for the architecture generation script, validates script execution, JSON structure, and UML diagram generation",
+      "execution_order": 95,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "scripts/generate_architecture.py",
+          "method": "subprocess",
+          "when": "runtime"
+        }
+      ],
+      "called_by": [
+        "pytest",
+        "test runners",
+        "CI/CD pipelines"
+      ],
+      "requires_before": [
+        "scripts/generate_architecture.py"
+      ],
+      "category": "test"
+    }
+  },
+  "test_aws_opensearch_manager.py": {
+    "hash": "bdc72373b24e37b33a00db31cd4f1e8d",
+    "data": {
+      "role": "test",
+      "description": "Unit tests for AWSOpenSearchManager class, testing domain creation and connection verification functionality",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/infrastructure/aws_manager.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "pytest",
+        "test_runner.py",
+        "run_tests.py"
+      ],
+      "requires_before": [
+        "ids/infrastructure/aws_manager.py"
+      ],
+      "category": "test"
+    }
+  },
+  "test_tailscale_manager.py": {
+    "hash": "a5f52aa552919f169a37f688d5306066",
+    "data": {
+      "role": "test",
+      "description": "Unit tests for TailscaleManager component, testing dataclasses like TailscaleNode, TailscaleAuthKey, deployment configurations, and the TailscaleManager functionality",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/composants/tailscale_manager.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "ids/domain/tailscale.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "pytest",
+        "test runners",
+        "CI/CD scripts"
+      ],
+      "requires_before": [
+        "ids/composants/tailscale_manager.py",
+        "ids/domain/tailscale.py"
+      ],
+      "category": "test"
+    }
+  },
+  "test_opensearch_client.py": {
+    "hash": "60a5079c5e7faff95db2d745010c81fa",
+    "data": {
+      "role": "test",
+      "description": "Unit tests for OpenSearch client, testing AWS SigV4 authentication setup and ping functionality",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "ids/infrastructure/opensearch_client.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "pytest",
+        "test runner scripts",
+        "ci/cd pipelines"
+      ],
+      "requires_before": [
+        "ids/infrastructure/opensearch_client.py"
+      ],
+      "category": "test"
+    }
+  },
+  "test_config_validator.py": {
+    "hash": "3a47affcd5d0bb83680cd017ed779470",
+    "data": {
+      "role": "test",
+      "description": "Unit tests for configuration validation functionality, testing various config sections, thresholds, and validation rules",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "test runner (pytest)",
+        "CI/CD pipeline"
+      ],
+      "requires_before": [
+        "config_validator.py",
+        "conftest.py"
+      ],
+      "category": "test"
+    }
+  },
+  "test_pi_uploader.py": {
+    "hash": "218c3e201969527955627cfeefb120fa",
+    "data": {
+      "role": "test",
+      "description": "Unit tests for Raspberry Pi deployment helper module, testing configuration loading, environment file rendering, and deployment command execution",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "src/ids/deploy/pi_uploader.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "pytest",
+        "test runners",
+        "CI/CD pipelines"
+      ],
+      "requires_before": [
+        "src/ids/deploy/pi_uploader.py"
+      ],
+      "category": "test"
+    }
+  },
+  "test_deploy_helper.py": {
+    "hash": "e76d789a2124f1c070c7a83774e0e5ba",
+    "data": {
+      "role": "test",
+      "description": "Unit tests for deployment helper functionality, testing the deployment flow and command execution",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "ids/app/deploy_helper.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "test runners (pytest)",
+        "CI/CD pipelines"
+      ],
+      "requires_before": [
+        "ids/app/deploy_helper.py"
+      ],
+      "category": "test"
+    }
+  },
+  "test_domain.py": {
+    "hash": "e1210fa5925be934c3b762651e7c73c7",
+    "data": {
+      "role": "test",
+      "description": "Unit tests for domain models, specifically testing AlerteIDS dataclass and related enums",
+      "execution_order": 80,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/domain/alerte.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "pytest",
+        "test runners",
+        "CI/CD pipelines"
+      ],
+      "requires_before": [
+        "ids/domain/alerte.py"
+      ],
+      "category": "test"
+    }
+  },
+  "test_deploy_uploader.py": {
+    "hash": "7b64ea315a4556fc2790d2f74de279ee",
+    "data": {
+      "role": "test",
+      "description": "Unit tests for the deployment uploader module, testing SSH command building, config loading, and Pi deployment workflow",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/deploy/pi_uploader.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "pytest",
+        "test runners",
+        "CI/CD pipelines"
+      ],
+      "requires_before": [
+        "ids/deploy/pi_uploader.py"
+      ],
+      "category": "test"
+    }
+  },
+  "loader.py": {
+    "hash": "04b19631b6bd5886ed8caf260d831ccf",
+    "data": {
+      "role": "library",
+      "description": "Configuration loader that loads and validates YAML config files and merges JSON secrets, implements configuration management interface",
+      "execution_order": 15,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "domain/exceptions.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "main.py",
+        "app.py",
+        "service initialization scripts",
+        "config factory modules"
+      ],
+      "requires_before": [
+        "domain/exceptions.py"
+      ],
+      "category": "config"
+    }
+  },
+  "logger.py": {
+    "hash": "a01d5247ba1c85f0b372a7d96cecc15d",
+    "data": {
+      "role": "library",
+      "description": "Logging utility module providing standard logging implementation and configuration for the IDS agent",
+      "execution_order": 5,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "../interfaces",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "main.py",
+        "agent.py",
+        "ids_service.py",
+        "detector.py"
+      ],
+      "requires_before": [
+        "../interfaces"
+      ],
+      "category": "util"
+    }
+  },
+  "alert_store.py": {
+    "hash": "9798506e396122c1cf89d8618c44f777",
+    "data": {
+      "role": "library",
+      "description": "In-memory alert storage implementation providing persistence for IDS alerts using dictionary-based storage",
+      "execution_order": 15,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "../app/decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "../interfaces.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "../domain.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "ids service modules",
+        "alert processing services",
+        "test files"
+      ],
+      "requires_before": [
+        "../interfaces.py",
+        "../domain.py",
+        "../app/decorateurs.py"
+      ],
+      "category": "core"
+    }
+  },
+  "redis_client.py": {
+    "hash": "b603cb888dfcfb123d76dfa99c25069c",
+    "data": {
+      "role": "library",
+      "description": "Redis client wrapper providing async ping functionality with decorators for logging, metrics, and retry logic",
+      "execution_order": 25,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "../app/decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "../interfaces.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "service classes",
+        "application initialization",
+        "health check services"
+      ],
+      "requires_before": [
+        "../app/decorateurs.py",
+        "../interfaces.py"
+      ],
+      "category": "core"
+    }
+  },
+  "aws_manager.py": {
+    "hash": "9fe85968620978671c298db61c3be22b",
+    "data": {
+      "role": "library",
+      "description": "AWS OpenSearch manager that provides connectivity and domain management for OpenSearch services",
+      "execution_order": 25,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "opensearch_client.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "../app/decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "../interfaces.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "main application files",
+        "service initialization scripts",
+        "IDS detection services"
+      ],
+      "requires_before": [
+        "../interfaces.py",
+        "../app/decorateurs.py",
+        "opensearch_client.py"
+      ],
+      "category": "core"
+    }
+  },
+  "opensearch_client.py": {
+    "hash": "ba04af16e0713b3117607fe37a57a892",
+    "data": {
+      "role": "library",
+      "description": "OpenSearch client wrapper that provides authentication, connection management, and health check functionality for AWS OpenSearch service",
+      "execution_order": 25,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "interfaces.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "search_service.py",
+        "document_indexer.py",
+        "search_repository.py",
+        "main.py"
+      ],
+      "requires_before": [
+        "decorateurs.py",
+        "interfaces.py"
+      ],
+      "category": "core"
+    }
+  },
+  "mirroring.py": {
+    "hash": "628a3a1340fe0519207b0510d176e3a6",
+    "data": {
+      "role": "library",
+      "description": "Port mirroring verification module for TP-Link switches via web interface monitoring",
+      "execution_order": 60,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/datastructures.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "dashboard.py",
+        "main.py",
+        "monitor.py"
+      ],
+      "requires_before": [
+        "ids/datastructures.py"
+      ],
+      "category": "monitor"
+    }
+  },
+  "setup.py": {
+    "hash": "a44cea518c8fc2cec06fa02ee03764ac",
+    "data": {
+      "role": "library",
+      "description": "Setup and configuration module for IDS Dashboard that handles Tailscale tailnet and OpenSearch domain setup",
+      "execution_order": 10,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/storage/crud.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "ids/storage/models.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "main application files",
+        "configuration scripts",
+        "deployment scripts"
+      ],
+      "requires_before": [
+        "ids/storage/crud.py",
+        "ids/storage/models.py"
+      ],
+      "category": "setup"
+    }
+  },
+  "elasticsearch.py": {
+    "hash": "d8cd8dad92a62afe54963b44ccd841ec",
+    "data": {
+      "role": "library",
+      "description": "Library module for monitoring Elasticsearch cluster health and indices status",
+      "execution_order": 30,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "dashboard.py",
+        "monitor.py",
+        "health_check.py",
+        "main.py"
+      ],
+      "requires_before": [
+        "ids/datastructures.py"
+      ],
+      "category": "monitor"
+    }
+  },
+  "network.py": {
+    "hash": "289971703f085aa49f5670150e8a39a0",
+    "data": {
+      "role": "library",
+      "description": "Network interface monitoring library for tracking eth0 traffic statistics from port mirroring",
+      "execution_order": 30,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/datastructures.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "ids/utils.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "webapp/backend/src/ids/dashboard/main.py",
+        "webapp/backend/src/ids/service.py",
+        "webapp/backend/src/ids/dashboard/api.py"
+      ],
+      "requires_before": [
+        "ids/datastructures.py",
+        "ids/utils.py"
+      ],
+      "category": "monitor"
+    }
+  },
+  "hardware.py": {
+    "hash": "1ab111c92b6c7c23f2f56fa74880eb99",
+    "data": {
+      "role": "library",
+      "description": "Hardware controller library for Raspberry Pi GPIO LED control, handles alerts and provides LED flashing functionality",
+      "execution_order": 30,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "main.py",
+        "app.py",
+        "dashboard.py",
+        "alert_manager.py",
+        "monitoring.py"
+      ],
+      "requires_before": [],
+      "category": "core"
+    }
+  },
+  "tailscale.py": {
+    "hash": "668edf188a264dacfaa57bdc1bec4c1b",
+    "data": {
+      "role": "library",
+      "description": "Domain models and data structures for Tailscale network management, defining enums, dataclasses for nodes, authentication, and deployment configuration",
+      "execution_order": 10,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "tailscale_service.py",
+        "tailscale_repository.py",
+        "tailscale_controller.py",
+        "deployment_service.py",
+        "node_manager.py"
+      ],
+      "requires_before": [],
+      "category": "core"
+    }
+  },
+  "app.py": {
+    "hash": "a694e44b3ce719559480d248fe8a933b",
+    "data": {
+      "role": "entry_point",
+      "description": "FastAPI dashboard application for IDS monitoring with WebSocket support and multiple service integrations",
+      "execution_order": 20,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "ai_healing.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "elasticsearch.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "hardware.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "mirroring.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "network.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "setup.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "suricata.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "tailscale.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "main.py",
+        "run.py",
+        "start_dashboard.py",
+        "docker_entrypoint.py"
+      ],
+      "requires_before": [
+        "setup.py",
+        "database migrations",
+        "config files"
+      ],
+      "category": "core"
+    }
+  },
+  "ai_healing.py": {
+    "hash": "89a2e0268fe7a44cf76f1ac2602296cb",
+    "data": {
+      "role": "service",
+      "description": "AI-powered error healing service that uses Anthropic Claude to diagnose IDS system errors and provide automated healing suggestions",
+      "execution_order": 40,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/datastructures.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "dashboard.py",
+        "system_monitor.py",
+        "error_handler.py",
+        "pipeline_manager.py"
+      ],
+      "requires_before": [
+        "datastructures.py"
+      ],
+      "category": "core"
+    }
+  },
+  "suricata.py": {
+    "hash": "2cfdc53fb07a6c1ae13152eee71ffa93",
+    "data": {
+      "role": "library",
+      "description": "Async log monitor library for parsing Suricata EVE JSON logs and generating alert events",
+      "execution_order": 40,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "ids/datastructures.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "dashboard service",
+        "ids monitoring service",
+        "alert processing modules"
+      ],
+      "requires_before": [
+        "ids/datastructures.py"
+      ],
+      "category": "monitor"
+    }
+  },
+  "opensearch_domain.py": {
+    "hash": "2bb4f6cb3e9600a81ef9303b8bf38284",
+    "data": {
+      "role": "library",
+      "description": "AWS OpenSearch domain provisioning module using boto3 for creating and managing OpenSearch clusters",
+      "execution_order": 75,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "../config/loader.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "config/loader.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "deploy scripts",
+        "main deployment orchestrator",
+        "infrastructure setup scripts"
+      ],
+      "requires_before": [
+        "config/loader.py"
+      ],
+      "category": "deploy"
+    }
+  },
+  "pi_uploader.py": {
+    "hash": "fa8f513959f41eb6d430ac0a059743f6",
+    "data": {
+      "role": "utility",
+      "description": "Pi upload and install flow for IDS2 - handles deployment configuration loading, SSH/SCP command building, and remote deployment operations",
+      "execution_order": 60,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "deploy/deploy.py",
+        "deploy/install.py",
+        "deploy_scripts"
+      ],
+      "requires_before": [
+        "config.yaml",
+        "secret.json"
+      ],
+      "category": "deploy"
+    }
+  },
+  "config.py": {
+    "hash": "d113e8f680cecec5721c1517f3f992d0",
+    "data": {
+      "role": "library",
+      "description": "Interface/Protocol definition for configuration management with methods to get, set, reload, and retrieve configuration values",
+      "execution_order": 5,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "webapp/backend/src/ids/config/gestionnaire.py",
+        "webapp/backend/src/ids/config/factory.py",
+        "webapp/backend/src/ids/services/config_service.py"
+      ],
+      "requires_before": [],
+      "category": "config"
+    }
+  },
+  "parser.py": {
+    "hash": "4d22ebb845c06278a0cb8542b1d3afd0",
+    "data": {
+      "role": "library",
+      "description": "Parser library for Suricata EVE JSON format events, converting them to AlerteIDS domain objects",
+      "execution_order": 50,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "../domain/alerte.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "suricata service files",
+        "log processing modules",
+        "IDS event handlers"
+      ],
+      "requires_before": [
+        "../domain/alerte.py"
+      ],
+      "category": "core"
+    }
+  },
+  "manager.py": {
+    "hash": "09aa95e7e6a9fdd1f9395d160eeab2cd",
+    "data": {
+      "role": "library",
+      "description": "Suricata IDS manager that reads and parses eve.json log files to generate security alerts",
+      "execution_order": 30,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "parser.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "../app/decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "../composants/base.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "../domain.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "../interfaces.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "main.py",
+        "app.py",
+        "alert_processor.py",
+        "ids_service.py"
+      ],
+      "requires_before": [
+        "../composants/base.py",
+        "../domain.py",
+        "../interfaces.py",
+        "../app/decorateurs.py",
+        "parser.py"
+      ],
+      "category": "core"
+    }
+  },
+  "pipeline_status.py": {
+    "hash": "be3a42ed5c14304de162d4cf7fb325a1",
+    "data": {
+      "role": "library",
+      "description": "Protocol interface definition for pipeline status providers, defining contract for health status reporting",
+      "execution_order": 15,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "../domain",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "pipeline status implementations",
+        "health monitoring services",
+        "status aggregators"
+      ],
+      "requires_before": [
+        "domain models",
+        "ConditionSante definition"
+      ],
+      "category": "core"
+    }
+  },
+  "supervisor.py": {
+    "hash": "f573eb14a5cf829dba99e5240ec067dc",
+    "data": {
+      "role": "entry_point",
+      "description": "Main entry point for IDS agent supervisor that orchestrates Docker containers, Suricata monitoring, and resource management with graceful shutdown handling",
+      "execution_order": 1,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "webapp/backend/src/ids/composants.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/config/loader.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/suricata.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/app/container.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/app/decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/app/pipeline_status.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "system startup scripts",
+        "docker entrypoint",
+        "service manager"
+      ],
+      "requires_before": [
+        "webapp/backend/src/ids/config/loader.py",
+        "webapp/backend/src/ids/app/container.py"
+      ],
+      "category": "core"
+    }
+  },
+  "container.py": {
+    "hash": "ae76431415df9e0a7bb9e130473bdf57",
+    "data": {
+      "role": "config",
+      "description": "Dependency injection container using punq framework to wire up all application services and components",
+      "execution_order": 10,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "webapp/backend/src/ids/config/loader.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/composants/connectivity.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/composants/docker_manager.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/composants/metrics_server.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/composants/resource_controller.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/composants/vector_manager.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/domain.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/infrastructure.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/interfaces.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/suricata.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/app/pipeline_status.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "webapp/backend/src/ids/main.py",
+        "webapp/backend/src/ids/app/__init__.py"
+      ],
+      "requires_before": [
+        "webapp/backend/src/ids/config/loader.py",
+        "webapp/backend/src/ids/domain.py",
+        "webapp/backend/src/ids/interfaces.py",
+        "webapp/backend/src/ids/infrastructure.py"
+      ],
+      "category": "config"
+    }
+  },
+  "api_status.py": {
+    "hash": "594321b8f46accff338d339e506a9522",
+    "data": {
+      "role": "service",
+      "description": "FastAPI web service providing HTTP endpoints for pipeline status monitoring with health checks",
+      "execution_order": 85,
+      "is_executable": true,
+      "calls": [
+        {
+          "file": "decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "pipeline_status.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "main.py",
+        "app.py",
+        "server.py",
+        "run_api.py"
+      ],
+      "requires_before": [
+        "decorateurs.py",
+        "pipeline_status.py"
+      ],
+      "category": "core"
+    }
+  },
+  "deploy_helper.py": {
+    "hash": "2a06bc4215c0ed83d272bbf34919142b",
+    "data": {
+      "role": "utility",
+      "description": "Deployment helper for automating Docker image build and deployment to Raspberry Pi, including SSH operations and service management",
+      "execution_order": 85,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "deploy.py",
+        "main.py",
+        "deployment_script.py"
+      ],
+      "requires_before": [
+        "config.yaml",
+        "secret.json",
+        "requirements.txt",
+        "docker/docker-compose.yml"
+      ],
+      "category": "deploy"
+    }
+  },
+  "decorateurs.py": {
+    "hash": "34b5fcaa4c6ec023e6cf6633a0b3c2ae",
+    "data": {
+      "role": "library",
+      "description": "Python decorators library providing logging, metrics, and caching functionality for function calls",
+      "execution_order": 5,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "services/*.py",
+        "handlers/*.py",
+        "models/*.py",
+        "app/*.py"
+      ],
+      "requires_before": [],
+      "category": "util"
+    }
+  },
+  "connectivity.py": {
+    "hash": "c93a955f64001aa82a0793ac69457d38",
+    "data": {
+      "role": "library",
+      "description": "Component library for testing connectivity to external dependencies (OpenSearch, Docker)",
+      "execution_order": 30,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "webapp/backend/src/ids/app/decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/domain.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/interfaces.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/composants/base.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "health check services",
+        "monitoring components",
+        "system status checkers",
+        "dependency verification scripts"
+      ],
+      "requires_before": [
+        "webapp/backend/src/ids/composants/base.py",
+        "webapp/backend/src/ids/app/decorateurs.py",
+        "webapp/backend/src/ids/domain.py",
+        "webapp/backend/src/ids/interfaces.py"
+      ],
+      "category": "monitor"
+    }
+  },
+  "interfaces.py": {
+    "hash": "13e090747250e118eaedcdaa92b5f68c",
+    "data": {
+      "role": "library",
+      "description": "Defines abstract interfaces and protocols for Tailscale monitoring components using dependency inversion principle",
+      "execution_order": 5,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "models.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "api_client.py",
+        "connectivity.py",
+        "visualizer.py",
+        "monitor.py",
+        "main.py"
+      ],
+      "requires_before": [
+        "models.py"
+      ],
+      "category": "core"
+    }
+  },
+  "visualizer.py": {
+    "hash": "6ebde3f1fda831841d9730ef84179598",
+    "data": {
+      "role": "library",
+      "description": "Network visualization library that generates interactive HTML graphs using Pyvis, handles visual representation of Tailscale network topology",
+      "execution_order": 75,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "interfaces.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "models.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "main.py",
+        "network_analyzer.py",
+        "tailscale_monitor.py"
+      ],
+      "requires_before": [
+        "interfaces.py",
+        "models.py"
+      ],
+      "category": "util"
+    }
+  },
+  "api_client.py": {
+    "hash": "69469c50520947e01bb7d553681f1e88",
+    "data": {
+      "role": "library",
+      "description": "Tailscale API client implementation with two strategies - official library or requests fallback for device management",
+      "execution_order": 25,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "interfaces.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "models.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "tailscale_service.py",
+        "device_manager.py",
+        "ids_monitor.py"
+      ],
+      "requires_before": [
+        "interfaces.py",
+        "models.py"
+      ],
+      "category": "core"
+    }
+  },
+  "monitor.py": {
+    "hash": "a45d5f7a1ac45b97cd3e6cda96c56ab8",
+    "data": {
+      "role": "library",
+      "description": "High-level orchestrator class for Tailscale network monitoring that coordinates API clients, connectivity testing, and visualization",
+      "execution_order": 40,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "api_client.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "connectivity.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "models.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "interfaces.py",
+          "method": "import",
+          "when": "conditional"
+        },
+        {
+          "file": "visualizer.py",
+          "method": "import",
+          "when": "conditional"
+        }
+      ],
+      "called_by": [
+        "main.py",
+        "cli.py",
+        "app.py",
+        "runner.py"
+      ],
+      "requires_before": [
+        "api_client.py",
+        "connectivity.py",
+        "models.py",
+        "interfaces.py"
+      ],
+      "category": "core"
+    }
+  },
+  "persistance.py": {
+    "hash": "4f6e636921817d8a46d06c365d08ca66",
+    "data": {
+      "role": "library",
+      "description": "Interface/Protocol definition for alert persistence operations in IDS system",
+      "execution_order": 10,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "../domain",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "persistence implementation classes",
+        "service classes that handle alerts",
+        "repository classes"
+      ],
+      "requires_before": [
+        "../domain"
+      ],
+      "category": "core"
+    }
+  },
+  "gestionnaire.py": {
+    "hash": "9531564d347188ab5b9814e3b6dc4ad1",
+    "data": {
+      "role": "library",
+      "description": "Protocol interface defining the contract for managed components (Suricata, Docker, etc.) with lifecycle methods like start, stop, health check, and config reload",
+      "execution_order": 5,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "../domain",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "suricata_manager.py",
+        "docker_manager.py",
+        "metrics_manager.py",
+        "component_implementations"
+      ],
+      "requires_before": [
+        "domain/__init__.py",
+        "domain/condition_sante.py"
+      ],
+      "category": "core"
+    }
+  },
+  "alerte_source.py": {
+    "hash": "9815743356777efa8137d47842a61bb9",
+    "data": {
+      "role": "library",
+      "description": "Protocol interface definition for IDS alert sources, defining contract for Suricata and other alert providers",
+      "execution_order": 5,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "domain/alerte.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "suricata_manager.py",
+        "alert_processor.py",
+        "ids_service.py"
+      ],
+      "requires_before": [
+        "domain/alerte.py"
+      ],
+      "category": "core"
+    }
+  },
+  "alerte.py": {
+    "hash": "dc0cd4f9642a40e06d01c52247566603",
+    "data": {
+      "role": "library",
+      "description": "Domain entity module defining IDS alert data structures, severity levels, and alert types",
+      "execution_order": 10,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "ids/services/*.py",
+        "ids/repositories/*.py",
+        "ids/handlers/*.py",
+        "ids/use_cases/*.py"
+      ],
+      "requires_before": [],
+      "category": "core"
+    }
+  },
+  "configuration.py": {
+    "hash": "c21051ec28aa74cfa47116ac91a46768",
+    "data": {
+      "role": "config",
+      "description": "Configuration data class for IDS system containing global parameters for network interface, logging, Suricata, Redis, AWS OpenSearch, Docker, and resource limits",
+      "execution_order": 5,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "ids/application/services/*.py",
+        "ids/infrastructure/*.py",
+        "main.py"
+      ],
+      "requires_before": [],
+      "category": "config"
+    }
+  },
+  "exceptions.py": {
+    "hash": "00d7e4aefeff2c6d6f48dffe7222085e",
+    "data": {
+      "role": "library",
+      "description": "Domain-specific exception classes for the IDS system, defining custom error types for configuration, connections, Suricata, Docker, AWS, and resource management",
+      "execution_order": 5,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "configuration modules",
+        "connection handlers",
+        "suricata integration",
+        "docker services",
+        "aws connectors",
+        "alert processors",
+        "resource monitors"
+      ],
+      "requires_before": [],
+      "category": "core"
+    }
+  },
+  "metriques.py": {
+    "hash": "14075e55a3e30e616238174b840917e2",
+    "data": {
+      "role": "library",
+      "description": "Data model definitions for IDS system metrics and health monitoring using dataclasses",
+      "execution_order": 5,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "webapp/backend/src/ids/services/monitoring.py",
+        "webapp/backend/src/ids/application/health_service.py",
+        "webapp/backend/src/ids/infrastructure/metrics_collector.py"
+      ],
+      "requires_before": [],
+      "category": "core"
+    }
+  },
+  "base.py": {
+    "hash": "de5a113c133c8cafe4675cf9c417fe10",
+    "data": {
+      "role": "library",
+      "description": "Base class for managed components providing lifecycle management (start/stop), health checking, and configuration reloading functionality",
+      "execution_order": 10,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "../app/decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "../domain.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "../interfaces.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "component implementations",
+        "service classes",
+        "pipeline components"
+      ],
+      "requires_before": [
+        "../app/decorateurs.py",
+        "../domain.py",
+        "../interfaces.py"
+      ],
+      "category": "core"
+    }
+  },
+  "docker_manager.py": {
+    "hash": "3907a55912747f1aec3ef7db48455668",
+    "data": {
+      "role": "library",
+      "description": "Docker Compose lifecycle management component for IDS services with start/stop/health check capabilities",
+      "execution_order": 25,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "base.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "domain.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "interfaces.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "main.py",
+        "ids_manager.py",
+        "service_orchestrator.py",
+        "startup.py"
+      ],
+      "requires_before": [
+        "base.py",
+        "decorateurs.py",
+        "domain.py",
+        "interfaces.py"
+      ],
+      "category": "core"
+    }
+  },
+  "tailscale_manager.py": {
+    "hash": "6db36bde8eab68469a37e0dbf2a0285a",
+    "data": {
+      "role": "library",
+      "description": "Tailscale network management library providing device, ACL, and connectivity management functionality",
+      "execution_order": 50,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "network_service.py",
+        "ids_main.py",
+        "network_monitor.py",
+        "device_manager.py"
+      ],
+      "requires_before": [],
+      "category": "core"
+    }
+  },
+  "vector_manager.py": {
+    "hash": "1a3068dcc6bc0a3b5d240377f74eb199",
+    "data": {
+      "role": "library",
+      "description": "Component for managing Vector configuration (log processing tool that reads eve.json and sends to OpenSearch)",
+      "execution_order": 40,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "base.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "__init__.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "main.py",
+        "app.py",
+        "health_checker.py",
+        "component_manager.py"
+      ],
+      "requires_before": [
+        "base.py",
+        "decorateurs.py",
+        "domain/__init__.py"
+      ],
+      "category": "core"
+    }
+  },
+  "resource_controller.py": {
+    "hash": "0a4b0da650e49b2c31d6877231e9883f",
+    "data": {
+      "role": "service",
+      "description": "Resource monitoring service that collects system metrics (CPU, RAM) and verifies resource limits with health checks",
+      "execution_order": 30,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "webapp/backend/src/ids/app/decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/domain.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/interfaces.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "webapp/backend/src/ids/composants/base.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "webapp/backend/src/ids/app/main.py",
+        "webapp/backend/src/ids/services/monitoring_service.py",
+        "webapp/backend/src/ids/app/system_manager.py"
+      ],
+      "requires_before": [
+        "webapp/backend/src/ids/composants/base.py",
+        "webapp/backend/src/ids/interfaces.py",
+        "webapp/backend/src/ids/domain.py",
+        "webapp/backend/src/ids/app/decorateurs.py"
+      ],
+      "category": "monitor"
+    }
+  },
+  "metrics_collector.py": {
+    "hash": "caf3fd8c0717414b87a2eaeeceb67632",
+    "data": {
+      "role": "library",
+      "description": "Compatibility shim module that re-exports MetricsCollector from metrics_server for backward compatibility",
+      "execution_order": 15,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "metrics_server.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "legacy code that imports MetricsCollector from this module",
+        "other IDS components",
+        "webapp backend modules"
+      ],
+      "requires_before": [
+        "metrics_server.py"
+      ],
+      "category": "core"
+    }
+  },
+  "metrics_server.py": {
+    "hash": "e035e55a4ba4fd901f63f43a39fbcc5e",
+    "data": {
+      "role": "library",
+      "description": "Metrics collection component that provides system metrics like uptime and metric registration",
+      "execution_order": 30,
+      "is_executable": false,
+      "calls": [
+        {
+          "file": "app/decorateurs.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "domain/__init__.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "interfaces/__init__.py",
+          "method": "import",
+          "when": "startup"
+        },
+        {
+          "file": "composants/base.py",
+          "method": "import",
+          "when": "startup"
+        }
+      ],
+      "called_by": [
+        "main.py",
+        "app.py",
+        "service_manager.py",
+        "monitoring_service.py"
+      ],
+      "requires_before": [
+        "domain/__init__.py",
+        "interfaces/__init__.py",
+        "composants/base.py",
+        "app/decorateurs.py"
+      ],
+      "category": "monitor"
+    }
+  },
+  "opensearch_manager.py": {
+    "hash": "f087d4dddd966b34cd318cfed66543e6",
+    "data": {
+      "role": "library",
+      "description": "OpenSearch domain management library for AWS using boto3 and opensearch-py, provides complete domain lifecycle and index management",
+      "execution_order": 20,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "webapp/backend/src/ids/services/*",
+        "webapp/backend/src/ids/api/*",
+        "webapp/backend/src/main.py"
+      ],
+      "requires_before": [
+        "webapp/backend/src/ids/config/*"
+      ],
+      "category": "core"
+    }
+  },
+  "raspberry_pi_manager.py": {
+    "hash": "e0cb666e9a403e1f920fcecc7b529f05",
+    "data": {
+      "role": "library",
+      "description": "Library module for managing Raspberry Pi devices via SSH connection, including system monitoring, service management, Docker operations, and GPIO control",
+      "execution_order": 40,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "device_manager.py",
+        "raspberry_pi_controller.py",
+        "monitoring_service.py",
+        "device_service.py"
+      ],
+      "requires_before": [],
+      "category": "core"
+    }
+  },
+  "logging_utils.py": {
+    "hash": "0859390cf319549f98a3ea33caefdca7",
+    "data": {
+      "role": "library",
+      "description": "Utility library providing SafeLogger wrapper with lazy formatting and safe execution functions for error handling",
+      "execution_order": 10,
+      "is_executable": false,
+      "calls": [],
+      "called_by": [
+        "other service modules",
+        "main application files",
+        "API handlers"
+      ],
+      "requires_before": [],
+      "category": "util"
+    }
+  }
+}
