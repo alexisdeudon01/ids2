@@ -1,8 +1,14 @@
 FROM python:3.12-slim-bookworm AS builder
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends gcc libffi-dev && rm -rf /var/lib/apt/lists/*
+RUN if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+      sed -i 's|URIs: http://deb.debian.org|URIs: https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources; \
+    fi \
+    && apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o Acquire::ForceIPv4=true \
+    && apt-get install -y --no-install-recommends gcc libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt ./
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
 FROM python:3.12-slim-bookworm AS runtime
 LABEL maintainer="SIXT R&D Team <dev@sixt.com>" \
