@@ -30,6 +30,7 @@ except ImportError as e:  # pragma: no cover - optional import fallback
     if __name__ == "__main__":
         print(f"⚠️  Warning: Could not import ids.deploy.pi_uploader: {e}")
 
+
 try:
     from ids.deploy import opensearch_domain
 except ImportError as e:  # pragma: no cover - optional import fallback
@@ -39,10 +40,17 @@ except ImportError as e:  # pragma: no cover - optional import fallback
 
 try:
     from ids.config.loader import ConfigManager
-    from ids.domain.exceptions import ErreurConfiguration
 except ImportError as e:  # pragma: no cover - optional import fallback
     ConfigManager = None
+    if __name__ == "__main__":
+        print(f"⚠️  Warning: Could not import ids.config.loader: {e}")
+
+try:
+    from ids.domain.exceptions import ErreurConfiguration
+except ImportError as e:  # pragma: no cover - optional import fallback
     ErreurConfiguration = Exception
+    if __name__ == "__main__":
+        print(f"⚠️  Warning: Could not import ids.domain.exceptions: {e}")
     if __name__ == "__main__":
         print(f"⚠️  Warning: Could not import ids.config.loader: {e}")
 
@@ -191,7 +199,7 @@ def load_yaml_data(path: Path) -> Dict[str, Any]:
     if not path.exists():
         return {}
     try:
-        import yaml
+        import yaml  # type: ignore[import-untyped]
     except ImportError as e:
         logging.warning(f"yaml module not available: {e}")
         return {}
