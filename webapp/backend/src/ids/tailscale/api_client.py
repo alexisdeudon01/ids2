@@ -10,10 +10,8 @@ from __future__ import annotations
 from .interfaces import BaseAPIClient
 from .models import DeviceState
 
-# Use the Python tailscale library
 try:
     from tailscale import Tailscale
-
     TAILSCALE_LIB_AVAILABLE = True
 except ImportError:
     TAILSCALE_LIB_AVAILABLE = False
