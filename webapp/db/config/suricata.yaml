@@ -1,0 +1,61 @@
+%YAML 1.1
+---
+# Minimal Suricata configuration for IDS2
+
+default-log-dir: /mnt/ram_logs
+
+vars:
+  address-groups:
+    HOME_NET: "any"
+    EXTERNAL_NET: "any"
+  port-groups:
+    HTTP_PORTS: "80"
+    SSH_PORTS: "22"
+    SMTP_PORTS: "25"
+    DNS_PORTS: "53"
+    TLS_PORTS: "443"
+
+default-rule-path: /etc/suricata/rules
+rule-files:
+  - local.rules
+
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert:
+            payload: yes
+            payload-printable: yes
+        - http:
+        - dns:
+        - tls:
+        - flow
+        - stats
+        # Structure des différents types dans "eve-log":
+        # - alert: logs des alertes générées par les règles Suricata (payload, metadata…)
+        # - dns: logs des requêtes DNS (payload, metadata…)
+        # - tls: logs des requêtes TLS (payload, metadata…)
+        # - flow: logs des flux de données (payload, metadata…)
+        # - stats: logs des statistiques (payload, metadata…) 
+        # - http: logs des requêtes HTTP (payload, metadata…)
+        # - ftp: logs des requêtes FTP (payload, metadata…)
+        # - smtp: logs des requêtes SMTP (payload, metadata…)
+        # - imap: logs des requêtes IMAP (payload, metadata…)
+        # - pop3: logs des requêtes POP3 (payload, metadata…)
+        # - nntp: logs des requêtes NNTP (payload, metadata…)
+        # - sip: logs des requêtes SIP (payload, metadata…)
+        # - tftp: logs des requêtes TFTP (payload, metadata…)
+        # - ssh: logs des requêtes SSH (payload, metadata…)
+        # - telnet: logs des requêtes TELNET (payload, metadata…)
+        # - tftp: logs des requêtes TFTP (payload, metadata…)
+        # - dhcp: logs des requêtes DHCP (payload, metadata…)
+        # - ntp: logs des requêtes NTP (payload, metadata…)
+        # - snmp: logs des requêtes SNMP (payload, metadata…)
+        # - syslog: logs des requêtes SYSLOG (payload, metadata…)
+        # - dns: logs des requêtes DNS (payload, metadata…)
+        # - tls: logs des requêtes TLS (payload, metadata…)
+        # - flow: logs des flux de données (payload, metadata…)
+        # - stats: logs des statistiques (payload, metadata…)
+        
