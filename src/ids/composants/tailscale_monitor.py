@@ -21,7 +21,7 @@ from typing import List, Optional, Dict, Any
 import requests
 
 try:
-    from pyvis.network import Network
+    from pyvis.network import Network  # type: ignore[import-not-found]
     PYVIS_AVAILABLE = True
 except ImportError:
     PYVIS_AVAILABLE = False

@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List, Optional
 
 import requests
-from pyvis.network import Network
+from pyvis.network import Network  # type: ignore[import-not-found]
 
 
 @dataclass

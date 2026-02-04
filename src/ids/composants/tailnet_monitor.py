@@ -15,8 +15,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
-import requests
-from pyvis.network import Network
+import requests  # type: ignore[import-untyped]
+from pyvis.network import Network  # type: ignore[import-not-found]
 
 
 @dataclass
