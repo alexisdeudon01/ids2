@@ -41,5 +41,7 @@ fi
 
 # 5. Ajouter 'venv' à .gitignore pour ne pas le versionner sur GitHub
 echo "Ajout de 'venv/' au fichier .gitignore"
+# Ensure .gitignore exists before appending
+touch .gitignore
 echo "venv/" >> .gitignore
 sort -u .gitignore -o .gitignore # Supprime les doublons si 'venv/' était déjà là

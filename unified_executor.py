@@ -354,7 +354,7 @@ class UnifiedExecutor:
                     timeout=step.timeout,
                     capture_output=True,
                     text=True,
-                    env={**os.environ, 'PYTHONPATH': str(self.project_dir)}
+                    env={**os.environ, 'PYTHONPATH': f"{os.environ.get('PYTHONPATH', '')}:{self.project_dir}".lstrip(':')}
                 )
                 duration = time.time() - start
                 

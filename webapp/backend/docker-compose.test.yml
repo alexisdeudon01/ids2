@@ -17,6 +17,7 @@ services:
       - ./tests:/app/tests
       # Mount config.yaml only if it exists, otherwise use defaults
       - ./config.yaml:/app/config.yaml:ro
+      # Use mounted volume for test results instead of /tmp
       - test-results:/app/test-results
     networks:
       - ids-test-network
@@ -25,7 +26,7 @@ services:
       --cov=src/ids --cov-report=term-missing 
       --cov-report=html:/app/test-results/htmlcov
       --junitxml=/app/test-results/junit.xml
-      --log-file=/tmp/pytest.log
+      --log-file=/app/test-results/pytest.log
 
   # ==========================================================================
   # Unit Tests Only
@@ -54,6 +55,8 @@ services:
     container_name: ids-integration-test
     environment:
       - PYTHONPATH=/app/src
+      # Note: These are placeholder values for testing. Real AWS credentials should
+      # be provided via environment variables or AWS credentials file in production.
       - AWS_ACCESS_KEY_ID=testing
       - AWS_SECRET_ACCESS_KEY=testing
       - AWS_DEFAULT_REGION=eu-central-1

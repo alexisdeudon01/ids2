@@ -7,6 +7,8 @@ if [ "$EUID" -ne 0 ] && ! sudo -n true 2>/dev/null; then
     exit 1
 fi
 
+# Store original DEBIAN_FRONTEND value if set
+ORIGINAL_DEBIAN_FRONTEND="${DEBIAN_FRONTEND:-}"
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get install -y \
@@ -16,3 +18,8 @@ apt-get install -y \
   lsb-release \
   build-essential \
   jq
+
+# Restore original DEBIAN_FRONTEND if it was set
+if [ -n "$ORIGINAL_DEBIAN_FRONTEND" ]; then
+    export DEBIAN_FRONTEND="$ORIGINAL_DEBIAN_FRONTEND"
+fi

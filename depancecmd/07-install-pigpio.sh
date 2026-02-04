@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export DEBIAN_FRONTEND=noninteractive
+# Check for root/sudo privileges
+if [ "$EUID" -ne 0 ] && ! sudo -n true 2>/dev/null; then
+    echo "❌ This script requires root privileges. Please run with sudo or as root."
+    exit 1
+fi
+
+# Verify GPIO hardware support (basic check for Raspberry Pi)
+if [ ! -d "/sys/class/gpio" ] && [ ! -f "/proc/device-tree/model" ]; then
+    echo "⚠️  Warning: GPIO hardware not detected. This script is designed for Raspberry Pi."
+    echo "   Continuing anyway, but GPIO functionality may not work."
+fi
+
+# Set DEBIAN_FRONTEND inline to ensure it persists
+DEBIAN_FRONTEND=noninteractive export DEBIAN_FRONTEND
 
 echo "🔨 Building pigpio from source (Trixie compatibility)..."
 
