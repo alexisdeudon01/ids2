@@ -35,7 +35,7 @@ from .network import NetworkMonitor
 from .setup import OpenSearchSetup, TailnetSetup, setup_infrastructure
 from .suricata import SuricataLogMonitor
 from .tailscale import TailscaleMonitor
-from ids.storage import crud, get_session, init_db, models, schemas
+from dbmanager.storage import crud, get_session, init_db, models, schemas
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 

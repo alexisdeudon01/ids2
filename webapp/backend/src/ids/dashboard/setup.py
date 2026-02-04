@@ -16,7 +16,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ids.storage import crud, models
+from dbmanager.storage import crud, models
 
 logger = logging.getLogger(__name__)
 

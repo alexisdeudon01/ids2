@@ -54,17 +54,17 @@ RUN apt install -y redis-server && \
 
 # --- Configuration de l'environnement Python ---
 WORKDIR /app
-COPY requirements.txt .
+COPY webapp/backend/requirements.txt ./requirements.txt
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir -r requirements.txt
 
 # Copier le code de l'agent Python et les configurations
-COPY src/ ./src/
-COPY config.yaml ./
-COPY suricata/ ./suricata/
-COPY vector/ ./vector/
-RUN mkdir -p docker/ 
-COPY docker/prometheus.yml ./docker/ 
+COPY webapp/backend/src/ ./src/
+COPY webapp/backend/config.yaml ./config.yaml
+RUN mkdir -p suricata vector docker/
+COPY webapp/db/config/suricata.yaml ./suricata/suricata.yaml
+COPY webapp/db/config/vector.toml ./vector/vector.toml
+COPY docker/prometheus.yml ./docker/
 
 # Rendre les scripts exécutables (si nécessaire, pour les scripts shell)
 # chmod +x deploy/*.sh # Les scripts de déploiement ne seront pas utilisés de la même manière

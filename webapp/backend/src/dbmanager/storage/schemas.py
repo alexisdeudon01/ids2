@@ -42,7 +42,7 @@ class RaspberryPiConfigSchema(BaseModel):
 
 class SuricataConfigSchema(BaseModel):
     log_path: str = "/mnt/ram_logs/eve.json"
-    config_path: str = "suricata/suricata.yaml"
+    config_path: str = "webapp/db/config/suricata.yaml"
     rules_path: str = "suricata/rules"
     eve_log_payload: bool = False
     eve_log_packet: bool = False

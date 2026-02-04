@@ -64,7 +64,7 @@ class SuricataConfig(Base, TimestampMixin):
 
     id: Mapped[int] = Column(Integer, primary_key=True)
     log_path: Mapped[str] = Column(String, default="/mnt/ram_logs/eve.json")
-    config_path: Mapped[str] = Column(String, default="suricata/suricata.yaml")
+    config_path: Mapped[str] = Column(String, default="webapp/db/config/suricata.yaml")
     rules_path: Mapped[str] = Column(String, default="suricata/rules")
     eve_log_payload: Mapped[bool] = Column(Boolean, default=False)
     eve_log_packet: Mapped[bool] = Column(Boolean, default=False)

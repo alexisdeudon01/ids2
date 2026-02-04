@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import requests
+import httpx
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -28,9 +28,9 @@ class DeployConfig:
     image_tag: str = "latest"
     dockerfile: str = "Dockerfile"
     compose_path: str = "docker/docker-compose.yml"
-    requirements_path: str = "requirements.txt"
-    config_path: str = "config.yaml"
-    secret_path: str = "secret.json"
+    requirements_path: str = "webapp/backend/requirements.txt"
+    config_path: str = "webapp/backend/config.yaml"
+    secret_path: str = "webapp/backend/secret.json"
     opensearch_endpoint: str | None = None
     ssh_options: Sequence[str] = field(
         default_factory=lambda: ("-o", "BatchMode=yes", "-o", "ConnectTimeout=5")
@@ -126,10 +126,9 @@ class DeployHelper:
 
     def _check_opensearch(self, endpoint: str) -> None:
         try:
-            response = requests.get(endpoint, timeout=5)
-            if response.status_code >= 500:
-                raise RuntimeError(f"OpenSearch indisponible: {response.status_code}")
-        except requests.RequestException as exc:
+            response = httpx.get(endpoint, timeout=5.0)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
             raise RuntimeError(f"OpenSearch indisponible: {exc}") from exc
 
     @property

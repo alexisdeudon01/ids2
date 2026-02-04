@@ -10,7 +10,7 @@ import shlex
 import subprocess
 import tempfile
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
@@ -20,15 +20,15 @@ logger = logging.getLogger(__name__)
 Runner = Callable[..., subprocess.CompletedProcess]
 
 DEFAULT_SYNC_PATHS = [
-    Path("requirements.txt"),
-    Path("pyproject.toml"),
-    Path("config.yaml"),
-    Path("secret.json"),
-    Path("src"),
-    Path("deploy"),
+    Path("webapp/backend/requirements.txt"),
+    Path("webapp/backend/pyproject.toml"),
+    Path("webapp/backend/config.yaml"),
+    Path("webapp/backend/secret.json"),
+    Path("webapp/backend/src"),
+    Path("webapp/backend/deploy"),
     Path("docker"),
-    Path("vector"),
-    Path("suricata"),
+    Path("service"),
+    Path("webapp/db/config"),
 ]
 
 
@@ -46,8 +46,6 @@ class DeployConfig:
     dockerfile: Path = Path("Dockerfile")
     opensearch_endpoint: str | None = None
     run_install: bool = True
-    include_tests: bool = False
-    test_artifacts: list[Path] = field(default_factory=list)
     sync_paths: list[Path] | None = None
     verbose: bool = False
 
@@ -98,7 +96,7 @@ def load_deploy_config(
     **overrides: object,
 ) -> DeployConfig:
     config_data = load_yaml_config(config_path)
-    resolved_repo_root = repo_root or config_path.parent
+    resolved_repo_root = repo_root or config_path.parents[2]
     resolved_pi_host = pi_host or _extract_pi_host(config_data)
     resolved_opensearch = opensearch_endpoint or _extract_opensearch_endpoint(config_data)
     if not resolved_pi_host:
@@ -291,10 +289,6 @@ def collect_sync_entries(config: DeployConfig) -> list[tuple[Path, Path]]:
         paths = list(config.sync_paths)
     else:
         paths = list(DEFAULT_SYNC_PATHS)
-        if config.include_tests:
-            paths.append(Path("tests"))
-        if config.test_artifacts:
-            paths.extend(config.test_artifacts)
 
     entries: list[tuple[Path, Path]] = []
     for path in paths:
@@ -325,9 +319,9 @@ def sync_paths(config: DeployConfig, runner: Runner = subprocess.run) -> None:
 
 def render_env_file(config: DeployConfig) -> Path | None:
     """Crée un fichier docker/.env à partir de config.yaml et secret.json."""
-    config_path = config.repo_root / "config.yaml"
+    config_path = config.repo_root / "webapp/backend/config.yaml"
     config_data = load_yaml_config(config_path)
-    secret_data = _load_json(config.repo_root / "secret.json")
+    secret_data = _load_json(config.repo_root / "webapp/backend/secret.json")
 
     aws_config = config_data.get("aws", {}) if isinstance(config_data, dict) else {}
     opensearch = aws_config.get("opensearch", {}) if isinstance(aws_config, dict) else {}
@@ -402,7 +396,9 @@ def deploy_to_pi(config: DeployConfig, runner: Runner = subprocess.run) -> Path:
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Upload/install flow for IDS2 on Raspberry Pi.")
-    parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
+    parser.add_argument(
+        "--config", default="webapp/backend/config.yaml", help="Path to config.yaml"
+    )
     parser.add_argument("--repo-root", default=None, help="Repo root (defaults to config parent)")
     parser.add_argument("--pi-host", default=None, help="Pi hostname or IP")
     parser.add_argument("--pi-user", default="pi", help="Pi SSH user")
@@ -414,10 +410,6 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--image-tag", default="latest", help="Docker image tag")
     parser.add_argument("--dockerfile", default="Dockerfile", help="Dockerfile path")
     parser.add_argument("--opensearch-endpoint", default=None, help="OpenSearch endpoint URL")
-    parser.add_argument("--include-tests", action="store_true", help="Sync tests directory")
-    parser.add_argument(
-        "--test-artifact", action="append", default=[], help="Extra test artifact paths"
-    )
     parser.add_argument(
         "--sync-path", action="append", default=[], help="Override sync paths (relative)"
     )
@@ -429,7 +421,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
     config_path = Path(args.config).resolve()
-    repo_root = Path(args.repo_root).resolve() if args.repo_root else config_path.parent
+    repo_root = Path(args.repo_root).resolve() if args.repo_root else config_path.parents[2]
     deploy_config = load_deploy_config(
         config_path,
         repo_root=repo_root,
@@ -443,8 +435,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         image_name=args.image_name,
         image_tag=args.image_tag,
         dockerfile=Path(args.dockerfile),
-        include_tests=args.include_tests,
-        test_artifacts=[Path(path) for path in args.test_artifact],
         sync_paths=[Path(path) for path in args.sync_path] if args.sync_path else None,
         run_install=not args.skip_install,
         verbose=args.verbose,

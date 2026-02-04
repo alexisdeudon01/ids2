@@ -4,7 +4,7 @@ services:
     image: timberio/vector:0.34.0-alpine
     command: ["vector", "--config", "/etc/vector/vector.toml"]
     volumes:
-      - ./vector.toml:/etc/vector/vector.toml:ro
+      - ../webapp/db/config/vector.toml:/etc/vector/vector.toml:ro
       - /mnt/ram_logs:/mnt/ram_logs # Volume pour les logs Suricata
       - /var/lib/vector/buffer:/var/lib/vector/buffer # Tampon disque pour Vector
       - /var/lib/vector/redis_buffer:/var/lib/vector/redis_buffer # Tampon disque pour Redis fallback

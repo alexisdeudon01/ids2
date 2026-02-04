@@ -59,7 +59,6 @@ def run_command(client: paramiko.SSHClient, command: str, sudo_password: str | N
 def upload_repo(client: paramiko.SSHClient, local_root: Path, remote_root: str) -> None:
     ignore_dir_names = {
         "__pycache__",
-        ".pytest_cache",
         ".mypy_cache",
         ".ruff_cache",
         "node_modules",
@@ -131,7 +130,7 @@ def main() -> int:
         print("Configuration du service systemd...")
         run_command(
             client,
-            f"cp {REMOTE_DIR}/webapp/backend/deploy/{SERVICE_NAME} /etc/systemd/system/{SERVICE_NAME}",
+            f"cp {REMOTE_DIR}/service/{SERVICE_NAME} /etc/systemd/system/{SERVICE_NAME}",
             sudo_password=sudo_password,
         )
         run_command(client, "systemctl daemon-reload", sudo_password=sudo_password)

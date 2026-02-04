@@ -21,7 +21,7 @@ resource_controller:
 
 suricata:
   log_path: "/mnt/ram_logs/eve.json"
-  config_path: "suricata/suricata.yaml"
+  config_path: "webapp/db/config/suricata.yaml"
   rules_path: "suricata/rules" # Chemin pour les règles Suricata
   eve_log_options: # Options configurables pour eve-log
     payload: no
@@ -32,7 +32,7 @@ suricata:
 
 vector:
   index_pattern: "suricata-ids2-%Y.%m.%d" # Pattern d'index plus spécifique
-  config_path: "vector/vector.toml"
+  config_path: "webapp/db/config/vector.toml"
   log_read_path: "/mnt/ram_logs/eve.json"
   disk_buffer_max_size: "100 GiB" # Taille maximale du tampon disque principal
   redis_buffer_max_size: "10 GiB" # Taille maximale du tampon disque pour Redis

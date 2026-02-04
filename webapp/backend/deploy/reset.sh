@@ -9,14 +9,17 @@ sudo systemctl disable ids2-agent.service
 sudo rm -f /etc/systemd/system/ids2-agent.service
 sudo systemctl daemon-reload
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+
 echo "Arrêt et suppression de la pile Docker Compose..."
 # Naviguer vers le répertoire docker pour exécuter docker compose down
-(cd docker && docker compose down -v --remove-orphans)
+(cd "$ROOT_DIR/docker" && docker compose down -v --remove-orphans)
 
 echo "Suppression des fichiers de configuration générés..."
-rm -f config.yaml
-rm -f vector/vector.toml
-rm -f suricata/suricata.yaml
+rm -f "$ROOT_DIR/webapp/backend/config.yaml"
+rm -f "$ROOT_DIR/webapp/db/config/vector.toml"
+rm -f "$ROOT_DIR/webapp/db/config/suricata.yaml"
 
 echo "Suppression des répertoires de logs RAM (si existants)..."
 # Attention: Assurez-vous que /mnt/ram_logs est bien un ramdisk avant de le supprimer
@@ -26,11 +29,9 @@ echo "Suppression des répertoires de logs RAM (si existants)..."
 sudo rm -f /mnt/ram_logs/eve.json
 
 echo "Nettoyage des répertoires du projet..."
-rm -rf src/__pycache__
-rm -rf src/ids/**/__pycache__
-rm -rf docker/grafana/* # Supprimer le contenu de grafana, pas le répertoire lui-même
-rm -rf docker/prometheus.yml # Supprimer le fichier prometheus.yml généré
-rm -rf vector/* # Supprimer le contenu de vector, pas le répertoire lui-même
-rm -rf suricata/* # Supprimer le contenu de suricata, pas le répertoire lui-même
+rm -rf "$ROOT_DIR/webapp/backend/src/__pycache__"
+rm -rf "$ROOT_DIR/webapp/backend/src/ids/**/__pycache__"
+rm -rf "$ROOT_DIR/docker/grafana/*" # Supprimer le contenu de grafana, pas le répertoire lui-même
+rm -rf "$ROOT_DIR/docker/prometheus.yml" # Supprimer le fichier prometheus.yml généré
 
 echo "Réinitialisation terminée. L'environnement est propre."
