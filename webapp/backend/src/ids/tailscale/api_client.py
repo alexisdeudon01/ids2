@@ -11,11 +11,13 @@ from .interfaces import BaseAPIClient
 from .models import DeviceState
 
 try:
-    from tailscale import Tailscale
-    TAILSCALE_LIB_AVAILABLE = True
+    from tailscale import Tailscale  # type: ignore
 except ImportError:
     TAILSCALE_LIB_AVAILABLE = False
+else:
+    TAILSCALE_LIB_AVAILABLE = True
 
+Tailscale = None
 
 class TailscaleLibraryClient(BaseAPIClient):
     """
