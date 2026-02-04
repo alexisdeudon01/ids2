@@ -274,18 +274,6 @@ Les dépendances incluent :
 
 ---
 
-## 🧪 Tests
-
-Des tests unitaires sont disponibles dans `tests/unit/` pour chaque gestionnaire.
-
-```bash
-pytest tests/unit/test_tailscale_manager.py
-pytest tests/unit/test_opensearch_manager.py
-pytest tests/unit/test_raspberry_pi_manager.py
-```
-
----
-
 ## 📚 Ressources
 
 - [Tailscale API Docs](https://tailscale.com/api)

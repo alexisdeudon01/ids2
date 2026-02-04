@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 class InMemoryAlertStore(PersistanceAlertes):
-    """Persistance simple en memoire pour les tests."""
+    """Persistance simple en memoire."""
 
     def __init__(self) -> None:
         self._data: dict[str, AlerteIDS] = {}

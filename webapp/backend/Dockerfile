@@ -34,7 +34,6 @@ COPY --from=builder /usr/local /usr/local
 
 # Copy application code
 COPY src/ ./src/
-COPY tests/ ./tests/
 COPY config.yaml pyproject.toml ./
 
 # Set Python environment variables

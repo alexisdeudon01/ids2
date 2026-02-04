@@ -18,7 +18,7 @@ class VectorManager(BaseComponent):
 
     def __init__(self, config: GestionnaireConfig | None = None) -> None:
         super().__init__(config, "vector")
-        config_path = "vector/vector.toml"
+        config_path = "webapp/db/config/vector.toml"
         if config:
             config_path = config.obtenir("vector.config_path", config_path)
         self._config_path = Path(config_path)

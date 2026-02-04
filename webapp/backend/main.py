@@ -14,8 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-REPO_ROOT = Path(__file__).resolve().parent
-SRC_ROOT = REPO_ROOT / "src"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SRC_ROOT = REPO_ROOT / "webapp/backend/src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
@@ -242,11 +242,12 @@ def ensure_env_on_pi(paths: RepoPaths, ssh_config: SSHConfig) -> None:
 
 
 def sync_endpoint_files(paths: RepoPaths, ssh_config: SSHConfig) -> bool:
+    backend_dir = paths.root / "webapp" / "backend"
     required = [
         paths.root / "docker" / "docker-compose.yml",
         paths.root / "docker" / "fastapi" / "Dockerfile",
-        paths.root / "requirements.txt",
-        paths.root / "src",
+        backend_dir / "requirements.txt",
+        backend_dir / "src",
     ]
     missing = [path for path in required if not path.exists()]
     if missing:
@@ -261,8 +262,11 @@ def sync_endpoint_files(paths: RepoPaths, ssh_config: SSHConfig) -> bool:
             ssh_config.remote_dir / "docker" / "docker-compose.yml",
         ),
         (paths.root / "docker" / "fastapi", ssh_config.remote_dir / "docker" / "fastapi"),
-        (paths.root / "requirements.txt", ssh_config.remote_dir / "requirements.txt"),
-        (paths.root / "src", ssh_config.remote_dir / "src"),
+        (
+            backend_dir / "requirements.txt",
+            ssh_config.remote_dir / "webapp" / "backend" / "requirements.txt",
+        ),
+        (backend_dir / "src", ssh_config.remote_dir / "webapp" / "backend" / "src"),
     ]
     excludes = ["__pycache__", "*.pyc", ".venv", "dist"]
     for local_path, remote_path in entries:
@@ -474,31 +478,6 @@ def create_endpoint(paths: RepoPaths, ssh_config: SSHConfig) -> None:
     )
 
 
-def test_pipeline(ssh_config: SSHConfig) -> None:
-    result = run_ssh(
-        ssh_config,
-        "curl -sS http://localhost:8080/status",
-        check=False,
-        capture_output=True,
-    )
-    if result.returncode != 0:
-        print("Pipeline status check failed. Is the endpoint running?")
-        return
-    raw = (result.stdout or "").strip()
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        print(raw)
-        return
-
-    state = data.get("etat_pipeline", "unknown")
-    resume = data.get("resume", {}) if isinstance(data, dict) else {}
-    total = resume.get("total", "n/a")
-    healthy = resume.get("sains", "n/a")
-    errors = resume.get("erreurs", "n/a")
-    print(f"Pipeline state: {state} (healthy={healthy}/{total}, errors={errors})")
-
-
 def wait_for_http(
     ssh_config: SSHConfig,
     url: str,
@@ -593,12 +572,12 @@ def check_configuration(paths: RepoPaths, ssh_config: SSHConfig) -> None:
         print(f"- AWS credentials in secret.json: {'ok' if creds_ok else 'missing'}")
 
     required_paths = [
-        "config.yaml",
-        "deploy/ids2-agent.service",
-        "deploy/suricata.service",
+        "webapp/backend/config.yaml",
+        "service/ids2-agent.service",
+        "service/suricata.service",
         "docker/docker-compose.yml",
-        "vector/vector.toml",
-        "suricata/suricata.yaml",
+        "webapp/db/config/vector.toml",
+        "webapp/db/config/suricata.yaml",
     ]
     for rel in required_paths:
         path = paths.root / rel
@@ -607,12 +586,12 @@ def check_configuration(paths: RepoPaths, ssh_config: SSHConfig) -> None:
 
     print("Remote configuration:")
     remote_checks = [
-        "config.yaml",
-        "deploy/ids2-agent.service",
-        "deploy/suricata.service",
+        "webapp/backend/config.yaml",
+        "service/ids2-agent.service",
+        "service/suricata.service",
         "docker/docker-compose.yml",
-        "vector/vector.toml",
-        "suricata/suricata.yaml",
+        "webapp/db/config/vector.toml",
+        "webapp/db/config/suricata.yaml",
     ]
     for rel in remote_checks:
         remote_path = ssh_config.remote_dir / rel
@@ -658,9 +637,8 @@ def menu(paths: RepoPaths, ssh_config: SSHConfig) -> None:
         "2. Build docker and run",
         "3. Check all services on Pi",
         "4. Create the endpoint",
-        "5. Test the pipeline",
-        "6. Check all configuration",
-        "7. Create OpenSearch domain",
+        "5. Check all configuration",
+        "6. Create OpenSearch domain",
         "q. Quit",
     )
 
@@ -686,10 +664,8 @@ def menu(paths: RepoPaths, ssh_config: SSHConfig) -> None:
         elif choice == "4":
             run_action("Create endpoint", lambda: create_endpoint(paths, ssh_config))
         elif choice == "5":
-            run_action("Test pipeline", lambda: test_pipeline(ssh_config))
-        elif choice == "6":
             run_action("Check configuration", lambda: check_configuration(paths, ssh_config))
-        elif choice == "7":
+        elif choice == "6":
             run_action("Create OpenSearch domain", lambda: create_opensearch_domain(paths))
         elif choice in {"q", "quit", "exit"}:
             return
@@ -704,8 +680,12 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     parser.add_argument("--pi-port", type=int, default=22, help="Pi SSH port")
     parser.add_argument("--ssh-key", default=None, help="SSH private key path")
     parser.add_argument("--remote-dir", default="/opt/ids2", help="Pi install directory")
-    parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
-    parser.add_argument("--secret", default="secret.json", help="Path to secret.json")
+    parser.add_argument(
+        "--config", default="webapp/backend/config.yaml", help="Path to config.yaml"
+    )
+    parser.add_argument(
+        "--secret", default="webapp/backend/secret.json", help="Path to secret.json"
+    )
     parser.add_argument("--sudo-password", default=None, help="Sudo password (not recommended)")
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
     return parser.parse_args(argv)
