@@ -27,7 +27,7 @@ except ImportError:
         TAILSCALE_AVAILABLE = True
         TAILSCALE_SDK = "tailscale"
     except ImportError:
-        logger.warning("tailscale SDK not available. Install with: pip install python-tailscale")
+        logger.warning("tailscale SDK not available. Install with: pip install tailscale")
 
 
 class TailscaleMonitor:

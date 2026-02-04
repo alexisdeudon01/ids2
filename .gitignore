@@ -1,4 +1,6 @@
 .venv/
+webapp/backend/venv/
+webapp/backend/.venv/
 scripts/actions_secrets.map
 secret.json
 data/

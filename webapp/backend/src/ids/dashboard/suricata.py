@@ -33,14 +33,14 @@ try:
 
     PYEVE_AVAILABLE = True
 except ImportError:
-    logger.warning("pyeve not available. Install with: pip install pyeve")
+    logger.debug("pyeve not available (optional). Falling back to json parsing.")
 
 try:
     import suricata
 
     PYTHON_SURICATA_AVAILABLE = True
 except ImportError:
-    logger.warning("python-suricata not available. Install with: pip install python-suricata")
+    logger.debug("Suricata python bindings not available (optional).")
 
 
 class SuricataLogMonitor:

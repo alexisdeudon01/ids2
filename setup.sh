@@ -51,6 +51,7 @@ tar \
   --exclude=.git \
   --exclude=webapp/frontend/node_modules \
   --exclude=webapp/backend/.venv \
+  --exclude=webapp/backend/venv \
   --exclude=__pycache__ \
   -czf "$ARCHIVE_PATH" .
 

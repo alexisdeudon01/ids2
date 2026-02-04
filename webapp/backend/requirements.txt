@@ -27,7 +27,6 @@ python-json-logger>=2.0.4  # JSON logging
 pyvis>=0.3.2  # Interactive network visualization
 networkx>=3.0  # Graph data structures and algorithms
 tailscale>=0.6.0  # Tailscale API client
-python-tailscale>=0.1.0  # Tailscale API client (python-tailscale)
 
 # Infrastructure Management
 paramiko>=3.0.0  # SSH client for Raspberry Pi
@@ -51,10 +50,8 @@ anthropic>=0.18.0  # Anthropic Claude AI SDK
 httpx>=0.25.0  # Async HTTP client for switch management
 
 # IDS & Logs
-python-suricata>=0.1.0  # Suricata helpers
 SuricataLog>=1.0.0  # Suricata EVE log parser
 suricata-update>=1.2.0  # Suricata rule updater
-pyeve>=1.0.0  # Suricata EVE parsing helpers
 
 # Testing & Quality
 pytest>=7.0.0  # Test framework
