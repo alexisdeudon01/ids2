@@ -83,7 +83,7 @@ install_docker_apt() {
   fi
 
   curl -fsSL "https://download.docker.com/linux/${repo_os}/gpg" \
-    | gpg --batch --yes --no-tty --dearmor -o /etc/apt/keyrings/docker.gpg || { echo "❌ Failed to download/install Docker GPG key"; exit 1; }
+    | gpg --batch --yes --no-tty --dearmor -o /etc/apt/keyrings/docker.gpg
   chmod a+r /etc/apt/keyrings/docker.gpg
 
   local arch codename
