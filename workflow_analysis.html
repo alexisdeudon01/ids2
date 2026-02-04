@@ -1,0 +1,3972 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Analysis - ids2</title>
+    <meta http-equiv='refresh' content='5'>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+            padding: 20px 30px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #58a6ff;
+            font-size: 1.5em;
+        }
+        
+        .header .stats {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .stat {
+            background: #21262d;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 0.85em;
+        }
+        
+        .stat span { color: #58a6ff; font-weight: bold; }
+        .stat.bugs span { color: #f85149; }
+        .stat.ok span { color: #3fb950; }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 0 20px;
+            overflow-x: auto;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: #8b949e;
+            font-size: 0.9em;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        
+        .tab:hover { color: #c9d1d9; background: #21262d; }
+        .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+        .tab.bugs { color: #f85149; }
+        .tab.fsm { color: #a371f7; }
+        .tab.unified { color: #3fb950; }
+        
+        /* Tab content */
+        .tab-content {
+            display: none;
+            padding: 20px;
+            max-height: calc(100vh - 150px);
+            overflow-y: auto;
+        }
+        
+        .tab-content.active { display: block; }
+        
+        /* Workflow view */
+        .workflow-header {
+            background: #161b22;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .workflow-header h2 {
+            color: #3fb950;
+            margin-bottom: 10px;
+        }
+        
+        .workflow-header p {
+            color: #8b949e;
+            font-size: 0.9em;
+        }
+        
+        .sequence {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .step {
+            display: flex;
+            align-items: stretch;
+            gap: 15px;
+        }
+        
+        .step-number {
+            width: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .step-number .num {
+            width: 30px;
+            height: 30px;
+            background: #238636;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+        
+        .step-number .line {
+            flex: 1;
+            width: 2px;
+            background: #30363d;
+            margin-top: 5px;
+        }
+        
+        .step-card {
+            flex: 1;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .step-card h3 {
+            color: #58a6ff;
+            font-size: 1em;
+            margin-bottom: 5px;
+        }
+        
+        .step-card .desc {
+            color: #8b949e;
+            font-size: 0.85em;
+        }
+        
+        .step-card .meta {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .step-card .tag {
+            background: #21262d;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+        }
+        
+        .step-card .tag.cat { color: #a371f7; }
+        .step-card .tag.order { color: #f0883e; }
+        
+        /* Bugs view */
+        .bug-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .bug-card {
+            background: #161b22;
+            border-left: 4px solid #f85149;
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .bug-card.high { border-left-color: #f85149; }
+        .bug-card.medium { border-left-color: #f0883e; }
+        .bug-card.low { border-left-color: #3fb950; }
+        
+        .bug-card h4 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .bug-card .severity {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+        
+        .bug-card .severity.critical { background: #f85149; color: white; }
+        .bug-card .severity.high { background: #da3633; color: white; }
+        .bug-card .severity.medium { background: #f0883e; color: black; }
+        .bug-card .severity.low { background: #3fb950; color: black; }
+        
+        .bug-card .file {
+            color: #58a6ff;
+            font-family: monospace;
+        }
+        
+        .bug-card .suggestion {
+            background: #1c2128;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #3fb950;
+        }
+        
+        /* FSM view */
+        .fsm-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .fsm-state {
+            background: #161b22;
+            border: 2px solid #30363d;
+            border-radius: 12px;
+            padding: 15px;
+            min-width: 200px;
+        }
+        
+        .fsm-state.initial { border-color: #3fb950; }
+        .fsm-state.final { border-color: #a371f7; }
+        .fsm-state.error { border-color: #f85149; }
+        
+        .fsm-state h4 { color: #58a6ff; margin-bottom: 5px; }
+        .fsm-state p { font-size: 0.8em; color: #8b949e; }
+        
+        /* Orphans */
+        .orphan-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .orphan {
+            background: #21262d;
+            padding: 8px 15px;
+            border-radius: 6px;
+            border: 1px dashed #484f58;
+            color: #8b949e;
+        }
+        
+        /* Code view */
+        .code-container {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .code-header {
+            background: #161b22;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-header button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .code-header button:hover { background: #2ea043; }
+        
+        pre {
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+        
+        /* Live indicator */
+        .live-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #238636;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            animation: pulse 2s infinite;
+            z-index: 1000;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div class="live-indicator">🔄 Analyse en cours... (refresh auto)</div>
+    
+    <div class="header">
+        <h1>🔄 Workflow Analysis - ids2</h1>
+        <div class="stats">
+            <div class="stat">Fichiers: <span>23</span></div>
+            <div class="stat ok">Workflows: <span>18</span></div>
+            <div class="stat bugs">Bugs: <span>152</span></div>
+            <div class="stat">Orphelins: <span>1</span></div>
+        </div>
+    </div>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('overview')">📊 Vue d'ensemble</div>
+        <div class="tab" onclick="showTab('wf-0')">unified_executor.py</div><div class="tab" onclick="showTab('wf-1')">setup.sh</div><div class="tab" onclick="showTab('wf-2')">setup_venv.sh</div><div class="tab" onclick="showTab('wf-3')">00-check-apt-sources</div><div class="tab" onclick="showTab('wf-4')">01-update-upgrade.sh</div><div class="tab" onclick="showTab('wf-5')">05-install-docker.sh</div><div class="tab" onclick="showTab('wf-6')">06-install-suricata.</div><div class="tab" onclick="showTab('wf-7')">07-install-pigpio.sh</div><div class="tab" onclick="showTab('wf-8')">08-install-sqlite.sh</div><div class="tab" onclick="showTab('wf-9')">09-configure-network</div><div class="tab" onclick="showTab('wf-10')">workflow_analyzer.py</div><div class="tab" onclick="showTab('wf-11')">02-install-base.sh</div><div class="tab" onclick="showTab('wf-12')">10-install-backend-d</div><div class="tab" onclick="showTab('wf-13')">03-install-python.sh</div><div class="tab" onclick="showTab('wf-14')">04-install-node.sh</div><div class="tab" onclick="showTab('wf-15')">main.py</div><div class="tab" onclick="showTab('wf-16')">11-install-frontend-</div><div class="tab" onclick="showTab('wf-17')">deploy.py</div>
+        <div class="tab bugs" onclick="showTab('bugs')">🐛 Bugs (152)</div>
+        <div class="tab fsm" onclick="showTab('fsm')">⚙️ FSM</div>
+        <div class="tab" onclick="showTab('orphans')">👻 Orphelins (1)</div>
+        <div class="tab unified" onclick="showTab('unified')">📜 Script Unifié</div>
+    </div>
+    
+    <!-- Overview Tab -->
+    <div id="overview" class="tab-content active">
+        <h2 style="color: #58a6ff; margin-bottom: 20px;">🎯 Ordre d'Exécution Recommandé</h2>
+        
+        <div class="sequence">
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">1</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 unified_executor.py</h3>
+                <div class="desc">A unified execution orchestrator that runs all project scripts in optimal order with FSM state management, error handling, and retry logic.</div>
+                <div class="meta">
+                    <span class="tag cat">core</span>
+                    <span class="tag order">Order: 1</span>
+                    <span class="tag">3 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">2</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 setup.sh</h3>
+                <div class="desc">Remote deployment script that packages and installs an IDS (Intrusion Detection System) dashboard on a Raspberry Pi via SSH. Prompts for credentials, transfers files, and executes installation scripts remotely.</div>
+                <div class="meta">
+                    <span class="tag cat">deploy</span>
+                    <span class="tag order">Order: 1</span>
+                    <span class="tag">3 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">3</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 setup_venv.sh</h3>
+                <div class="desc">Sets up a Python virtual environment named 'venv', installs dependencies from requirements.txt if present, and updates .gitignore to exclude the virtual environment.</div>
+                <div class="meta">
+                    <span class="tag cat">setup</span>
+                    <span class="tag order">Order: 5</span>
+                    <span class="tag">3 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">4</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 00-check-apt-sources.sh</h3>
+                <div class="desc">Validates that APT package manager sources are properly configured by checking for existence of sources.list files or sources.list.d directory entries.</div>
+                <div class="meta">
+                    <span class="tag cat">setup</span>
+                    <span class="tag order">Order: 5</span>
+                    <span class="tag">5 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">5</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 01-update-upgrade.sh</h3>
+                <div class="desc">Updates APT package lists and upgrades all installed Debian/Ubuntu packages to their latest versions in non-interactive mode.</div>
+                <div class="meta">
+                    <span class="tag cat">setup</span>
+                    <span class="tag order">Order: 5</span>
+                    <span class="tag">2 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">6</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 05-install-docker.sh</h3>
+                <div class="desc">Installs Docker Engine via apt with GPG key verification and adds user to docker group. Enables Docker service and handles compose plugin installation.</div>
+                <div class="meta">
+                    <span class="tag cat">install</span>
+                    <span class="tag order">Order: 5</span>
+                    <span class="tag">4 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">7</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 06-install-suricata.sh</h3>
+                <div class="desc">Installs Suricata network intrusion detection system and updates its rule sets on Debian/Ubuntu systems.</div>
+                <div class="meta">
+                    <span class="tag cat">install</span>
+                    <span class="tag order">Order: 6</span>
+                    <span class="tag">3 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">8</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 07-install-pigpio.sh</h3>
+                <div class="desc">Downloads, compiles, and installs pigpio library from source code with systemd service setup for GPIO control on Raspberry Pi.</div>
+                <div class="meta">
+                    <span class="tag cat">install</span>
+                    <span class="tag order">Order: 7</span>
+                    <span class="tag">7 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">9</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 08-install-sqlite.sh</h3>
+                <div class="desc">Installs SQLite3 database engine using apt-get package manager on Debian/Ubuntu systems.</div>
+                <div class="meta">
+                    <span class="tag cat">install</span>
+                    <span class="tag order">Order: 8</span>
+                    <span class="tag">2 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">10</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 09-configure-network.sh</h3>
+                <div class="desc">Configures network interface for traffic mirroring by disabling all interfaces except the designated mirror interface and enabling promiscuous mode on it.</div>
+                <div class="meta">
+                    <span class="tag cat">config</span>
+                    <span class="tag order">Order: 9</span>
+                    <span class="tag">3 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">11</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 workflow_analyzer.py</h3>
+                <div class="desc">An advanced workflow analyzer that uses AI to analyze project files, detect bugs, generate finite state machines, and create interactive HTML reports. It combines static code analysis with resource monitoring and parallel processing.</div>
+                <div class="meta">
+                    <span class="tag cat">util</span>
+                    <span class="tag order">Order: 15</span>
+                    <span class="tag">6 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">12</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 02-install-base.sh</h3>
+                <div class="desc">Installs base system packages required for the project using apt-get with non-interactive mode.</div>
+                <div class="meta">
+                    <span class="tag cat">install</span>
+                    <span class="tag order">Order: 2</span>
+                    <span class="tag">2 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">13</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 10-install-backend-deps.sh</h3>
+                <div class="desc">Installs Python backend dependencies in a virtual environment by creating a venv and installing packages from requirements.txt.</div>
+                <div class="meta">
+                    <span class="tag cat">install</span>
+                    <span class="tag order">Order: 15</span>
+                    <span class="tag">4 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">14</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 03-install-python.sh</h3>
+                <div class="desc">Installs Python 3 and related development packages on a Debian/Ubuntu system using apt-get.</div>
+                <div class="meta">
+                    <span class="tag cat">install</span>
+                    <span class="tag order">Order: 15</span>
+                    <span class="tag">2 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">15</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 04-install-node.sh</h3>
+                <div class="desc">Installs Node.js and npm packages on a Debian-based system using apt-get package manager.</div>
+                <div class="meta">
+                    <span class="tag cat">install</span>
+                    <span class="tag order">Order: 15</span>
+                    <span class="tag">2 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">16</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 main.py</h3>
+                <div class="desc">Main deployment script for a webapp backend that handles SSH deployment to Raspberry Pi and AWS OpenSearch configuration. Manages configuration loading, environment setup, and remote deployment operations.</div>
+                <div class="meta">
+                    <span class="tag cat">deploy</span>
+                    <span class="tag order">Order: 15</span>
+                    <span class="tag">5 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">17</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 11-install-frontend-deps.sh</h3>
+                <div class="desc">Installs npm dependencies for the frontend webapp by running 'npm install' in the frontend directory.</div>
+                <div class="meta">
+                    <span class="tag cat">install</span>
+                    <span class="tag order">Order: 75</span>
+                    <span class="tag">3 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">
+                <div class="num">18</div>
+                <div class="line"></div>
+            </div>
+            <div class="step-card">
+                <h3>🚀 deploy.py</h3>
+                <div class="desc">Deployment script that uploads code to a Raspberry Pi via SSH/SFTP and configures it as a systemd service. Interactive script that prompts for SSH credentials and deploys the IDS dashboard application.</div>
+                <div class="meta">
+                    <span class="tag cat">deploy</span>
+                    <span class="tag order">Order: 95</span>
+                    <span class="tag">4 scripts</span>
+                </div>
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <!-- Workflow Tabs -->
+    
+        <div id="wf-0" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: unified_executor.py</h2>
+                <p>A unified execution orchestrator that runs all project scripts in optimal order with FSM state management, error handling, and retry logic.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>unified_executor.py</h3>
+                    <div class="desc">A unified execution orchestrator that runs all project scripts in optimal order with FSM state management, error handling, and retry logic.</div>
+                    <div class="meta">
+                        <span class="tag cat">core</span>
+                        <span class="tag order">Order: 1</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>dynamic</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>unified_execution.log</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-1" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: setup.sh</h2>
+                <p>Remote deployment script that packages and installs an IDS (Intrusion Detection System) dashboard on a Raspberry Pi via SSH. Prompts for credentials, transfers files, and executes installation scripts remotely.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>setup.sh</h3>
+                    <div class="desc">Remote deployment script that packages and installs an IDS (Intrusion Detection System) dashboard on a Raspberry Pi via SSH. Prompts for credentials, transfers files, and executes installation scripts remotely.</div>
+                    <div class="meta">
+                        <span class="tag cat">deploy</span>
+                        <span class="tag order">Order: 1</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>depancecmd/*.sh</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>/tmp/ids-dashboard.tar.gz</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-2" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: setup_venv.sh</h2>
+                <p>Sets up a Python virtual environment named 'venv', installs dependencies from requirements.txt if present, and updates .gitignore to exclude the virtual environment.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>setup_venv.sh</h3>
+                    <div class="desc">Sets up a Python virtual environment named 'venv', installs dependencies from requirements.txt if present, and updates .gitignore to exclude the virtual environment.</div>
+                    <div class="meta">
+                        <span class="tag cat">setup</span>
+                        <span class="tag order">Order: 5</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>requirements.txt</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>.gitignore</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-3" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 00-check-apt-sources.sh</h2>
+                <p>Validates that APT package manager sources are properly configured by checking for existence of sources.list files or sources.list.d directory entries.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>00-check-apt-sources.sh</h3>
+                    <div class="desc">Validates that APT package manager sources are properly configured by checking for existence of sources.list files or sources.list.d directory entries.</div>
+                    <div class="meta">
+                        <span class="tag cat">setup</span>
+                        <span class="tag order">Order: 5</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>/etc/apt/sources.list.d</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>/etc/apt/sources.list</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">4</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>/etc/apt/sources.list.d/*.list</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">5</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>/etc/apt/sources.list.d/*.sources</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-4" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 01-update-upgrade.sh</h2>
+                <p>Updates APT package lists and upgrades all installed Debian/Ubuntu packages to their latest versions in non-interactive mode.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>01-update-upgrade.sh</h3>
+                    <div class="desc">Updates APT package lists and upgrades all installed Debian/Ubuntu packages to their latest versions in non-interactive mode.</div>
+                    <div class="meta">
+                        <span class="tag cat">setup</span>
+                        <span class="tag order">Order: 5</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>apt-get</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-5" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 05-install-docker.sh</h2>
+                <p>Installs Docker Engine via apt with GPG key verification and adds user to docker group. Enables Docker service and handles compose plugin installation.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>05-install-docker.sh</h3>
+                    <div class="desc">Installs Docker Engine via apt with GPG key verification and adds user to docker group. Enables Docker service and handles compose plugin installation.</div>
+                    <div class="meta">
+                        <span class="tag cat">install</span>
+                        <span class="tag order">Order: 5</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>/etc/os-release</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>/etc/apt/keyrings/docker.gpg</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">4</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>/etc/apt/sources.list.d/docker.list</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-6" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 06-install-suricata.sh</h2>
+                <p>Installs Suricata network intrusion detection system and updates its rule sets on Debian/Ubuntu systems.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>06-install-suricata.sh</h3>
+                    <div class="desc">Installs Suricata network intrusion detection system and updates its rule sets on Debian/Ubuntu systems.</div>
+                    <div class="meta">
+                        <span class="tag cat">install</span>
+                        <span class="tag order">Order: 6</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>apt-get</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>suricata-update</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-7" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 07-install-pigpio.sh</h2>
+                <p>Downloads, compiles, and installs pigpio library from source code with systemd service setup for GPIO control on Raspberry Pi.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>07-install-pigpio.sh</h3>
+                    <div class="desc">Downloads, compiles, and installs pigpio library from source code with systemd service setup for GPIO control on Raspberry Pi.</div>
+                    <div class="meta">
+                        <span class="tag cat">install</span>
+                        <span class="tag order">Order: 7</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>apt</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>pip</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">4</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>gpioinfo</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">5</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>pigpio.zip</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">6</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>/etc/systemd/system/pigpiod.service</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">7</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>Makefile</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-8" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 08-install-sqlite.sh</h2>
+                <p>Installs SQLite3 database engine using apt-get package manager on Debian/Ubuntu systems.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>08-install-sqlite.sh</h3>
+                    <div class="desc">Installs SQLite3 database engine using apt-get package manager on Debian/Ubuntu systems.</div>
+                    <div class="meta">
+                        <span class="tag cat">install</span>
+                        <span class="tag order">Order: 8</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>apt-get</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-9" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 09-configure-network.sh</h2>
+                <p>Configures network interface for traffic mirroring by disabling all interfaces except the designated mirror interface and enabling promiscuous mode on it.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>09-configure-network.sh</h3>
+                    <div class="desc">Configures network interface for traffic mirroring by disabling all interfaces except the designated mirror interface and enabling promiscuous mode on it.</div>
+                    <div class="meta">
+                        <span class="tag cat">config</span>
+                        <span class="tag order">Order: 9</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>ip</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>awk</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-10" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: workflow_analyzer.py</h2>
+                <p>An advanced workflow analyzer that uses AI to analyze project files, detect bugs, generate finite state machines, and create interactive HTML reports. It combines static code analysis with resource monitoring and parallel processing.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>workflow_analyzer.py</h3>
+                    <div class="desc">An advanced workflow analyzer that uses AI to analyze project files, detect bugs, generate finite state machines, and create interactive HTML reports. It combines static code analysis with resource monitoring and parallel processing.</div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 15</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>anthropic</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>networkx</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">4</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>psutil</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">5</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>workflow_analysis_cache.json</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">6</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>workflow_analysis.html</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-11" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 02-install-base.sh</h2>
+                <p>Installs base system packages required for the project using apt-get with non-interactive mode.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>02-install-base.sh</h3>
+                    <div class="desc">Installs base system packages required for the project using apt-get with non-interactive mode.</div>
+                    <div class="meta">
+                        <span class="tag cat">install</span>
+                        <span class="tag order">Order: 2</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>apt-get</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-12" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 10-install-backend-deps.sh</h2>
+                <p>Installs Python backend dependencies in a virtual environment by creating a venv and installing packages from requirements.txt.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>10-install-backend-deps.sh</h3>
+                    <div class="desc">Installs Python backend dependencies in a virtual environment by creating a venv and installing packages from requirements.txt.</div>
+                    <div class="meta">
+                        <span class="tag cat">install</span>
+                        <span class="tag order">Order: 15</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>requirements.txt</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>python3</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">4</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>pip</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-13" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 03-install-python.sh</h2>
+                <p>Installs Python 3 and related development packages on a Debian/Ubuntu system using apt-get.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>03-install-python.sh</h3>
+                    <div class="desc">Installs Python 3 and related development packages on a Debian/Ubuntu system using apt-get.</div>
+                    <div class="meta">
+                        <span class="tag cat">install</span>
+                        <span class="tag order">Order: 15</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>apt-get</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-14" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 04-install-node.sh</h2>
+                <p>Installs Node.js and npm packages on a Debian-based system using apt-get package manager.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>04-install-node.sh</h3>
+                    <div class="desc">Installs Node.js and npm packages on a Debian-based system using apt-get package manager.</div>
+                    <div class="meta">
+                        <span class="tag cat">install</span>
+                        <span class="tag order">Order: 15</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>apt-get</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-15" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: main.py</h2>
+                <p>Main deployment script for a webapp backend that handles SSH deployment to Raspberry Pi and AWS OpenSearch configuration. Manages configuration loading, environment setup, and remote deployment operations.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>main.py</h3>
+                    <div class="desc">Main deployment script for a webapp backend that handles SSH deployment to Raspberry Pi and AWS OpenSearch configuration. Manages configuration loading, environment setup, and remote deployment operations.</div>
+                    <div class="meta">
+                        <span class="tag cat">deploy</span>
+                        <span class="tag order">Order: 15</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>src/ids/deploy/pi_uploader.py</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>src/ids/deploy/opensearch_domain.py</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">4</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>src/ids/config/loader.py</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">5</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>subprocess</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-16" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: 11-install-frontend-deps.sh</h2>
+                <p>Installs npm dependencies for the frontend webapp by running 'npm install' in the frontend directory.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>11-install-frontend-deps.sh</h3>
+                    <div class="desc">Installs npm dependencies for the frontend webapp by running 'npm install' in the frontend directory.</div>
+                    <div class="meta">
+                        <span class="tag cat">install</span>
+                        <span class="tag order">Order: 75</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>04-install-node.sh</h3>
+                    <div class="desc">Installs Node.js and npm packages on a Debian-based system using apt-get package manager.</div>
+                    <div class="meta">
+                        <span class="tag cat">install</span>
+                        <span class="tag order">Order: 15</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>apt-get</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 2</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <div id="wf-17" class="tab-content">
+            <div class="workflow-header">
+                <h2>🚀 Workflow: deploy.py</h2>
+                <p>Deployment script that uploads code to a Raspberry Pi via SSH/SFTP and configures it as a systemd service. Interactive script that prompts for SSH credentials and deploys the IDS dashboard application.</p>
+            </div>
+            <div class="sequence">
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">1</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>deploy.py</h3>
+                    <div class="desc">Deployment script that uploads code to a Raspberry Pi via SSH/SFTP and configures it as a systemd service. Interactive script that prompts for SSH credentials and deploys the IDS dashboard application.</div>
+                    <div class="meta">
+                        <span class="tag cat">deploy</span>
+                        <span class="tag order">Order: 95</span>
+                        <span class="tag">Depth: 0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">2</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>requirements.txt</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">3</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>deploy/ids-dashboard.service</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">
+                    <div class="num">4</div>
+                    <div class="line"></div>
+                </div>
+                <div class="step-card">
+                    <h3>secret.json</h3>
+                    <div class="desc"></div>
+                    <div class="meta">
+                        <span class="tag cat">util</span>
+                        <span class="tag order">Order: 50</span>
+                        <span class="tag">Depth: 1</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+    
+    <!-- Bugs Tab -->
+    <div id="bugs" class="tab-content">
+        <h2 style="color: #f85149; margin-bottom: 20px;">🐛 Problèmes Détectés</h2>
+        
+        
+        <h3 style="color: #f85149; margin: 20px 0 10px;">💀 Critiques</h3>
+        <div class="bug-list">
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">unified_executor.py</span>
+                    (ligne 54)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>EXECUTION_STEPS list is empty - no scripts will be executed</p>
+                <div class="suggestion">💡 Populate EXECUTION_STEPS with actual project scripts</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">unified_executor.py</span>
+                    (ligne 152)
+                </h4>
+                <p><strong>Type:</strong> unreachable</p>
+                <p>Code after line 152 is cut off, method incomplete</p>
+                <div class="suggestion">💡 Complete the run() method implementation</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">setup.sh</span>
+                    (ligne 20)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>Passwords stored in plain text variables accessible via process list</p>
+                <div class="suggestion">💡 Use SSH keys instead of passwords, or ensure passwords are not exposed in process environment</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">setup_venv.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Script hardcodes path '/home/tor/Downloads/ids2' which won't exist on other systems</p>
+                <div class="suggestion">💡 Use relative paths or script directory detection like 'cd "$(dirname "$0")"'</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">workflow_analyzer.py</span>
+                    (ligne 46)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded API key exposed in source code</p>
+                <div class="suggestion">💡 Move API key to environment variable or config file, never commit secrets to code</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">workflow_analyzer.py</span>
+                    (ligne 46)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>API key hardcoded instead of using environment variable</p>
+                <div class="suggestion">💡 Use os.getenv('ANTHROPIC_API_KEY') with fallback or error</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">10-install-backend-deps.sh</span>
+                    (ligne 14)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>python3 command may not exist or be in PATH</p>
+                <div class="suggestion">💡 Add check for python3 availability before using</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">10-install-backend-deps.sh</span>
+                    (ligne 14)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>python3-venv package may not be installed on system</p>
+                <div class="suggestion">💡 Install python3-venv package or check for module availability</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">02-install-base.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No check for sudo/root privileges before attempting system package installation</p>
+                <div class="suggestion">💡 Add privilege check at start of script</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">Dockerfile</span>
+                    (ligne 27)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>config.yaml file may not exist when COPY is executed</p>
+                <div class="suggestion">💡 Add explicit check or make config.yaml optional with default fallback</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">Dockerfile</span>
+                    (ligne 48)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>ids.app.supervisor module may not exist or be importable</p>
+                <div class="suggestion">💡 Add build-time validation of Python module structure</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">docker-compose.test.yml</span>
+                    (ligne 9)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Dockerfile.test might not exist or be properly configured</p>
+                <div class="suggestion">💡 Ensure Dockerfile.test exists and contains proper test dependencies</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">deploy.py</span>
+                    (ligne 116)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>systemd service file path not verified before copy</p>
+                <div class="suggestion">💡 Verify service file exists at deploy/ids-dashboard.service before copying</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">config.yaml</span>
+                    (ligne 24)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded path '/mnt/ram_logs/eve.json' may not exist if RAM disk is not properly mounted</p>
+                <div class="suggestion">💡 Add validation for RAM disk mount point or make path configurable with fallback</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">config.yaml</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>References secret.json file for AWS and Tailscale credentials but file existence is not validated</p>
+                <div class="suggestion">💡 Add validation to ensure secret.json exists and contains required keys</div>
+            </div>
+            
+            <div class="bug-card critical">
+                <h4>
+                    <span class="severity critical">CRITICAL</span>
+                    <span class="file">main.py</span>
+                    (ligne 207)
+                </h4>
+                <p><strong>Type:</strong> unreachable</p>
+                <p>Code after line 207 is cut off, potential incomplete implementation</p>
+                <div class="suggestion">💡 Complete the render_env_file function implementation</div>
+            </div>
+            </div>
+        
+        
+        <h3 style="color: #f85149; margin: 20px 0 10px;">🔴 Élevés</h3>
+        <div class="bug-list">
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">unified_executor.py</span>
+                    (ligne 65)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>No file locking mechanism for concurrent executions</p>
+                <div class="suggestion">💡 Add file locking to prevent multiple simultaneous executions</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">setup.sh</span>
+                    (ligne 33)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Temporary archive file could be accessed by other users before cleanup</p>
+                <div class="suggestion">💡 Set restrictive permissions on temporary file: chmod 600</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">setup.sh</span>
+                    (ligne 25)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>SSH connection failures not properly handled - script continues even if remote commands fail</p>
+                <div class="suggestion">💡 Add connection testing before main operations</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">setup.sh</span>
+                    (ligne 64)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Assumes depancecmd/*.sh files exist without verification</p>
+                <div class="suggestion">💡 Check if depancecmd directory and .sh files exist before attempting to execute</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">setup_venv.sh</span>
+                    (ligne 1)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No 'set -e' to exit on errors, script continues even if cd fails or venv creation fails</p>
+                <div class="suggestion">💡 Add 'set -e' at top and check command exit codes</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">setup_venv.sh</span>
+                    (ligne 9)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>python3 and python3-venv availability not checked before use</p>
+                <div class="suggestion">💡 Add dependency checks: 'command -v python3 >/dev/null || { echo "python3 not found"; exit 1; }'</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 12)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>pip install uses --break-system-packages which could corrupt system Python</p>
+                <div class="suggestion">💡 Use virtual environment or check if system package is really unavailable</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">workflow_analyzer.py</span>
+                    (ligne 48)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded root directory path '/home/tor/Downloads/ids2' won't work on other systems</p>
+                <div class="suggestion">💡 Use os.getcwd() or accept path as command line argument</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">workflow_analyzer.py</span>
+                    (ligne 46)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No validation of API key format or network connectivity before making API calls</p>
+                <div class="suggestion">💡 Add API key validation and network error handling</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">01-update-upgrade.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No check for root/sudo privileges before running apt-get commands</p>
+                <div class="suggestion">💡 Add privilege check: if [[ $EUID -ne 0 ]]; then echo 'Root required'; exit 1; fi</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">09-configure-network.sh</span>
+                    (ligne 7)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Script assumes 'ip' command is available but doesn't verify it exists</p>
+                <div class="suggestion">💡 Add 'command -v ip >/dev/null || { echo "ip command not found"; exit 1; }'</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">09-configure-network.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Disabling interfaces while system might be using them could cause network disruption</p>
+                <div class="suggestion">💡 Add checks for active connections or add delay/confirmation</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">06-install-suricata.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No check if apt-get is available or if system is debian-based</p>
+                <div class="suggestion">💡 Add check for apt-get availability and OS detection</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">08-install-sqlite.sh</span>
+                    (ligne 5)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>Assumes Debian/Ubuntu system with apt-get, will fail on other distributions</p>
+                <div class="suggestion">💡 Add OS detection or document system requirements</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 8)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Script assumes apt-get is available but doesn't verify package manager type</p>
+                <div class="suggestion">💡 Check if apt-get exists before using it</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">10-install-backend-deps.sh</span>
+                    (ligne 4)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Assumes /opt/ids-dashboard structure exists</p>
+                <div class="suggestion">💡 Verify parent directories exist before proceeding</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">02-install-base.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No check if apt-get is available or system is debian-based</p>
+                <div class="suggestion">💡 Add check for apt-get existence and OS compatibility</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">03-install-python.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>No check for sufficient privileges to install system packages</p>
+                <div class="suggestion">💡 Add check for root/sudo privileges before attempting apt-get install</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">11-install-frontend-deps.sh</span>
+                    (ligne 5)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>If USER is not set and SUDO_USER is not set, INSTALL_USER could be empty</p>
+                <div class="suggestion">💡 Add fallback user or validation that INSTALL_USER is not empty</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">docker-compose.test.yml</span>
+                    (ligne 14)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded paths like /app/src, /app/tests might not match Dockerfile structure</p>
+                <div class="suggestion">💡 Verify paths match those defined in Dockerfile.test WORKDIR</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">docker-compose.test.yml</span>
+                    (ligne 16)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>config.yaml file might not exist causing mount failure</p>
+                <div class="suggestion">💡 Add existence check or make volume optional with :ro,nocopy</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">deploy.py</span>
+                    (ligne 8)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>paramiko import not in requirements check</p>
+                <div class="suggestion">💡 Add paramiko to requirements.txt or check if installed</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">deploy.py</span>
+                    (ligne 111)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>requirements.txt path not verified before pip install</p>
+                <div class="suggestion">💡 Check if requirements.txt exists before pip install command</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">deploy.py</span>
+                    (ligne 25)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>Secret file written with passwords in plain text without permission check</p>
+                <div class="suggestion">💡 Set restrictive file permissions (600) on secret.json</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">config.yaml</span>
+                    (ligne 8)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Static IP address '192.168.178.66' and network '192.168.178.0/24' are hardcoded for specific environment</p>
+                <div class="suggestion">💡 Make network configuration dynamic or environment-specific</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">main.py</span>
+                    (ligne 95)
+                </h4>
+                <p><strong>Type:</strong> missing_error_handling</p>
+                <p>SSH operations don't validate host connectivity before attempting commands</p>
+                <div class="suggestion">💡 Add connection testing before SSH operations</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">main.py</span>
+                    (ligne 14)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>sys.path modification assumes SRC_ROOT exists without validation</p>
+                <div class="suggestion">💡 Validate SRC_ROOT exists before adding to sys.path</div>
+            </div>
+            
+            <div class="bug-card high">
+                <h4>
+                    <span class="severity high">HIGH</span>
+                    <span class="file">database.py</span>
+                    (ligne 21)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>_build_engine() doesn't handle database connection errors</p>
+                <div class="suggestion">💡 Add try/except around create_engine() calls</div>
+            </div>
+            </div>
+        
+        
+        <h3 style="color: #f0883e; margin: 20px 0 10px;">🟠 Moyens</h3>
+        <div class="bug-list">
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">unified_executor.py</span>
+                    (ligne 21)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded log filename 'unified_execution.log' without path validation</p>
+                <div class="suggestion">💡 Use configurable log path with validation</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">unified_executor.py</span>
+                    (ligne 13)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>Missing signal handler cleanup despite importing signal</p>
+                <div class="suggestion">💡 Add proper signal handlers for graceful shutdown</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">unified_executor.py</span>
+                    (ligne 85)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Assumes bash and python executables exist without checking</p>
+                <div class="suggestion">💡 Add executable existence checks before subprocess calls</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">setup.sh</span>
+                    (ligne 14)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Script only checks for sshpass but doesn't verify tar, ssh, scp commands exist</p>
+                <div class="suggestion">💡 Add checks for all required commands: tar, ssh, scp</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">setup.sh</span>
+                    (ligne 69)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>REMOTE_DIR, INSTALL_USER, MIRROR_INTERFACE variables passed to remote scripts but not validated</p>
+                <div class="suggestion">💡 Validate all variables before passing to remote scripts</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">setup.sh</span>
+                    (ligne 33)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No cleanup of temporary archive file if script fails or succeeds</p>
+                <div class="suggestion">💡 Add trap to cleanup temporary files on exit</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">setup.sh</span>
+                    (ligne 69)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>Script continues execution even when individual installation scripts fail</p>
+                <div class="suggestion">💡 Consider adding option to stop on first failure or implement retry mechanism</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">setup_venv.sh</span>
+                    (ligne 9)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>No check if venv directory already exists, could overwrite existing environment</p>
+                <div class="suggestion">💡 Check if venv exists: 'if [ ! -d "venv" ]; then python3 -m venv venv; fi'</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">setup_venv.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>Script assumes specific directory structure and user permissions without validation</p>
+                <div class="suggestion">💡 Add directory existence and write permission checks</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">00-check-apt-sources.sh</span>
+                    (ligne 4)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Script assumes standard Debian/Ubuntu APT paths which may not exist on other distributions or containerized environments</p>
+                <div class="suggestion">💡 Add distribution detection or allow path override via environment variables</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 18)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Assumes gpioinfo command exists after package install but doesn't verify installation</p>
+                <div class="suggestion">💡 Add check if gpioinfo command exists before running test</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 3)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Script assumes it's running on Raspberry Pi 5 but doesn't validate hardware</p>
+                <div class="suggestion">💡 Add hardware detection or make script more generic</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 5)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>apt update and install commands could conflict if multiple scripts run simultaneously</p>
+                <div class="suggestion">💡 Add lock file or check if another apt process is running</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 5)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No check for internet connectivity before attempting package downloads</p>
+                <div class="suggestion">💡 Add network connectivity check before apt operations</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">workflow_analyzer.py</span>
+                    (ligne 33)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Missing error handling for failed imports - script exits immediately</p>
+                <div class="suggestion">💡 Add graceful degradation or better error messages for missing dependencies</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">workflow_analyzer.py</span>
+                    (ligne 21)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>ThreadPoolExecutor with shared resource monitoring could cause race conditions</p>
+                <div class="suggestion">💡 Ensure proper thread synchronization for shared state access</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">workflow_analyzer.py</span>
+                    (ligne 150)
+                </h4>
+                <p><strong>Type:</strong> resource_leak</p>
+                <p>ThreadPoolExecutor and monitoring threads may not clean up properly on exit</p>
+                <div class="suggestion">💡 Add proper cleanup in finally blocks or context managers</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">01-update-upgrade.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No specific error handling for network issues or package conflicts during upgrade</p>
+                <div class="suggestion">💡 Add retry logic and specific error messages for common apt-get failures</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">01-update-upgrade.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No verification that apt-get exists (could fail on non-Debian systems)</p>
+                <div class="suggestion">💡 Add check: command -v apt-get >/dev/null 2>&1 || { echo 'apt-get not found'; exit 1; }</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">01-update-upgrade.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Could conflict with other apt processes if run in parallel</p>
+                <div class="suggestion">💡 Add apt lock check or use flock to prevent concurrent apt operations</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">09-configure-network.sh</span>
+                    (ligne 3)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Default interface 'eth0' may not exist on all systems</p>
+                <div class="suggestion">💡 Auto-detect available interfaces or validate MIRROR_INTERFACE exists</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">09-configure-network.sh</span>
+                    (ligne 7)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>Using '|| true' suppresses all errors which could hide critical failures</p>
+                <div class="suggestion">💡 Check specific error conditions instead of blindly suppressing with || true</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">09-configure-network.sh</span>
+                    (ligne 3)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>No validation that MIRROR_INTERFACE is a valid interface name</p>
+                <div class="suggestion">💡 Add validation: ip link show "$MIRROR_INTERFACE" >/dev/null 2>&1</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">06-install-suricata.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>apt-get install could fail due to network issues, package conflicts, or insufficient disk space</p>
+                <div class="suggestion">💡 Add retry logic and better error messages for apt-get failures</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">06-install-suricata.sh</span>
+                    (ligne 9)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No check for internet connectivity before suricata-update</p>
+                <div class="suggestion">💡 Add network connectivity check before attempting rule updates</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">06-install-suricata.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Assumes standard apt-get location and debian package names</p>
+                <div class="suggestion">💡 Add OS detection and use appropriate package manager</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">08-install-sqlite.sh</span>
+                    (ligne 5)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No apt-get update before install, may fail if package lists are stale</p>
+                <div class="suggestion">💡 Run apt-get update before install or ensure it's run in a previous script</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">08-install-sqlite.sh</span>
+                    (ligne 5)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No verification that sqlite3 was actually installed successfully</p>
+                <div class="suggestion">💡 Add post-install verification like 'sqlite3 --version'</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">08-install-sqlite.sh</span>
+                    (ligne 5)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Could conflict if multiple package installations run simultaneously</p>
+                <div class="suggestion">💡 Use package manager locking or run installs sequentially</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">05-install-docker.sh</span>
+                    (ligne 39)
+                </h4>
+                <p><strong>Type:</strong> missing_error_handling</p>
+                <p>curl command could fail without proper error handling despite set -e</p>
+                <div class="suggestion">💡 Add explicit error checking after curl command</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">05-install-docker.sh</span>
+                    (ligne 47)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded fallback codename 'bookworm' may not work on all Debian derivatives</p>
+                <div class="suggestion">💡 Use dynamic detection or support multiple fallback codenames</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">05-install-docker.sh</span>
+                    (ligne 16)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>usermod command uses || true which silently ignores failures</p>
+                <div class="suggestion">💡 Check if usermod actually succeeded and warn user</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">05-install-docker.sh</span>
+                    (ligne 4)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>If all user variables are empty, docker group setup silently skips</p>
+                <div class="suggestion">💡 Warn user when no valid user found for docker group</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">05-install-docker.sh</span>
+                    (ligne 28)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>GPG keyring path /etc/apt/keyrings may not exist on older systems</p>
+                <div class="suggestion">💡 Check if directory exists before install command</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">05-install-docker.sh</span>
+                    (ligne 20)
+                </h4>
+                <p><strong>Type:</strong> missing_error_handling</p>
+                <p>No verification that docker service actually started after enable</p>
+                <div class="suggestion">💡 Add docker service status check after enable</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 17)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>Network download has no retry mechanism or timeout handling</p>
+                <div class="suggestion">💡 Add wget timeout and retry options</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 11)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Multiple instances could create conflicting temp directories or systemd services</p>
+                <div class="suggestion">💡 Add file locking mechanism</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 42)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded /etc/systemd/system path may not exist on all systems</p>
+                <div class="suggestion">💡 Check if systemd directory exists before creating service</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 20)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>find command could fail silently if extraction creates unexpected structure</p>
+                <div class="suggestion">💡 Add more robust directory detection with explicit error messages</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">10-install-backend-deps.sh</span>
+                    (ligne 18)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>Network failures during pip install are not handled gracefully</p>
+                <div class="suggestion">💡 Add retry logic or offline fallback for pip install</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">10-install-backend-deps.sh</span>
+                    (ligne 4)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>If REMOTE_DIR is empty string, paths become invalid</p>
+                <div class="suggestion">💡 Validate REMOTE_DIR is not empty before using</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">10-install-backend-deps.sh</span>
+                    (ligne 18)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Requirements file could contain packages that fail to install</p>
+                <div class="suggestion">💡 Parse requirements and validate each package individually</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">02-install-base.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No verification that packages were actually installed successfully</p>
+                <div class="suggestion">💡 Add post-install verification commands</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">02-install-base.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No network connectivity check before attempting downloads</p>
+                <div class="suggestion">💡 Add network connectivity test</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">02-install-base.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>apt-get update not called, could install stale packages if run in parallel with other apt operations</p>
+                <div class="suggestion">💡 Add 'apt-get update' before install or use apt-get update && apt-get install</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">03-install-python.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No apt-get update before install - packages might be outdated or missing</p>
+                <div class="suggestion">💡 Run 'apt-get update' before installing packages</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">03-install-python.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Assumes apt-get is available and system is Debian/Ubuntu based</p>
+                <div class="suggestion">💡 Add OS detection or document system requirements</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">03-install-python.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Script assumes internet connectivity without checking</p>
+                <div class="suggestion">💡 Add network connectivity check before attempting downloads</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">04-install-node.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>apt-get update not called before install, could install outdated packages</p>
+                <div class="suggestion">💡 Run apt-get update first or ensure it was run recently</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">04-install-node.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Assumes apt-get package manager exists (Debian/Ubuntu only)</p>
+                <div class="suggestion">💡 Add OS detection or document OS requirements</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">11-install-frontend-deps.sh</span>
+                    (ligne 4)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded path /opt/ids-dashboard may not exist on all systems</p>
+                <div class="suggestion">💡 Validate REMOTE_DIR exists before using</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">11-install-frontend-deps.sh</span>
+                    (ligne 10)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Script references 04-install-node.sh but doesn't verify it exists</p>
+                <div class="suggestion">💡 Check if 04-install-node.sh exists before referencing it</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">11-install-frontend-deps.sh</span>
+                    (ligne 13)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>npm install can fail but no specific error handling for common npm issues</p>
+                <div class="suggestion">💡 Add npm cache clean or retry logic for npm install failures</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">__init__.py</span>
+                    (ligne 1)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No imports or initialization of database components, other modules may fail when trying to access db package contents</p>
+                <div class="suggestion">💡 Add imports for main database classes or functions that should be available at package level</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">Dockerfile</span>
+                    (ligne 48)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded /app/config.yaml path in CMD may not match actual config location</p>
+                <div class="suggestion">💡 Use environment variable for config path or relative path</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">Dockerfile</span>
+                    (ligne 26)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No validation that required source directories exist before COPY</p>
+                <div class="suggestion">💡 Add build-time checks or use .dockerignore with explicit file listing</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">Dockerfile</span>
+                    (ligne 32)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>No environment variables defined for runtime configuration like log levels or network interfaces</p>
+                <div class="suggestion">💡 Add ENV variables for common configuration overrides</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">Dockerfile</span>
+                    (ligne 37)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Fixed paths /var/log/ids and /var/lib/ids may conflict with host system</p>
+                <div class="suggestion">💡 Use configurable volume mount points</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">docker-compose.test.yml</span>
+                    (ligne 69)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>flake8 command uses '|| true' which masks all failures</p>
+                <div class="suggestion">💡 Remove '|| true' or implement proper error handling to fail on critical lint issues</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">docker-compose.test.yml</span>
+                    (ligne 1)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Multiple services might run simultaneously causing port conflicts or resource contention</p>
+                <div class="suggestion">💡 Use docker-compose run instead of up for sequential execution</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">deploy.py</span>
+                    (ligne 17)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>REMOTE_DIR hardcoded to /opt/ids-dashboard without checking permissions</p>
+                <div class="suggestion">💡 Make REMOTE_DIR configurable or check write permissions</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">deploy.py</span>
+                    (ligne 30)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>SSH connection timeout but no retry mechanism</p>
+                <div class="suggestion">💡 Add retry logic for SSH connection failures</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">deploy.py</span>
+                    (ligne 111)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Python3 command assumed to exist on remote system</p>
+                <div class="suggestion">💡 Check if python3 is available or use python fallback</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">deploy.py</span>
+                    (ligne 95)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No rollback mechanism if deployment fails partially</p>
+                <div class="suggestion">💡 Add rollback functionality to restore previous state on failure</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">deploy.py</span>
+                    (ligne 31)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>SSH host key verification uses AutoAddPolicy without user consent</p>
+                <div class="suggestion">💡 Warn user about host key auto-acceptance or make configurable</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">config.yaml</span>
+                    (ligne 4)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>OpenSearch endpoint is hardcoded to specific AWS domain, not environment-agnostic</p>
+                <div class="suggestion">💡 Use environment variables or separate config files for different deployment environments</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">config.yaml</span>
+                    (ligne 77)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>Tailscale configuration is commented out but no fallback or validation for required fields</p>
+                <div class="suggestion">💡 Provide clear documentation on which Tailscale fields are required and validate presence</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">config.yaml</span>
+                    (ligne 57)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Docker services start order not specified, but some services depend on others (Vector depends on Redis/OpenSearch)</p>
+                <div class="suggestion">💡 Add depends_on configuration or startup delay mechanisms</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">main.py</span>
+                    (ligne 17)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Optional imports with broad Exception catching could hide ImportError issues</p>
+                <div class="suggestion">💡 Catch specific ImportError instead of broad Exception</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">main.py</span>
+                    (ligne 35)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Default remote_dir hardcoded to /opt/ids2 without validation</p>
+                <div class="suggestion">💡 Make remote directory configurable and validate existence</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">main.py</span>
+                    (ligne 168)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>File operations in load_yaml_data and load_json_data catch all exceptions silently</p>
+                <div class="suggestion">💡 Add specific exception handling and logging for file operations</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">main.py</span>
+                    (ligne 95)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Concurrent SSH operations could conflict if multiple instances run simultaneously</p>
+                <div class="suggestion">💡 Add file locking or deployment state management</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">database.py</span>
+                    (ligne 37)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No exception handling in get_session() for database connection failures</p>
+                <div class="suggestion">💡 Add try/except around SessionLocal() creation</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">database.py</span>
+                    (ligne 33)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded 'data' directory path may not exist in all deployment environments</p>
+                <div class="suggestion">💡 Make data directory configurable via environment variable</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">database.py</span>
+                    (ligne 8)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>SQLAlchemy import not in requirements check</p>
+                <div class="suggestion">💡 Ensure SQLAlchemy is in requirements.txt</div>
+            </div>
+            
+            <div class="bug-card medium">
+                <h4>
+                    <span class="severity medium">MEDIUM</span>
+                    <span class="file">database.py</span>
+                    (ligne 16)
+                </h4>
+                <p><strong>Type:</strong> unreachable</p>
+                <p>_resolve_db_url() function is defined but its logic seems flawed - it replaces a relative path with absolute but uses the same relative path</p>
+                <div class="suggestion">💡 Fix path resolution logic or remove if unused</div>
+            </div>
+            </div>
+        
+        
+        <h3 style="color: #3fb950; margin: 20px 0 10px;">🟢 Faibles</h3>
+        <div class="bug-list">
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">unified_executor.py</span>
+                    (ligne 95)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>PYTHONPATH hardcoded to project_dir might conflict with existing paths</p>
+                <div class="suggestion">💡 Append to existing PYTHONPATH instead of overriding</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">setup.sh</span>
+                    (ligne 33)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Hardcoded /tmp path for archive may not exist on all systems</p>
+                <div class="suggestion">💡 Use TMPDIR environment variable or verify /tmp exists</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">setup_venv.sh</span>
+                    (ligne 26)
+                </h4>
+                <p><strong>Type:</strong> unreachable</p>
+                <p>Sort command on .gitignore may fail if file doesn't exist initially</p>
+                <div class="suggestion">💡 Ensure .gitignore exists: 'touch .gitignore' before sorting</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">00-check-apt-sources.sh</span>
+                    (ligne 9)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Time-of-check-time-of-use issue between checking file existence and later APT operations</p>
+                <div class="suggestion">💡 This is acceptable for a pre-flight check as APT will handle missing sources gracefully</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">00-check-apt-sources.sh</span>
+                    (ligne 9)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Script doesn't verify if 'ls' command exists, though this is extremely unlikely to be missing</p>
+                <div class="suggestion">💡 Use built-in bash test operators instead of ls for better portability</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">00-check-apt-sources.sh</span>
+                    (ligne 1)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>While set -euo pipefail is used, there's no cleanup or specific error context when checks fail</p>
+                <div class="suggestion">💡 Consider adding more descriptive error messages indicating which specific check failed</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 18)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>gpioinfo test failure doesn't affect script success due to pipe to head</p>
+                <div class="suggestion">💡 Check gpioinfo exit code separately or remove head pipe</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">01-update-upgrade.sh</span>
+                    (ligne 7)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No disk space check before upgrade which could fill filesystem</p>
+                <div class="suggestion">💡 Check available space in /var/cache/apt/archives before upgrade</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">09-configure-network.sh</span>
+                    (ligne 9)
+                </h4>
+                <p><strong>Type:</strong> unreachable</p>
+                <p>If ip -o link show fails, the while loop gets no input but script continues</p>
+                <div class="suggestion">💡 Verify ip command succeeds before processing output</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">06-install-suricata.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>If multiple instances run simultaneously, apt locks could cause failures</p>
+                <div class="suggestion">💡 Add apt lock checking and waiting mechanism</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">06-install-suricata.sh</span>
+                    (ligne 4)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>No validation that DEBIAN_FRONTEND export is working correctly</p>
+                <div class="suggestion">💡 Verify environment variable is set correctly</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">08-install-sqlite.sh</span>
+                    (ligne 5)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Assumes apt-get is in PATH and available</p>
+                <div class="suggestion">💡 Use full path /usr/bin/apt-get or check availability first</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">05-install-docker.sh</span>
+                    (ligne 26)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Multiple apt-get update calls could conflict if run in parallel</p>
+                <div class="suggestion">💡 Add flock around apt operations</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">05-install-docker.sh</span>
+                    (ligne 19)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>Script assumes systemctl exists but only checks at runtime</p>
+                <div class="suggestion">💡 Add fallback for non-systemd systems</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 1)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No verification that system supports GPIO hardware before installing</p>
+                <div class="suggestion">💡 Add hardware compatibility check</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">07-install-pigpio.sh</span>
+                    (ligne 4)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>DEBIAN_FRONTEND export may not persist in all shell environments</p>
+                <div class="suggestion">💡 Set DEBIAN_FRONTEND inline with apt commands</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">10-install-backend-deps.sh</span>
+                    (ligne 14)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Multiple instances could try to create venv simultaneously</p>
+                <div class="suggestion">💡 Use file locking or atomic directory creation</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">02-install-base.sh</span>
+                    (ligne 4)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>DEBIAN_FRONTEND set but not checked if it's already set to something important</p>
+                <div class="suggestion">💡 Store and restore original DEBIAN_FRONTEND value</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">03-install-python.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No verification that packages were actually installed successfully</p>
+                <div class="suggestion">💡 Add post-install verification like 'python3 --version'</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">04-install-node.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No specific error handling for network failures during package download</p>
+                <div class="suggestion">💡 Add retry logic or better error messages for network issues</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">04-install-node.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>No check if packages are already installed, causing unnecessary reinstalls</p>
+                <div class="suggestion">💡 Add package existence check before installation</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">04-install-node.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>Relies on PATH containing apt-get but doesn't verify</p>
+                <div class="suggestion">💡 Use full path /usr/bin/apt-get or verify command exists</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">11-install-frontend-deps.sh</span>
+                    (ligne 13)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>If multiple instances run simultaneously, npm install could conflict</p>
+                <div class="suggestion">💡 Use npm install with --mutex flag or lock file</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">11-install-frontend-deps.sh</span>
+                    (ligne 6)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>Frontend directory structure assumed to be webapp/frontend</p>
+                <div class="suggestion">💡 Make frontend path configurable</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">__init__.py</span>
+                    (ligne 1)
+                </h4>
+                <p><strong>Type:</strong> dead_code</p>
+                <p>File contains only docstring with no functional code, imports, or package initialization</p>
+                <div class="suggestion">💡 Consider adding __all__ to explicitly define public API or import key database classes/functions</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">Dockerfile</span>
+                    (ligne 45)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>HEALTHCHECK runs immediately but supervisor may need startup time</p>
+                <div class="suggestion">💡 Implement proper health check endpoint in supervisor module</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">docker-compose.test.yml</span>
+                    (ligne 47)
+                </h4>
+                <p><strong>Type:</strong> missing_env</p>
+                <p>AWS credentials are hardcoded as 'testing' but AWS services might require different mock values</p>
+                <div class="suggestion">💡 Use proper mock AWS service or document that these are placeholder values</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">docker-compose.test.yml</span>
+                    (ligne 22)
+                </h4>
+                <p><strong>Type:</strong> hardcoded_path</p>
+                <p>pytest.log is written to /tmp which might not be accessible in container</p>
+                <div class="suggestion">💡 Write logs to mounted volume like /app/test-results/pytest.log</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">docker-compose.test.yml</span>
+                    (ligne 67)
+                </h4>
+                <p><strong>Type:</strong> missing_dependency</p>
+                <p>flake8 is installed at runtime but not in Dockerfile.test, causing repeated downloads</p>
+                <div class="suggestion">💡 Include flake8 in Dockerfile.test to avoid runtime installation</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">deploy.py</span>
+                    (ligne 121)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Service restart without checking if previous instance stopped</p>
+                <div class="suggestion">💡 Add service status check before restart</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">config.yaml</span>
+                    (ligne 12)
+                </h4>
+                <p><strong>Type:</strong> no_error_handling</p>
+                <p>No validation rules for resource limits (CPU/RAM percentages could exceed 100%)</p>
+                <div class="suggestion">💡 Add configuration validation to ensure percentage values are between 0-100</div>
+            </div>
+            
+            <div class="bug-card low">
+                <h4>
+                    <span class="severity low">LOW</span>
+                    <span class="file">database.py</span>
+                    (ligne 33)
+                </h4>
+                <p><strong>Type:</strong> race_condition</p>
+                <p>Multiple processes could try to create data/ directory simultaneously</p>
+                <div class="suggestion">💡 Add file locking or check-and-create atomically</div>
+            </div>
+            </div>
+        
+    </div>
+    
+    <!-- FSM Tab -->
+    <div id="fsm" class="tab-content">
+        <h2 style="color: #a371f7; margin-bottom: 20px;">⚙️ Final State Machine</h2>
+        <div class="fsm-container">
+            
+        </div>
+    </div>
+    
+    <!-- Orphans Tab -->
+    <div id="orphans" class="tab-content">
+        <h2 style="color: #8b949e; margin-bottom: 20px;">👻 Scripts Orphelins</h2>
+        <p style="margin-bottom: 15px; color: #8b949e;">Ces fichiers ne sont appelés par aucun workflow et n'appellent rien d'utile.</p>
+        <div class="orphan-list">
+            <div class="orphan">__init__.py</div>
+        </div>
+    </div>
+    
+    <!-- Unified Script Tab -->
+    <div id="unified" class="tab-content">
+        <h2 style="color: #3fb950; margin-bottom: 20px;">📜 Script d'Exécution Unifié</h2>
+        <p style="margin-bottom: 15px; color: #8b949e;">Ce script exécute automatiquement tous les workflows dans l'ordre optimal.</p>
+        
+        <div class="code-container">
+            <div class="code-header">
+                <span>unified_executor.py</span>
+                <button onclick="copyCode()">📋 Copier</button>
+            </div>
+            <pre id="unified-code">#!/usr/bin/env python3
+"""
+=============================================================================
+UNIFIED EXECUTION SCRIPT - Auto-generated by Workflow Analyzer
+=============================================================================
+Ce script exécute tous les scripts du projet dans l'ordre optimal.
+Généré le: 2026-02-04 20:26:39
+=============================================================================
+"""
+
+import os
+import sys
+import subprocess
+import time
+import signal
+from pathlib import Path
+from enum import Enum, auto
+from dataclasses import dataclass
+from typing import Optional, List, Callable
+import logging
+
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s | %(levelname)-8s | %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('unified_execution.log')
+    ]
+)
+log = logging.getLogger(__name__)
+
+# =============================================================================
+# FSM STATES
+# =============================================================================
+
+class State(Enum):
+    START = auto()
+    UNIFIED_EXECUTOR_PY = auto()
+    SETUP_SH = auto()
+    02_INSTALL_BASE_SH = auto()
+    SETUP_VENV_SH = auto()
+    00_CHECK_APT_SOURCES_SH = auto()
+    01_UPDATE_UPGRADE_SH = auto()
+    05_INSTALL_DOCKER_SH = auto()
+    06_INSTALL_SURICATA_SH = auto()
+    07_INSTALL_PIGPIO_SH = auto()
+    08_INSTALL_SQLITE_SH = auto()
+    09_CONFIGURE_NETWORK_SH = auto()
+    WORKFLOW_ANALYZER_PY = auto()
+    10_INSTALL_BACKEND_DEPS_SH = auto()
+    03_INSTALL_PYTHON_SH = auto()
+    04_INSTALL_NODE_SH = auto()
+    MAIN_PY = auto()
+    11_INSTALL_FRONTEND_DEPS_SH = auto()
+    DEPLOY_PY = auto()
+    SUCCESS = auto()
+    ERROR = auto()
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+@dataclass
+class StepConfig:
+    name: str
+    script: str
+    state: State
+    description: str
+    timeout: int = 300
+    can_fail: bool = True
+    on_failure: str = "abort"  # abort, skip, retry
+    max_retries: int = 3
+    inputs: List[str] = None
+    outputs: List[str] = None
+
+EXECUTION_STEPS: List[StepConfig] = [
+    StepConfig(
+        name="unified_executor.py",
+        script="unified_executor.py",
+        state=State.UNIFIED_EXECUTOR_PY,
+        description="A unified execution orchestrator that runs all project scripts in optimal order with FSM state manag",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['project_dir', 'EXECUTION_STEPS configuration', 'environment variables'],
+        outputs=['unified_execution.log', 'execution state changes', 'orchestrated script results']
+    ),
+    StepConfig(
+        name="setup.sh",
+        script="setup.sh",
+        state=State.SETUP_SH,
+        description="Remote deployment script that packages and installs an IDS (Intrusion Detection System) dashboard on",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['PI_HOST (IP address)', 'PI_USER (SSH username)', 'PI_PASS (SSH password)'],
+        outputs=['ids-dashboard.tar.gz archive', 'Remote directory structure on Pi', 'Installed services on Pi']
+    ),
+    StepConfig(
+        name="02-install-base.sh",
+        script="02-install-base.sh",
+        state=State.02_INSTALL_BASE_SH,
+        description="Installs base system packages required for the project using apt-get with non-interactive mode.",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['root/sudo privileges', 'internet connection', 'debian/ubuntu system'],
+        outputs=['ca-certificates', 'curl', 'gnupg']
+    ),
+    StepConfig(
+        name="setup_venv.sh",
+        script="setup_venv.sh",
+        state=State.SETUP_VENV_SH,
+        description="Sets up a Python virtual environment named 'venv', installs dependencies from requirements.txt if pr",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['requirements.txt (optional)', '.gitignore file', 'python3 binary'],
+        outputs=['venv/ directory with virtual environment', 'installed Python packages', 'updated .gitignore file']
+    ),
+    StepConfig(
+        name="00-check-apt-sources.sh",
+        script="00-check-apt-sources.sh",
+        state=State.00_CHECK_APT_SOURCES_SH,
+        description="Validates that APT package manager sources are properly configured by checking for existence of sour",
+        timeout=5,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['/etc/apt/sources.list', '/etc/apt/sources.list.d/', 'APT configuration files'],
+        outputs=['console messages in French', 'exit status (0=success, 1=failure)']
+    ),
+    StepConfig(
+        name="01-update-upgrade.sh",
+        script="01-update-upgrade.sh",
+        state=State.01_UPDATE_UPGRADE_SH,
+        description="Updates APT package lists and upgrades all installed Debian/Ubuntu packages to their latest versions",
+        timeout=1800,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['root/sudo privileges', 'internet connection', 'APT package manager'],
+        outputs=['updated package lists in /var/lib/apt/lists/', 'upgraded system packages', 'updated package cache']
+    ),
+    StepConfig(
+        name="05-install-docker.sh",
+        script="05-install-docker.sh",
+        state=State.05_INSTALL_DOCKER_SH,
+        description="Installs Docker Engine via apt with GPG key verification and adds user to docker group. Enables Dock",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['INSTALL_USER env var', 'SUDO_USER env var', 'USER env var'],
+        outputs=['docker service enabled', 'docker group membership', 'Docker Engine installed']
+    ),
+    StepConfig(
+        name="06-install-suricata.sh",
+        script="06-install-suricata.sh",
+        state=State.06_INSTALL_SURICATA_SH,
+        description="Installs Suricata network intrusion detection system and updates its rule sets on Debian/Ubuntu syst",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['root privileges', 'internet connectivity', 'apt package manager'],
+        outputs=['suricata binary installed', 'suricata-update tool', 'updated threat detection rules']
+    ),
+    StepConfig(
+        name="07-install-pigpio.sh",
+        script="07-install-pigpio.sh",
+        state=State.07_INSTALL_PIGPIO_SH,
+        description="Downloads, compiles, and installs pigpio library from source code with systemd service setup for GPI",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['internet connection', 'PIGPIO_ARCHIVE_URL environment variable', 'apt package manager'],
+        outputs=['pigpio library binaries', 'pigpiod daemon', 'systemd service file']
+    ),
+    StepConfig(
+        name="08-install-sqlite.sh",
+        script="08-install-sqlite.sh",
+        state=State.08_INSTALL_SQLITE_SH,
+        description="Installs SQLite3 database engine using apt-get package manager on Debian/Ubuntu systems.",
+        timeout=120,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['apt package manager', 'internet connection', 'root/sudo privileges'],
+        outputs=['sqlite3 binary installed', '/usr/bin/sqlite3 executable', 'SQLite3 system libraries']
+    ),
+    StepConfig(
+        name="09-configure-network.sh",
+        script="09-configure-network.sh",
+        state=State.09_CONFIGURE_NETWORK_SH,
+        description="Configures network interface for traffic mirroring by disabling all interfaces except the designated",
+        timeout=30,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['MIRROR_INTERFACE environment variable (defaults to eth0)', 'system network interfaces', 'root privileges'],
+        outputs=['disabled non-mirror network interfaces', 'promiscuous mode enabled on mirror interface', 'system ready for network monitoring']
+    ),
+    StepConfig(
+        name="workflow_analyzer.py",
+        script="workflow_analyzer.py",
+        state=State.WORKFLOW_ANALYZER_PY,
+        description="An advanced workflow analyzer that uses AI to analyze project files, detect bugs, generate finite st",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['ANTHROPIC_API_KEY environment variable or hardcoded key', 'root_dir directory to analyze (/home/tor/Downloads/ids2)', 'Project files with extensions: .py, .sh, .yml, .yaml, .service, .bash'],
+        outputs=['workflow_analysis.html - Interactive multi-tab HTML report', 'workflow_analysis_cache.json - Cached analysis results', 'Console output with colored logging']
+    ),
+    StepConfig(
+        name="10-install-backend-deps.sh",
+        script="10-install-backend-deps.sh",
+        state=State.10_INSTALL_BACKEND_DEPS_SH,
+        description="Installs Python backend dependencies in a virtual environment by creating a venv and installing pack",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['REMOTE_DIR environment variable', 'requirements.txt file', 'python3 binary'],
+        outputs=['virtual environment directory', 'installed Python packages', 'upgraded pip']
+    ),
+    StepConfig(
+        name="03-install-python.sh",
+        script="03-install-python.sh",
+        state=State.03_INSTALL_PYTHON_SH,
+        description="Installs Python 3 and related development packages on a Debian/Ubuntu system using apt-get.",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['Debian/Ubuntu system', 'root/sudo privileges', 'internet connectivity'],
+        outputs=['python3 binary', 'python3-venv module', 'python3-pip package manager']
+    ),
+    StepConfig(
+        name="04-install-node.sh",
+        script="04-install-node.sh",
+        state=State.04_INSTALL_NODE_SH,
+        description="Installs Node.js and npm packages on a Debian-based system using apt-get package manager.",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['root/sudo privileges', 'internet connection', 'debian-based OS'],
+        outputs=['nodejs binary', 'npm binary', '/usr/bin/node']
+    ),
+    StepConfig(
+        name="main.py",
+        script="main.py",
+        state=State.MAIN_PY,
+        description="Main deployment script for a webapp backend that handles SSH deployment to Raspberry Pi and AWS Open",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['config.yaml', 'secrets.json', 'SSH keys'],
+        outputs=['.env files', 'deployed backend services', 'remote configurations']
+    ),
+    StepConfig(
+        name="11-install-frontend-deps.sh",
+        script="11-install-frontend-deps.sh",
+        state=State.11_INSTALL_FRONTEND_DEPS_SH,
+        description="Installs npm dependencies for the frontend webapp by running 'npm install' in the frontend directory",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['REMOTE_DIR env var', 'INSTALL_USER env var', 'SUDO_USER env var'],
+        outputs=['node_modules directory', 'installed frontend dependencies', 'package-lock.json']
+    ),
+    StepConfig(
+        name="deploy.py",
+        script="deploy.py",
+        state=State.DEPLOY_PY,
+        description="Deployment script that uploads code to a Raspberry Pi via SSH/SFTP and configures it as a systemd se",
+        timeout=300,
+        can_fail=True,
+        on_failure="abort",
+        inputs=['SSH host IP', 'SSH username', 'SSH password'],
+        outputs=['secret.json file', 'deployed code on remote server', 'configured systemd service']
+    ),
+]
+
+# =============================================================================
+# EXECUTOR
+# =============================================================================
+
+class UnifiedExecutor:
+    def __init__(self, project_dir: str = "."):
+        self.project_dir = Path(project_dir).resolve()
+        self.current_state = State.START
+        self.execution_log: List[dict] = []
+        self.start_time = time.time()
+        
+    def _run_script(self, step: StepConfig) -&gt; bool:
+        """Exécute un script avec gestion des erreurs et timeout."""
+        script_path = self.project_dir / step.script
+        
+        if not script_path.exists():
+            log.warning(f"Script non trouvé: {step.script}")
+            return step.on_failure == "skip"
+        
+        log.info(f"▶ Exécution: {step.script}")
+        log.info(f"  Description: {step.description}")
+        
+        # Préparer la commande
+        if step.script.endswith('.py'):
+            cmd = [sys.executable, str(script_path)]
+        elif step.script.endswith(('.sh', '.bash')):
+            cmd = ['bash', str(script_path)]
+        else:
+            cmd = [str(script_path)]
+        
+        # Exécuter avec timeout
+        retries = 0
+        while retries &lt;= step.max_retries:
+            try:
+                start = time.time()
+                result = subprocess.run(
+                    cmd,
+                    cwd=str(self.project_dir),
+                    timeout=step.timeout,
+                    capture_output=True,
+                    text=True,
+                    env={**os.environ, 'PYTHONPATH': str(self.project_dir)}
+                )
+                duration = time.time() - start
+                
+                if result.returncode == 0:
+                    log.info(f"  ✅ Succès en {duration:.1f}s")
+                    self.execution_log.append({
+                        'step': step.name,
+                        'status': 'success',
+                        'duration': duration
+                    })
+                    return True
+                else:
+                    log.error(f"  ❌ Échec (code {result.returncode})")
+                    if result.stderr:
+                        log.error(f"  Erreur: {result.stderr[:500]}")
+                    
+                    if step.on_failure == "retry" and retries &lt; step.max_retries:
+                        retries += 1
+                        log.info(f"  🔄 Retry {retries}/{step.max_retries}...")
+                        time.sleep(2)
+                        continue
+                    elif step.on_failure == "skip":
+                        log.warning(f"  ⏭️ Skip (non critique)")
+                        return True
+                    else:
+                        return False
+                        
+            except subprocess.TimeoutExpired:
+                log.error(f"  ⏰ Timeout après {step.timeout}s")
+                if step.on_failure == "skip":
+                    return True
+                return False
+            except Exception as e:
+                log.error(f"  💥 Exception: {e}")
+                return False
+        
+        return False
+    
+    def run(self, start_from: Optional[str] = None, dry_run: bool = False) -&gt; bool:
+        """Exécute tous les steps dans l'ordre."""
+        log.info("=" * 60)
+        log.info("UNIFIED EXECUTION - START")
+        log.info(f"Project: {self.project_dir}")
+        log.info(f"Steps: {len(EXECUTION_STEPS)}")
+        log.info("=" * 60)
+        
+        started = start_from is None
+        
+        for i, step in enumerate(EXECUTION_STEPS, 1):
+            if not started:
+                if step.script == start_from:
+                    started = True
+                else:
+                    continue
+            
+            log.info(f"\n[{i}/{len(EXECUTION_STEPS)}] {step.state.name}")
+            
+            if dry_run:
+                log.info(f"  [DRY-RUN] Would execute: {step.script}")
+                continue
+            
+            self.current_state = step.state
+            
+            if not self._run_script(step):
+                log.error(f"\n💀 EXECUTION FAILED at step: {step.name}")
+                self.current_state = State.ERROR
+                self._print_summary()
+                return False
+        
+        self.current_state = State.SUCCESS
+        log.info("\n" + "=" * 60)
+        log.info("✨ ALL STEPS COMPLETED SUCCESSFULLY")
+        log.info("=" * 60)
+        
+        self._print_summary()
+        return True
+    
+    def _print_summary(self):
+        """Affiche le résumé d'exécution."""
+        duration = time.time() - self.start_time
+        log.info(f"\n📊 SUMMARY")
+        log.info(f"  Total duration: {duration:.1f}s")
+        log.info(f"  Final state: {self.current_state.name}")
+        log.info(f"  Steps executed: {len(self.execution_log)}")
+        
+        success = sum(1 for l in self.execution_log if l['status'] == 'success')
+        log.info(f"  Successful: {success}/{len(self.execution_log)}")
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+def main():
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Unified Execution Script")
+    parser.add_argument('--dry-run', action='store_true', help='Simulation sans exécution')
+    parser.add_argument('--start-from', type=str, help='Démarrer à partir de ce script')
+    parser.add_argument('--list', action='store_true', help='Lister les étapes')
+    parser.add_argument('-d', '--dir', default='.', help='Répertoire du projet')
+    
+    args = parser.parse_args()
+    
+    if args.list:
+        print("\n📋 ÉTAPES D'EXÉCUTION:\n")
+        for i, step in enumerate(EXECUTION_STEPS, 1):
+            print(f"  {i:2d}. [{step.state.name:15s}] {step.script}")
+            print(f"      {step.description}")
+        return
+    
+    executor = UnifiedExecutor(args.dir)
+    success = executor.run(start_from=args.start_from, dry_run=args.dry_run)
+    
+    sys.exit(0 if success else 1)
+
+if __name__ == "__main__":
+    main()
+</pre>
+        </div>
+    </div>
+    
+    <script>
+        function showTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            
+            // Show selected
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function copyCode() {
+            const code = document.getElementById('unified-code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Code copié!');
+            });
+        }
+    </script>
+</body>
+</html>
