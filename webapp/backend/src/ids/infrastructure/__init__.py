@@ -1,15 +1,21 @@
 """
-Package Infrastructure - services externes (AWS, Redis, logging).
+Infrastructure modules for IDS project.
+
+This package contains:
+- DependencyManager: Manages Python and Docker dependencies
+- DockerOrchestrator: Manages Docker builds and services
+- SecretManager: Manages secrets in database
 """
 
-from .alert_store import InMemoryAlertStore
-from .aws_manager import AWSOpenSearchManager
-from .logger import LoggerStandard
-from .redis_client import RedisClient
+from .dependency_manager import DependencyManager, dependency_manager
+from .docker_orchestrator import DockerOrchestrator, docker_orchestrator
+from .secret_manager import SecretManager, secret_manager
 
 __all__ = [
-    "AWSOpenSearchManager",
-    "InMemoryAlertStore",
-    "LoggerStandard",
-    "RedisClient",
+    "DependencyManager",
+    "dependency_manager",
+    "DockerOrchestrator",
+    "docker_orchestrator",
+    "SecretManager",
+    "secret_manager",
 ]
