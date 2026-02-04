@@ -1,0 +1,17 @@
+[Unit]
+Description=IDS Agent - Intrusion Detection System
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=forking
+User=root
+WorkingDirectory=/opt/ids2/webapp/backend/docker
+ExecStart=/usr/bin/docker-compose up -d ids-runtime
+ExecStop=/usr/bin/docker-compose stop ids-runtime
+ExecReload=/usr/bin/docker-compose restart ids-runtime
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

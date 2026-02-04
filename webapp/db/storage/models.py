@@ -26,6 +26,8 @@ class Secrets(Base, TimestampMixin):
     (e.g., AWS Secrets Manager, HashiCorp Vault, or encrypted columns).
     """
     __tablename__ = "secrets"
+    # SECURITY WARNING: These fields are stored in plain text.
+    # In a production environment, use field-level encryption or an external secret manager (Vault, AWS Secrets Manager).
 
     id: Mapped[int] = Column(Integer, primary_key=True)
     aws_access_key_id: Mapped[str | None] = Column(Text, nullable=True)
