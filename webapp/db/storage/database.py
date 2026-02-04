@@ -6,8 +6,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+try:
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import DeclarativeBase, sessionmaker
+except ModuleNotFoundError as e:
+    raise ImportError(
+        "SQLAlchemy is required. Please install it with 'pip install sqlalchemy'."
+    ) from e
 
 DEFAULT_DB_URL = "sqlite:///./data/ids_dashboard.db"
 

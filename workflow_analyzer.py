@@ -47,7 +47,7 @@ except ImportError as e:
 
 @dataclass 
 class Config:
-    api_key: str = "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"
+    api_key: str = "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"
     model: str = "claude-sonnet-4-20250514"
     root_dir: str = "/home/tor/Downloads/ids2"
     cache_file: str = "workflow_analysis_cache.json"
