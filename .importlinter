@@ -1,0 +1,69 @@
+# Import-Linter Configuration
+# Enforces architectural boundaries and dependency rules
+# Run with: lint-imports
+
+[importlinter]
+root_packages = ids
+include_external_packages = True
+
+# ============================================================================
+# Contract 1: Domain Layer Independence
+# Domain should not depend on infrastructure or external services
+# ============================================================================
+[importlinter:contract:domain-independence]
+name = Domain layer must not import from infrastructure
+type = forbidden
+source_modules =
+    ids.domain
+forbidden_modules =
+    ids.infrastructure
+    ids.composants
+    ids.app
+    ids.deploy
+    ids.suricata
+    boto3
+    redis
+    requests
+    aiohttp
+
+# ============================================================================
+# Contract 2: Layered Architecture
+# Lower layers should not depend on higher layers
+# ============================================================================
+[importlinter:contract:layered-architecture]
+name = Layered Architecture (Clean Architecture)
+type = layers
+layers =
+    ids.app
+    ids.composants
+    ids.infrastructure
+    ids.interfaces
+    ids.domain
+containers =
+    ids
+
+# ============================================================================
+# Contract 3: Tailscale Module Independence
+# Tailscale module should be self-contained
+# ============================================================================
+[importlinter:contract:tailscale-independence]
+name = Tailscale module should be independent
+type = independence
+modules =
+    ids.tailscale
+    ids.suricata
+    ids.deploy
+
+# ============================================================================
+# Contract 4: No Circular Imports
+# ============================================================================
+[importlinter:contract:no-cycles]
+name = No circular imports allowed
+type = forbidden
+source_modules =
+    ids
+forbidden_modules =
+    # Self-reference check is implicit
+ignore_imports =
+    ids.composants -> ids.tailscale
+    ids.monitoring -> ids.tailscale

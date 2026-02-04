@@ -5,11 +5,11 @@ import argparse
 import getpass
 import json
 import logging
-import time
 import shlex
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -256,7 +256,10 @@ def sync_endpoint_files(paths: RepoPaths, ssh_config: SSHConfig) -> bool:
 
     ensure_remote_root(ssh_config)
     entries = [
-        (paths.root / "docker" / "docker-compose.yml", ssh_config.remote_dir / "docker" / "docker-compose.yml"),
+        (
+            paths.root / "docker" / "docker-compose.yml",
+            ssh_config.remote_dir / "docker" / "docker-compose.yml",
+        ),
         (paths.root / "docker" / "fastapi", ssh_config.remote_dir / "docker" / "fastapi"),
         (paths.root / "requirements.txt", ssh_config.remote_dir / "requirements.txt"),
         (paths.root / "src", ssh_config.remote_dir / "src"),
@@ -644,7 +647,9 @@ def create_opensearch_domain(paths: RepoPaths) -> None:
     if endpoint:
         print(f"OpenSearch endpoint: {endpoint}")
     else:
-        print("OpenSearch domain requested. Endpoint will be written to config.yaml when available.")
+        print(
+            "OpenSearch domain requested. Endpoint will be written to config.yaml when available."
+        )
 
 
 def menu(paths: RepoPaths, ssh_config: SSHConfig) -> None:
@@ -658,6 +663,7 @@ def menu(paths: RepoPaths, ssh_config: SSHConfig) -> None:
         "7. Create OpenSearch domain",
         "q. Quit",
     )
+
     def run_action(label: str, action) -> None:
         try:
             action()
@@ -707,8 +713,16 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = parse_args(argv)
-    config_path = (REPO_ROOT / args.config).resolve() if not Path(args.config).is_absolute() else Path(args.config)
-    secret_path = (REPO_ROOT / args.secret).resolve() if not Path(args.secret).is_absolute() else Path(args.secret)
+    config_path = (
+        (REPO_ROOT / args.config).resolve()
+        if not Path(args.config).is_absolute()
+        else Path(args.config)
+    )
+    secret_path = (
+        (REPO_ROOT / args.secret).resolve()
+        if not Path(args.secret).is_absolute()
+        else Path(args.secret)
+    )
 
     defaults = load_pi_defaults(config_path)
     host_default = args.pi_host or defaults.get("host") or ""
@@ -718,7 +732,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     user = prompt_value("Pi user", user_default)
     sudo_password = args.sudo_password
     if sudo_password is None:
-        sudo_password = getpass.getpass("Sudo password (leave empty if not needed): ").strip() or None
+        sudo_password = (
+            getpass.getpass("Sudo password (leave empty if not needed): ").strip() or None
+        )
 
     if not host:
         print("Pi host is required.")

@@ -16,13 +16,15 @@ logger = logging.getLogger(__name__)
 
 try:
     import paramiko
+
     PARAMIKO_AVAILABLE = True
 except ImportError:
     PARAMIKO_AVAILABLE = False
     logger.warning("paramiko not available. Install with: pip install paramiko")
 
 try:
-    from gpiozero import CPUTemperature, LoadAverage, DiskUsage
+    from gpiozero import CPUTemperature, DiskUsage, LoadAverage
+
     GPIOZERO_AVAILABLE = True
 except ImportError:
     GPIOZERO_AVAILABLE = False
@@ -32,6 +34,7 @@ except ImportError:
 @dataclass
 class RaspberryPiInfo:
     """Informations système du Raspberry Pi."""
+
     hostname: str
     model: str
     os_version: str
@@ -47,6 +50,7 @@ class RaspberryPiInfo:
 @dataclass
 class ServiceStatus:
     """Statut d'un service systemd."""
+
     name: str
     active: bool
     enabled: bool
@@ -57,6 +61,7 @@ class ServiceStatus:
 @dataclass
 class DockerContainerStatus:
     """Statut d'un conteneur Docker."""
+
     container_id: str
     name: str
     image: str
@@ -68,7 +73,7 @@ class DockerContainerStatus:
 class RaspberryPiManager:
     """
     Gestionnaire complet pour Raspberry Pi.
-    
+
     Fonctionnalités:
     - Connexion SSH
     - Exécution de commandes à distance
@@ -89,7 +94,7 @@ class RaspberryPiManager:
     ):
         """
         Initialise le gestionnaire Raspberry Pi.
-        
+
         Args:
             host: Adresse IP ou hostname
             user: Utilisateur SSH
@@ -99,7 +104,7 @@ class RaspberryPiManager:
         """
         if not PARAMIKO_AVAILABLE:
             raise ImportError("paramiko required. Install with: pip install paramiko")
-        
+
         self.host = host
         self.user = user
         self.port = port
@@ -124,24 +129,24 @@ class RaspberryPiManager:
         """Établit la connexion SSH."""
         if not PARAMIKO_AVAILABLE:
             raise ImportError("paramiko required")
-        
+
         self._ssh_client = paramiko.SSHClient()
         self._ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        
+
         connect_kwargs = {
             "hostname": self.host,
             "port": self.port,
             "username": self.user,
             "timeout": 10,
         }
-        
+
         if self.ssh_key_path:
             connect_kwargs["key_filename"] = self.ssh_key_path
         elif self.password:
             connect_kwargs["password"] = self.password
         else:
             raise ValueError("Either ssh_key_path or password must be provided")
-        
+
         try:
             self._ssh_client.connect(**connect_kwargs)
             logger.info(f"SSH connected to {self.user}@{self.host}")
@@ -160,7 +165,7 @@ class RaspberryPiManager:
         """Vérifie si la connexion SSH est active."""
         if not self._ssh_client:
             return False
-        
+
         transport = self._ssh_client.get_transport()
         return transport is not None and transport.is_active()
 
@@ -176,35 +181,35 @@ class RaspberryPiManager:
     ) -> tuple[int, str, str]:
         """
         Exécute une commande sur le Pi.
-        
+
         Args:
             command: Commande à exécuter
             sudo: Utiliser sudo
             timeout: Timeout en secondes
-            
+
         Returns:
             Tuple (exit_code, stdout, stderr)
         """
         if not self._ssh_client:
             raise RuntimeError("Not connected. Call connect() first.")
-        
+
         if sudo:
             command = f"sudo {command}"
-        
+
         logger.debug(f"Executing: {command}")
-        
+
         try:
             stdin, stdout, stderr = self._ssh_client.exec_command(command, timeout=timeout)
             exit_code = stdout.channel.recv_exit_status()
             stdout_text = stdout.read().decode("utf-8")
             stderr_text = stderr.read().decode("utf-8")
-            
+
             if exit_code != 0:
                 logger.warning(f"Command failed (exit {exit_code}): {command}")
                 logger.warning(f"stderr: {stderr_text}")
-            
+
             return exit_code, stdout_text, stderr_text
-            
+
         except Exception as e:
             logger.error(f"Command execution error: {e}")
             raise
@@ -216,47 +221,51 @@ class RaspberryPiManager:
     def get_system_info(self) -> RaspberryPiInfo:
         """
         Récupère les informations système du Pi.
-        
+
         Returns:
             Informations système
         """
         # Hostname
         _, hostname, _ = self.run_command("hostname")
         hostname = hostname.strip()
-        
+
         # Model
         _, model, _ = self.run_command("cat /proc/device-tree/model 2>/dev/null || echo 'Unknown'")
         model = model.strip().replace("\x00", "")
-        
+
         # OS version
-        _, os_version, _ = self.run_command("cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"'")
+        _, os_version, _ = self.run_command(
+            "cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"'"
+        )
         os_version = os_version.strip()
-        
+
         # Kernel
         _, kernel, _ = self.run_command("uname -r")
         kernel = kernel.strip()
-        
+
         # Architecture
         _, arch, _ = self.run_command("uname -m")
         arch = arch.strip()
-        
+
         # CPU count
         _, cpu_count, _ = self.run_command("nproc")
         cpu_count_int = int(cpu_count.strip())
-        
+
         # Total memory
         _, mem_info, _ = self.run_command("grep MemTotal /proc/meminfo | awk '{print $2}'")
         total_memory_mb = int(mem_info.strip()) // 1024
-        
+
         # CPU temperature
         cpu_temp = None
-        _, temp_output, _ = self.run_command("cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo ''")
+        _, temp_output, _ = self.run_command(
+            "cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo ''"
+        )
         if temp_output.strip():
             try:
                 cpu_temp = float(temp_output.strip()) / 1000.0
             except ValueError:
                 pass
-        
+
         # Load average
         load_avg = None
         _, load_output, _ = self.run_command("cat /proc/loadavg")
@@ -264,7 +273,7 @@ class RaspberryPiManager:
             parts = load_output.strip().split()
             if len(parts) >= 3:
                 load_avg = [float(parts[0]), float(parts[1]), float(parts[2])]
-        
+
         # Disk usage
         disk_usage = None
         _, disk_output, _ = self.run_command("df / | tail -1 | awk '{print $5}' | sed 's/%//'")
@@ -273,7 +282,7 @@ class RaspberryPiManager:
                 disk_usage = float(disk_output.strip())
             except ValueError:
                 pass
-        
+
         return RaspberryPiInfo(
             hostname=hostname,
             model=model,
@@ -294,25 +303,25 @@ class RaspberryPiManager:
     def get_service_status(self, service_name: str) -> ServiceStatus:
         """
         Récupère le statut d'un service systemd.
-        
+
         Args:
             service_name: Nom du service (ex: ids2-agent.service)
-            
+
         Returns:
             Statut du service
         """
         # Check if active
         exit_code, _, _ = self.run_command(f"systemctl is-active {service_name}", sudo=True)
         active = exit_code == 0
-        
+
         # Check if enabled
         exit_code, _, _ = self.run_command(f"systemctl is-enabled {service_name}", sudo=True)
         enabled = exit_code == 0
-        
+
         # Get status
         _, status_output, _ = self.run_command(f"systemctl status {service_name}", sudo=True)
         running = "running" in status_output.lower()
-        
+
         # Get description
         description = ""
         for line in status_output.split("\n"):
@@ -321,7 +330,7 @@ class RaspberryPiManager:
                 if len(parts) > 1:
                     description = parts[1].strip()
                 break
-        
+
         return ServiceStatus(
             name=service_name,
             active=active,
@@ -357,31 +366,33 @@ class RaspberryPiManager:
     def list_containers(self) -> List[DockerContainerStatus]:
         """
         Liste les conteneurs Docker sur le Pi.
-        
+
         Returns:
             Liste des conteneurs
         """
         _, output, _ = self.run_command(
             "docker ps -a --format '{{.ID}}|{{.Names}}|{{.Image}}|{{.Status}}|{{.CreatedAt}}|{{.Ports}}'",
-            sudo=True
+            sudo=True,
         )
-        
+
         containers = []
         for line in output.strip().split("\n"):
             if not line:
                 continue
-            
+
             parts = line.split("|")
             if len(parts) >= 5:
-                containers.append(DockerContainerStatus(
-                    container_id=parts[0],
-                    name=parts[1],
-                    image=parts[2],
-                    status=parts[3],
-                    created=parts[4],
-                    ports=parts[5].split(",") if len(parts) > 5 and parts[5] else [],
-                ))
-        
+                containers.append(
+                    DockerContainerStatus(
+                        container_id=parts[0],
+                        name=parts[1],
+                        image=parts[2],
+                        status=parts[3],
+                        created=parts[4],
+                        ports=parts[5].split(",") if len(parts) > 5 and parts[5] else [],
+                    )
+                )
+
         return containers
 
     def start_container(self, container_name: str) -> bool:
@@ -402,18 +413,14 @@ class RaspberryPiManager:
     def docker_compose_up(self, compose_dir: str = "/opt/ids/docker") -> bool:
         """Lance Docker Compose."""
         exit_code, _, _ = self.run_command(
-            f"cd {compose_dir} && docker compose up -d",
-            sudo=True,
-            timeout=120
+            f"cd {compose_dir} && docker compose up -d", sudo=True, timeout=120
         )
         return exit_code == 0
 
     def docker_compose_down(self, compose_dir: str = "/opt/ids/docker") -> bool:
         """Arrête Docker Compose."""
         exit_code, _, _ = self.run_command(
-            f"cd {compose_dir} && docker compose down",
-            sudo=True,
-            timeout=60
+            f"cd {compose_dir} && docker compose down", sudo=True, timeout=60
         )
         return exit_code == 0
 
@@ -424,17 +431,17 @@ class RaspberryPiManager:
     def upload_file(self, local_path: str, remote_path: str) -> bool:
         """
         Upload un fichier vers le Pi via SFTP.
-        
+
         Args:
             local_path: Chemin local
             remote_path: Chemin distant
-            
+
         Returns:
             True si succès
         """
         if not self._ssh_client:
             raise RuntimeError("Not connected")
-        
+
         try:
             sftp = self._ssh_client.open_sftp()
             sftp.put(local_path, remote_path)
@@ -448,17 +455,17 @@ class RaspberryPiManager:
     def download_file(self, remote_path: str, local_path: str) -> bool:
         """
         Télécharge un fichier depuis le Pi via SFTP.
-        
+
         Args:
             remote_path: Chemin distant
             local_path: Chemin local
-            
+
         Returns:
             True si succès
         """
         if not self._ssh_client:
             raise RuntimeError("Not connected")
-        
+
         try:
             sftp = self._ssh_client.open_sftp()
             sftp.get(remote_path, local_path)
@@ -472,16 +479,16 @@ class RaspberryPiManager:
     def upload_directory(self, local_dir: str, remote_dir: str) -> bool:
         """
         Upload un répertoire complet via rsync.
-        
+
         Args:
             local_dir: Répertoire local
             remote_dir: Répertoire distant
-            
+
         Returns:
             True si succès
         """
         ssh_key_arg = f"-e 'ssh -i {self.ssh_key_path}'" if self.ssh_key_path else ""
-        
+
         try:
             result = subprocess.run(
                 f"rsync -avz --delete {ssh_key_arg} {local_dir}/ {self.user}@{self.host}:{remote_dir}/",
@@ -503,11 +510,13 @@ class RaspberryPiManager:
     def get_cpu_usage(self) -> float:
         """
         Récupère l'utilisation CPU.
-        
+
         Returns:
             Pourcentage d'utilisation CPU
         """
-        _, output, _ = self.run_command("top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d'%' -f1")
+        _, output, _ = self.run_command(
+            "top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d'%' -f1"
+        )
         try:
             return float(output.strip())
         except ValueError:
@@ -516,13 +525,13 @@ class RaspberryPiManager:
     def get_memory_usage(self) -> Dict[str, float]:
         """
         Récupère l'utilisation mémoire.
-        
+
         Returns:
             Dict avec total, used, free, available en MB
         """
         _, output, _ = self.run_command("free -m | grep Mem:")
         parts = output.strip().split()
-        
+
         if len(parts) >= 7:
             return {
                 "total_mb": float(parts[1]),
@@ -531,22 +540,22 @@ class RaspberryPiManager:
                 "available_mb": float(parts[6]),
                 "usage_percent": (float(parts[2]) / float(parts[1])) * 100,
             }
-        
+
         return {"total_mb": 0, "used_mb": 0, "free_mb": 0, "available_mb": 0, "usage_percent": 0}
 
     def get_disk_usage(self, path: str = "/") -> Dict[str, Any]:
         """
         Récupère l'utilisation disque.
-        
+
         Args:
             path: Point de montage
-            
+
         Returns:
             Dict avec statistiques disque
         """
         _, output, _ = self.run_command(f"df -h {path} | tail -1")
         parts = output.strip().split()
-        
+
         if len(parts) >= 5:
             return {
                 "filesystem": parts[0],
@@ -556,17 +565,19 @@ class RaspberryPiManager:
                 "usage_percent": float(parts[4].rstrip("%")),
                 "mount_point": parts[5] if len(parts) > 5 else path,
             }
-        
+
         return {}
 
     def get_temperature(self) -> Optional[float]:
         """
         Récupère la température CPU.
-        
+
         Returns:
             Température en °C ou None
         """
-        _, output, _ = self.run_command("cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo ''")
+        _, output, _ = self.run_command(
+            "cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo ''"
+        )
         if output.strip():
             try:
                 return float(output.strip()) / 1000.0
@@ -581,35 +592,38 @@ class RaspberryPiManager:
     def get_network_interfaces(self) -> Dict[str, Dict[str, Any]]:
         """
         Liste les interfaces réseau et leurs configurations.
-        
+
         Returns:
             Dict des interfaces avec leurs infos
         """
         _, output, _ = self.run_command("ip -j addr show")
-        
+
         try:
             import json
+
             interfaces_data = json.loads(output)
-            
+
             interfaces = {}
             for iface in interfaces_data:
                 name = iface.get("ifname", "")
                 addresses = []
                 for addr_info in iface.get("addr_info", []):
-                    addresses.append({
-                        "family": addr_info.get("family", ""),
-                        "local": addr_info.get("local", ""),
-                        "prefixlen": addr_info.get("prefixlen", 0),
-                    })
-                
+                    addresses.append(
+                        {
+                            "family": addr_info.get("family", ""),
+                            "local": addr_info.get("local", ""),
+                            "prefixlen": addr_info.get("prefixlen", 0),
+                        }
+                    )
+
                 interfaces[name] = {
                     "state": iface.get("operstate", "unknown"),
                     "mtu": iface.get("mtu", 0),
                     "addresses": addresses,
                 }
-            
+
             return interfaces
-            
+
         except Exception as e:
             logger.error(f"Failed to parse network interfaces: {e}")
             return {}

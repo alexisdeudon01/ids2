@@ -3,11 +3,12 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from ids.composants.tailscale_manager import (
-    TailscaleManager,
     DeploymentCapabilities,
+    TailscaleManager,
     deployment_strategy,
     handles_node_type,
 )

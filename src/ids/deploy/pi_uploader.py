@@ -256,7 +256,9 @@ def build_image(config: DeployConfig, runner: Runner = subprocess.run) -> None:
     )
 
 
-def save_image(config: DeployConfig, runner: Runner = subprocess.run, output_dir: Optional[Path] = None) -> Path:
+def save_image(
+    config: DeployConfig, runner: Runner = subprocess.run, output_dir: Optional[Path] = None
+) -> Path:
     output_root = output_dir or (config.repo_root / "dist")
     output_root.mkdir(parents=True, exist_ok=True)
     safe_name = config.image_name.replace("/", "_")
@@ -265,7 +267,9 @@ def save_image(config: DeployConfig, runner: Runner = subprocess.run, output_dir
     return tar_path
 
 
-def upload_and_load_image(config: DeployConfig, tar_path: Path, runner: Runner = subprocess.run) -> None:
+def upload_and_load_image(
+    config: DeployConfig, tar_path: Path, runner: Runner = subprocess.run
+) -> None:
     remote_tar = f"/tmp/{tar_path.name}"
     run_command(build_scp_command(config, tar_path, remote_tar), runner)
     run_ssh_command(config, f"docker load -i {shlex.quote(remote_tar)}", runner, sudo=True)
@@ -409,8 +413,12 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--dockerfile", default="Dockerfile", help="Dockerfile path")
     parser.add_argument("--opensearch-endpoint", default=None, help="OpenSearch endpoint URL")
     parser.add_argument("--include-tests", action="store_true", help="Sync tests directory")
-    parser.add_argument("--test-artifact", action="append", default=[], help="Extra test artifact paths")
-    parser.add_argument("--sync-path", action="append", default=[], help="Override sync paths (relative)")
+    parser.add_argument(
+        "--test-artifact", action="append", default=[], help="Extra test artifact paths"
+    )
+    parser.add_argument(
+        "--sync-path", action="append", default=[], help="Override sync paths (relative)"
+    )
     parser.add_argument("--skip-install", action="store_true", help="Skip install.sh on the Pi")
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
     return parser.parse_args(argv)

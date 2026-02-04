@@ -254,7 +254,9 @@ def creer_domaine(
     if not domain_config.get("access_policies"):
         account_id = _get_account_id(session)
         if account_id:
-            domain_config["access_policies"] = _build_access_policy(region, account_id, resolved_domain)
+            domain_config["access_policies"] = _build_access_policy(
+                region, account_id, resolved_domain
+            )
 
     payload = _build_payload(resolved_domain, domain_config)
     existing = _describe_domain(client, resolved_domain)

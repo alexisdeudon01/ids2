@@ -4,18 +4,19 @@ conftest.py - Fixtures et configuration globale pytest.
 Centralise les fixtures réutilisables pour tous les tests.
 """
 
-import pytest
-import logging
 import asyncio
-from pathlib import Path
-from typing import Generator, AsyncGenerator
+import logging
 from datetime import datetime
+from pathlib import Path
+from typing import AsyncGenerator, Generator
+
+import pytest
 
 # Importer les fixtures depuis les modules spécialisés
 from fixtures.alerte_fixtures import (
-    alerte_ids_simple,
-    alerte_ids_critique,
     alerte_ids_batch,
+    alerte_ids_critique,
+    alerte_ids_simple,
 )
 from fixtures.config_fixtures import (
     config_ids_test,
@@ -25,17 +26,16 @@ from fixtures.container_fixtures import (
     container_di_test,
 )
 
-
 # ============================================================================
 # Fixtures de Base
 # ============================================================================
+
 
 @pytest.fixture(scope="session")
 def logger() -> logging.Logger:
     """Logger global pour les tests."""
     logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     return logging.getLogger("test")
 
@@ -59,7 +59,7 @@ def event_loop():
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
-    
+
     yield loop
     loop.close()
 
@@ -67,6 +67,7 @@ def event_loop():
 # ============================================================================
 # Fixtures de Nettoyage
 # ============================================================================
+
 
 @pytest.fixture(autouse=True)
 def reset_logging():
@@ -80,6 +81,7 @@ def cleanup_temp_files(temp_dir):
     """Nettoie les fichiers temporaires après chaque test."""
     yield
     import shutil
+
     if temp_dir.exists():
         shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -87,6 +89,7 @@ def cleanup_temp_files(temp_dir):
 # ============================================================================
 # Hooks Pytest Personnalisés
 # ============================================================================
+
 
 def pytest_configure(config):
     """Configuration initiale de pytest."""
@@ -100,7 +103,7 @@ def pytest_collection_modifyitems(config, items):
         # Marquer les tests async
         if asyncio.iscoroutinefunction(item.function):
             item.add_marker(pytest.mark.asyncio)
-        
+
         # Marquer les tests lents
         if "sleep" in item.get_closest_marker("slow", default=""):
             item.add_marker(pytest.mark.slow)
@@ -121,22 +124,18 @@ def pytest_runtest_logreport(report):
 # Markers Personnalisés pour Filtrage
 # ============================================================================
 
+
 def pytest_addoption(parser):
     """Ajoute des options de ligne de commande."""
     parser.addoption(
         "--integration",
         action="store_true",
         default=False,
-        help="Exécuter aussi les tests d'intégration"
+        help="Exécuter aussi les tests d'intégration",
     )
     parser.addoption(
-        "--slow",
-        action="store_true",
-        default=False,
-        help="Exécuter aussi les tests lents"
+        "--slow", action="store_true", default=False, help="Exécuter aussi les tests lents"
     )
-
-
 
 
 # ==============================================================================
@@ -144,12 +143,12 @@ def pytest_addoption(parser):
 # ==============================================================================
 
 from fixtures.infra_fixtures import (
-    mock_boto3_session,
-    mock_opensearch_client,
     aws_config,
     invalid_aws_config,
-    valid_config_yaml,
     invalid_config_yaml,
+    mock_boto3_session,
     mock_config_file,
     mock_invalid_config_file,
+    mock_opensearch_client,
+    valid_config_yaml,
 )

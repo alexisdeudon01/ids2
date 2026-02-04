@@ -25,9 +25,8 @@ class OpenSearchClient:
         self._client: Optional[OpenSearch] = None
 
     def _resolve_endpoint(self) -> Optional[str]:
-        return (
-            self._config.obtenir("aws.opensearch_endpoint")
-            or self._config.obtenir("aws.opensearch.endpoint")
+        return self._config.obtenir("aws.opensearch_endpoint") or self._config.obtenir(
+            "aws.opensearch.endpoint"
         )
 
     def _resolve_region(self) -> Optional[str]:

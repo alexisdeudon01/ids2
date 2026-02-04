@@ -49,12 +49,8 @@ class ArchitectureAnalyzer:
                 print(f"Warning: Failed to analyze {file_path}: {e}")
 
         # Update summary
-        self.architecture["summary"]["total_modules"] = len(
-            self.architecture["modules"]
-        )
-        self.architecture["summary"]["total_classes"] = len(
-            self.architecture["classes"]
-        )
+        self.architecture["summary"]["total_modules"] = len(self.architecture["modules"])
+        self.architecture["summary"]["total_classes"] = len(self.architecture["classes"])
 
         return self.architecture
 
@@ -150,9 +146,7 @@ class ArchitectureAnalyzer:
             "is_async": isinstance(node, ast.AsyncFunctionDef),
         }
 
-    def _analyze_import(
-        self, node: ast.Import | ast.ImportFrom
-    ) -> Optional[List[str]]:
+    def _analyze_import(self, node: ast.Import | ast.ImportFrom) -> Optional[List[str]]:
         """Analyze import statements."""
         imports = []
         if isinstance(node, ast.Import):

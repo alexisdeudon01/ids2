@@ -4,8 +4,8 @@ Endpoint HTTP pour le statut du pipeline (FastAPI).
 
 from typing import Any, Dict
 
-from fastapi import FastAPI
 import uvicorn
+from fastapi import FastAPI
 
 from .decorateurs import log_appel, metriques
 from .pipeline_status import (

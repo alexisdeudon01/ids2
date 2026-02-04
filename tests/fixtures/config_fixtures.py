@@ -2,16 +2,17 @@
 fixtures/config_fixtures.py - Fixtures pour les tests de configuration.
 """
 
-import pytest
 import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
+
+import pytest
 
 # Ajouter src à PYTHONPATH
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from ids.domain import ConfigurationIDS
 from ids.config.loader import ConfigManager
+from ids.domain import ConfigurationIDS
 
 
 @pytest.fixture
@@ -22,7 +23,6 @@ def config_dict_test() -> Dict[str, Any]:
         "interface_reseau": "eth0",
         "repertoire_logs": "/tmp/test_logs",
         "repertoire_config": "/tmp/test_config",
-        
         "suricata": {
             "config_path": "/tmp/suricata.yaml",
             "log_path": "/tmp/eve.json",
@@ -32,25 +32,21 @@ def config_dict_test() -> Dict[str, Any]:
                 "http": True,
                 "dns": True,
                 "tls": True,
-            }
+            },
         },
-        
         "redis": {
             "host": "localhost",
             "port": 6379,
             "db": 0,
         },
-        
         "aws": {
             "region": "eu-west-1",
             "opensearch_domain": "test-opensearch",
             "opensearch_endpoint": None,
         },
-        
         "docker": {
             "compose_path": "docker/docker-compose.yml",
         },
-        
         "ressources": {
             "cpu_limit_percent": 80.0,
             "ram_limit_percent": 85.0,
@@ -80,9 +76,9 @@ def config_ids_test(config_dict_test) -> ConfigurationIDS:
 def config_manager_test(tmp_path, config_dict_test) -> ConfigManager:
     """ConfigManager pré-configuré pour les tests."""
     import yaml
-    
+
     config_file = tmp_path / "config_test.yaml"
-    with open(config_file, 'w') as f:
+    with open(config_file, "w") as f:
         yaml.dump(config_dict_test, f)
 
     secret_file = tmp_path / "secret.json"
@@ -103,6 +99,7 @@ def config_minimal() -> ConfigurationIDS:
 @pytest.fixture
 def config_factory():
     """Factory pour créer des configurations personnalisées."""
+
     def _create(**overrides) -> ConfigurationIDS:
         defaults = {
             "version": "2.0.0",
@@ -111,7 +108,7 @@ def config_factory():
         }
         defaults.update(overrides)
         return ConfigurationIDS(**defaults)
-    
+
     return _create
 
 

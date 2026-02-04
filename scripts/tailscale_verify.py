@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 try:
     from tailscale import Tailscale
+
     TAILSCALE_LIB_AVAILABLE = True
 except ImportError:
     TAILSCALE_LIB_AVAILABLE = False
@@ -68,6 +69,7 @@ def print_info(msg: str) -> None:
 @dataclass
 class DeviceInfo:
     """Informations sur un appareil Tailscale."""
+
     id: str
     name: str
     hostname: str
@@ -77,7 +79,7 @@ class DeviceInfo:
     is_external: bool
     last_seen: Optional[datetime] = None
     tags: List[str] = field(default_factory=list)
-    
+
     @property
     def ipv4(self) -> str:
         """Retourne l'adresse IPv4 principale."""
@@ -85,7 +87,7 @@ class DeviceInfo:
             if "." in addr and not addr.startswith("fd7a:"):
                 return addr
         return self.addresses[0] if self.addresses else ""
-    
+
     @property
     def is_online(self) -> bool:
         """Vérifie si l'appareil est probablement en ligne."""
@@ -98,28 +100,29 @@ class DeviceInfo:
 @dataclass
 class TailnetInfo:
     """Informations sur le tailnet."""
+
     name: str
     devices: List[DeviceInfo] = field(default_factory=list)
     dns_suffix: str = ""
-    
+
 
 async def get_tailnet_info(tailnet: str, api_key: str) -> TailnetInfo:
     """
     Récupère les informations du tailnet via l'API Tailscale.
-    
+
     Args:
         tailnet: Nom du tailnet (ex: "example.com" ou "user@gmail.com")
         api_key: Clé API Tailscale (tskey-api-...)
-    
+
     Returns:
         TailnetInfo avec la liste des appareils
     """
     info = TailnetInfo(name=tailnet)
-    
+
     async with Tailscale(tailnet=tailnet, api_key=api_key) as client:
         # Récupérer les appareils
         devices_response = await client.devices()
-        
+
         for device_id, device in devices_response.devices.items():
             dev_info = DeviceInfo(
                 id=device_id,
@@ -133,14 +136,14 @@ async def get_tailnet_info(tailnet: str, api_key: str) -> TailnetInfo:
                 tags=device.tags or [],
             )
             info.devices.append(dev_info)
-    
+
     return info
 
 
 def ping_device(ip: str, count: int = 3) -> tuple[bool, float]:
     """
     Ping un appareil via Tailscale CLI.
-    
+
     Returns:
         (success, average_latency_ms)
     """
@@ -151,17 +154,18 @@ def ping_device(ip: str, count: int = 3) -> tuple[bool, float]:
             text=True,
             timeout=30,
         )
-        
+
         if result.returncode != 0:
             return False, 0.0
-        
+
         # Parser la latence
         import re
+
         latencies = re.findall(r"in (\d+(?:\.\d+)?)\s*ms", result.stdout)
         if latencies:
             avg = sum(float(l) for l in latencies) / len(latencies)
             return True, avg
-        
+
         return True, 0.0
     except Exception:
         return False, 0.0
@@ -176,7 +180,7 @@ def check_local_tailscale() -> dict:
         "connected": False,
         "self_ip": "",
     }
-    
+
     # Version
     try:
         result = subprocess.run(
@@ -190,7 +194,7 @@ def check_local_tailscale() -> dict:
             info["version"] = result.stdout.strip().split("\n")[0]
     except Exception:
         return info
-    
+
     # Service
     try:
         result = subprocess.run(
@@ -202,7 +206,7 @@ def check_local_tailscale() -> dict:
         info["running"] = result.returncode == 0
     except Exception:
         pass
-    
+
     # IP locale
     try:
         result = subprocess.run(
@@ -216,19 +220,19 @@ def check_local_tailscale() -> dict:
             info["connected"] = True
     except Exception:
         pass
-    
+
     return info
 
 
 async def run_verification(tailnet: str, api_key: str, target_ip: Optional[str] = None) -> int:
     """
     Exécute la vérification complète du tailnet.
-    
+
     Args:
         tailnet: Nom du tailnet
         api_key: Clé API Tailscale
         target_ip: IP optionnelle à tester spécifiquement (ex: Raspberry Pi)
-    
+
     Returns:
         Code de sortie (0 = succès)
     """
@@ -237,31 +241,31 @@ async def run_verification(tailnet: str, api_key: str, target_ip: Optional[str] 
     print(f"{Colors.MAGENTA}{'=' * 60}{Colors.NC}")
     print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"  Utilisant la librairie Python 'tailscale'")
-    
+
     # Vérification locale
     print_header("Vérification Locale")
     local = check_local_tailscale()
-    
+
     if local["installed"]:
         print_success(f"Tailscale installé (version {local['version']})")
     else:
         print_error("Tailscale n'est pas installé localement")
         print_info("Exécutez: ./scripts/tailscale_setup.sh install")
-    
+
     if local["running"]:
         print_success("Service tailscaled actif")
     else:
         print_warn("Service tailscaled inactif")
         print_info("Exécutez: sudo systemctl start tailscaled")
-    
+
     if local["connected"]:
         print_success(f"Connecté - IP locale: {local['self_ip']}")
     else:
         print_warn("Non connecté au tailnet localement")
-    
+
     # Récupération des infos via API
     print_header(f"Tailnet: {tailnet}")
-    
+
     try:
         info = await get_tailnet_info(tailnet, api_key)
         print_success(f"Connexion API réussie")
@@ -269,25 +273,25 @@ async def run_verification(tailnet: str, api_key: str, target_ip: Optional[str] 
     except Exception as e:
         print_error(f"Erreur API: {e}")
         return 1
-    
+
     # Liste des appareils
     print_header("Appareils sur le Tailnet")
-    
+
     print(f"  {'Nom':<25} {'IP':<18} {'OS':<12} {'État':<12}")
     print(f"  {'-' * 25} {'-' * 18} {'-' * 12} {'-' * 12}")
-    
+
     raspberry_pi = None
-    
+
     for device in info.devices:
         ip = device.ipv4
-        
+
         # Détecter le Raspberry Pi
         if target_ip and ip == target_ip:
             raspberry_pi = device
         elif "raspberry" in device.name.lower() or "pi" in device.name.lower():
             if raspberry_pi is None:
                 raspberry_pi = device
-        
+
         # Statut
         if device.authorized:
             status_color = Colors.GREEN
@@ -295,18 +299,20 @@ async def run_verification(tailnet: str, api_key: str, target_ip: Optional[str] 
         else:
             status_color = Colors.RED
             status = "Non autorisé"
-        
+
         # Marquer si c'est nous
         is_self = ip == local.get("self_ip", "")
         self_marker = f" {Colors.YELLOW}(vous){Colors.NC}" if is_self else ""
-        
+
         name = device.name[:23] + ".." if len(device.name) > 25 else device.name
-        
-        print(f"  {name:<25} {ip:<18} {device.os:<12} {status_color}{status:<12}{Colors.NC}{self_marker}")
-    
+
+        print(
+            f"  {name:<25} {ip:<18} {device.os:<12} {status_color}{status:<12}{Colors.NC}{self_marker}"
+        )
+
     # Tests de connectivité
     print_header("Tests de Connectivité")
-    
+
     if target_ip:
         test_ip = target_ip
         print_info(f"Test de l'IP cible spécifiée: {target_ip}")
@@ -322,41 +328,47 @@ async def run_verification(tailnet: str, api_key: str, target_ip: Optional[str] 
         else:
             print_warn("Aucun autre appareil à tester")
             test_ip = None
-    
+
     if test_ip and local["connected"]:
         print_info(f"Ping Tailscale vers {test_ip}...")
         success, latency = ping_device(test_ip)
-        
+
         if success:
             print_success(f"Ping OK (latence: {latency:.1f}ms)")
         else:
             print_error("Ping échoué")
             print_info("Vérifiez que l'appareil est en ligne et autorisé")
-    
+
     # Valeurs de configuration
     print_header("Configuration pour GitHub Actions")
-    
+
     print(f"{Colors.BOLD}Secrets à configurer:{Colors.NC}")
     print()
     print(f"  {Colors.CYAN}TAILSCALE_TAILNET{Colors.NC}={Colors.GREEN}{tailnet}{Colors.NC}")
     print(f"  {Colors.CYAN}TAILSCALE_API_KEY{Colors.NC}={Colors.GREEN}(votre clé API){Colors.NC}")
-    
+
     if raspberry_pi:
-        print(f"  {Colors.CYAN}RASPBERRY_PI_TAILSCALE_IP{Colors.NC}={Colors.GREEN}{raspberry_pi.ipv4}{Colors.NC}")
+        print(
+            f"  {Colors.CYAN}RASPBERRY_PI_TAILSCALE_IP{Colors.NC}={Colors.GREEN}{raspberry_pi.ipv4}{Colors.NC}"
+        )
     elif target_ip:
-        print(f"  {Colors.CYAN}RASPBERRY_PI_TAILSCALE_IP{Colors.NC}={Colors.GREEN}{target_ip}{Colors.NC}")
+        print(
+            f"  {Colors.CYAN}RASPBERRY_PI_TAILSCALE_IP{Colors.NC}={Colors.GREEN}{target_ip}{Colors.NC}"
+        )
     else:
-        print(f"  {Colors.CYAN}RASPBERRY_PI_TAILSCALE_IP{Colors.NC}={Colors.YELLOW}(à définir){Colors.NC}")
-    
+        print(
+            f"  {Colors.CYAN}RASPBERRY_PI_TAILSCALE_IP{Colors.NC}={Colors.YELLOW}(à définir){Colors.NC}"
+        )
+
     print()
     print(f"{Colors.BOLD}Liens utiles:{Colors.NC}")
     print(f"  • API Key: {Colors.BLUE}https://login.tailscale.com/admin/settings/keys{Colors.NC}")
     print(f"  • OAuth:   {Colors.BLUE}https://login.tailscale.com/admin/settings/oauth{Colors.NC}")
     print(f"  • Machines:{Colors.BLUE}https://login.tailscale.com/admin/machines{Colors.NC}")
-    
+
     print()
     print_success("Vérification terminée!")
-    
+
     return 0
 
 
@@ -366,12 +378,12 @@ def main() -> int:
         print_error("La librairie 'tailscale' est requise.")
         print_info("Installez-la avec: pip install tailscale")
         return 1
-    
+
     # Récupérer les credentials
     tailnet = os.environ.get("TAILSCALE_TAILNET")
     api_key = os.environ.get("TAILSCALE_API_KEY")
     target_ip = os.environ.get("RASPBERRY_PI_TAILSCALE_IP")
-    
+
     # Mode interactif si pas de variables d'environnement
     if not tailnet:
         print()
@@ -381,27 +393,29 @@ def main() -> int:
         print(f"  {Colors.BLUE}https://login.tailscale.com/admin{Colors.NC}")
         print()
         tailnet = input("Nom du tailnet (ex: example.com ou user@gmail.com): ").strip()
-        
+
         if not tailnet:
             print_error("Tailnet requis")
             return 1
-    
+
     if not api_key:
         print()
         print("Créez une clé API sur:")
         print(f"  {Colors.BLUE}https://login.tailscale.com/admin/settings/keys{Colors.NC}")
         print()
         api_key = getpass.getpass("Clé API Tailscale (tskey-api-...): ").strip()
-        
+
         if not api_key:
             print_error("Clé API requise")
             return 1
-    
+
     if not target_ip:
         print()
-        target_ip = input("IP Tailscale du Raspberry Pi (optionnel, appuyez Entrée pour ignorer): ").strip()
+        target_ip = input(
+            "IP Tailscale du Raspberry Pi (optionnel, appuyez Entrée pour ignorer): "
+        ).strip()
         target_ip = target_ip if target_ip else None
-    
+
     # Exécuter la vérification
     return asyncio.run(run_verification(tailnet, api_key, target_ip))
 

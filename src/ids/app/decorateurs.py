@@ -4,15 +4,14 @@ Décorateurs - Extend comportements des fonctions avec logging, métriques, etc.
 Implémente les décorateurs mentionnés dans les exigences (@log_appel, @metriques).
 """
 
-import logging
-import time
-import functools
-from typing import Callable, Any, TypeVar, cast
-from datetime import datetime
-
 # Pour les décorateurs async
 import asyncio
+import functools
 import inspect
+import logging
+import time
+from datetime import datetime
+from typing import Any, Callable, TypeVar, cast
 
 T = TypeVar("T")
 
@@ -24,32 +23,34 @@ def log_appel(
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """
     Décorateur pour logger les appels de fonction.
-    
+
     Utilisation :
         @log_appel()
         def ma_fonction(x: int) -> int:
             return x * 2
-        
+
         @log_appel(niveau=logging.DEBUG, afficher_args=False)
         async def ma_fonction_async():
             ...
-    
+
     Args:
         niveau: Niveau de log (logging.INFO, DEBUG, etc.)
         afficher_args: Afficher les arguments
         afficher_retour: Afficher la valeur de retour
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         logger = logging.getLogger(func.__module__)
-        
+
         if inspect.iscoroutinefunction(func):
+
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs) -> T:
                 msg = f"Appel: {func.__name__}"
                 if afficher_args:
                     msg += f"({args}, {kwargs})"
                 logger.log(niveau, msg)
-                
+
                 try:
                     resultat = await func(*args, **kwargs)
                     if afficher_retour:
@@ -58,16 +59,17 @@ def log_appel(
                 except Exception as e:
                     logger.error(f"Exception dans {func.__name__}: {e}")
                     raise
-            
+
             return cast(Callable[..., T], async_wrapper)
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs) -> T:
                 msg = f"Appel: {func.__name__}"
                 if afficher_args:
                     msg += f"({args}, {kwargs})"
                 logger.log(niveau, msg)
-                
+
                 try:
                     resultat = func(*args, **kwargs)
                     if afficher_retour:
@@ -76,29 +78,31 @@ def log_appel(
                 except Exception as e:
                     logger.error(f"Exception dans {func.__name__}: {e}")
                     raise
-            
+
             return cast(Callable[..., T], sync_wrapper)
-    
+
     return decorator
 
 
 def metriques(nom_metrique: str = None) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """
     Décorateur pour collecter des métriques (durée d'exécution).
-    
+
     Utilisation :
         @metriques("temps_traitement_alerte")
         def traiter_alerte(alerte: AlerteIDS) -> None:
             ...
-    
+
     Args:
         nom_metrique: Nom de la métrique (par défaut: nom de la fonction)
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         logger = logging.getLogger(func.__module__)
         metrique_name = nom_metrique or f"execution_time.{func.__name__}"
-        
+
         if inspect.iscoroutinefunction(func):
+
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs) -> T:
                 debut = time.time()
@@ -108,9 +112,10 @@ def metriques(nom_metrique: str = None) -> Callable[[Callable[..., T]], Callable
                 finally:
                     duree = time.time() - debut
                     logger.debug(f"{metrique_name}: {duree:.3f}s")
-            
+
             return cast(Callable[..., T], async_wrapper)
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs) -> T:
                 debut = time.time()
@@ -120,9 +125,9 @@ def metriques(nom_metrique: str = None) -> Callable[[Callable[..., T]], Callable
                 finally:
                     duree = time.time() - debut
                     logger.debug(f"{metrique_name}: {duree:.3f}s")
-            
+
             return cast(Callable[..., T], sync_wrapper)
-    
+
     return decorator
 
 
@@ -131,35 +136,35 @@ def cache_resultat(
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """
     Décorateur pour mettre en cache le résultat d'une fonction.
-    
+
     Utilisation :
         @cache_resultat(ttl_secondes=60)
         def configuration_statique() -> Dict:
             return loads_expensive_config()
-    
+
     Args:
         ttl_secondes: Durée de vie du cache en secondes
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         cache = {}
         cache_time = {}
-        
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> T:
             clé = (args, tuple(sorted(kwargs.items())))
             maintenant = time.time()
-            
-            if (clé in cache and 
-                (maintenant - cache_time[clé]) < ttl_secondes):
+
+            if clé in cache and (maintenant - cache_time[clé]) < ttl_secondes:
                 return cache[clé]
-            
+
             resultat = func(*args, **kwargs)
             cache[clé] = resultat
             cache_time[clé] = maintenant
             return resultat
-        
+
         return cast(Callable[..., T], wrapper)
-    
+
     return decorator
 
 
@@ -170,26 +175,28 @@ def retry(
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """
     Décorateur pour réessayer une fonction en cas d'erreur.
-    
+
     Utilisation :
         @retry(nb_tentatives=3, delai_initial=0.5, backoff=2.0)
         async def appel_api_instable():
             ...
-    
+
     Args:
         nb_tentatives: Nombre total de tentatives
         delai_initial: Délai initial en secondes
         backoff: Multiplicateur de délai à chaque tentative
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         logger = logging.getLogger(func.__module__)
-        
+
         if inspect.iscoroutinefunction(func):
+
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs) -> T:
                 delai = delai_initial
                 dernier_erreur = None
-                
+
                 for tentative in range(nb_tentatives):
                     try:
                         return await func(*args, **kwargs)
@@ -203,19 +210,18 @@ def retry(
                             )
                             await asyncio.sleep(delai)
                             delai *= backoff
-                
-                logger.error(
-                    f"{func.__name__} échoué après {nb_tentatives} tentatives"
-                )
+
+                logger.error(f"{func.__name__} échoué après {nb_tentatives} tentatives")
                 raise dernier_erreur
-            
+
             return cast(Callable[..., T], async_wrapper)
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs) -> T:
                 delai = delai_initial
                 dernier_erreur = None
-                
+
                 for tentative in range(nb_tentatives):
                     try:
                         return func(*args, **kwargs)
@@ -229,14 +235,12 @@ def retry(
                             )
                             time.sleep(delai)
                             delai *= backoff
-                
-                logger.error(
-                    f"{func.__name__} échoué après {nb_tentatives} tentatives"
-                )
+
+                logger.error(f"{func.__name__} échoué après {nb_tentatives} tentatives")
                 raise dernier_erreur
-            
+
             return cast(Callable[..., T], sync_wrapper)
-    
+
     return decorator
 
 

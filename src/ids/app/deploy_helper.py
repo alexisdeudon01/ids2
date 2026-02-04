@@ -81,7 +81,9 @@ class DeployHelper:
 
     def save_image(self) -> Path:
         """Sauvegarde l'image Docker en tar."""
-        tar_path = Path(tempfile.gettempdir()) / f"{self.config.image_name}-{self.config.image_tag}.tar"
+        tar_path = (
+            Path(tempfile.gettempdir()) / f"{self.config.image_name}-{self.config.image_tag}.tar"
+        )
         self._run(["docker", "save", "-o", str(tar_path), self.image_ref])
         return tar_path
 
@@ -134,7 +136,12 @@ class DeployHelper:
         self.runner.run(list(command), check=True)
 
     def _ssh(self, command: str) -> None:
-        ssh_cmd = ["ssh", *self.config.ssh_options, f"{self.config.pi_user}@{self.config.pi_host}", command]
+        ssh_cmd = [
+            "ssh",
+            *self.config.ssh_options,
+            f"{self.config.pi_user}@{self.config.pi_host}",
+            command,
+        ]
         self._run(ssh_cmd)
 
     def _scp(self, source: Path, dest: str) -> None:

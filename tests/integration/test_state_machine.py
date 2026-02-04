@@ -1,10 +1,13 @@
 """State Machine Integration Tests."""
-import pytest
+
 from enum import Enum, auto
+
+import pytest
 
 
 class AgentState(Enum):
     """Agent states from state machine diagram."""
+
     CHECKING_CONFIG = auto()
     VALIDATING_CONFIGURATION = auto()
     SPINNING_UP_CONTAINERS = auto()
@@ -21,6 +24,7 @@ class AgentState(Enum):
 
 class AgentEvent(Enum):
     """Events that trigger state transitions."""
+
     INIT_COMPLETE = auto()
     CONFIG_VALID = auto()
     DOCKER_HEALTHY = auto()
@@ -41,7 +45,7 @@ class AgentEvent(Enum):
 
 class StateMachine:
     """State machine implementation."""
-    
+
     def __init__(self):
         self.current_state = AgentState.CHECKING_CONFIG
         self._transitions = {
@@ -90,7 +94,7 @@ class StateMachine:
                 AgentEvent.SERVICES_READY: AgentState.MONITORING,
             },
         }
-    
+
     def transition(self, event: AgentEvent) -> bool:
         if self.current_state not in self._transitions:
             return False
@@ -116,16 +120,16 @@ class TestStateMachine:
     def test_happy_path_to_monitoring(self, sm):
         assert sm.transition(AgentEvent.INIT_COMPLETE)
         assert sm.current_state == AgentState.VALIDATING_CONFIGURATION
-        
+
         assert sm.transition(AgentEvent.CONFIG_VALID)
         assert sm.current_state == AgentState.SPINNING_UP_CONTAINERS
-        
+
         assert sm.transition(AgentEvent.DOCKER_HEALTHY)
         assert sm.current_state == AgentState.PREPARING_ENVIRONMENT
-        
+
         assert sm.transition(AgentEvent.ENV_READY)
         assert sm.current_state == AgentState.STARTING_SERVICES
-        
+
         assert sm.transition(AgentEvent.SERVICES_READY)
         assert sm.current_state == AgentState.MONITORING
 
@@ -133,7 +137,7 @@ class TestStateMachine:
     def test_docker_failure_recovery(self, sm):
         sm.transition(AgentEvent.INIT_COMPLETE)
         sm.transition(AgentEvent.CONFIG_VALID)
-        
+
         assert sm.transition(AgentEvent.DOCKER_FAILED)
         assert sm.current_state == AgentState.ATTEMPT_RECOVERY
 
@@ -145,10 +149,10 @@ class TestStateMachine:
         sm.transition(AgentEvent.DOCKER_HEALTHY)
         sm.transition(AgentEvent.ENV_READY)
         sm.transition(AgentEvent.SERVICES_READY)
-        
+
         assert sm.transition(AgentEvent.HIGH_CPU)
         assert sm.current_state == AgentState.RESOURCE_LIMIT_EXCEEDED
-        
+
         assert sm.transition(AgentEvent.NORMAL_RESOURCES)
         assert sm.current_state == AgentState.NORMAL_MONITORING
 

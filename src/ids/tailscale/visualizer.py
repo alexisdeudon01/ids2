@@ -54,7 +54,10 @@ class PyvisVisualizer(BaseVisualizer):
             max_node_size: Maximum node size (low latency)
         """
         if not PYVIS_AVAILABLE:
-            raise ImportError("The 'pyvis' library is required for visualization. " "Install with: pip install pyvis")
+            raise ImportError(
+                "The 'pyvis' library is required for visualization. "
+                "Install with: pip install pyvis"
+            )
 
         self.height = height
         self.width = width

@@ -28,7 +28,9 @@ def test_opensearch_client_builds_sigv4_client(aws_config):
     session = Mock()
     session.get_credentials.return_value = Mock()
 
-    with patch("ids.infrastructure.opensearch_client.boto3.Session", return_value=session) as session_cls:
+    with patch(
+        "ids.infrastructure.opensearch_client.boto3.Session", return_value=session
+    ) as session_cls:
         with patch("ids.infrastructure.opensearch_client.OpenSearch") as opensearch_cls:
             opensearch_instance = Mock()
             opensearch_cls.return_value = opensearch_instance

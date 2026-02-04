@@ -1,6 +1,9 @@
 """Unit tests for domain models."""
-import pytest
+
 from datetime import datetime
+
+import pytest
+
 from ids.domain.alerte import AlerteIDS, SeveriteAlerte, TypeAlerte
 
 

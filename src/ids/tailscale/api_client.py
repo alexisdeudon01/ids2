@@ -38,7 +38,9 @@ class TailscaleLibraryClient(BaseAPIClient):
             api_key: Tailscale API key (tskey-api-...)
         """
         if not TAILSCALE_LIB_AVAILABLE:
-            raise ImportError("The 'tailscale' library is required. " "Install with: pip install tailscale")
+            raise ImportError(
+                "The 'tailscale' library is required. " "Install with: pip install tailscale"
+            )
         super().__init__(tailnet, api_key)
 
     async def get_devices(self) -> List[DeviceState]:

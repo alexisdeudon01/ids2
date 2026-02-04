@@ -2,11 +2,12 @@
 fixtures/alerte_fixtures.py - Fixtures pour les tests d'AlerteIDS.
 """
 
-import pytest
-from datetime import datetime
-from typing import List
 import sys
+from datetime import datetime
 from pathlib import Path
+from typing import List
+
+import pytest
 
 # Ajouter src à PYTHONPATH pour les imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -80,7 +81,7 @@ def alerte_ids_tous_types() -> List[AlerteIDS]:
         TypeAlerte.CONFORMITE,
         TypeAlerte.RESSOURCE,
     ]
-    
+
     return [
         AlerteIDS(
             timestamp=datetime.utcnow(),
@@ -100,13 +101,14 @@ def alerte_ids_tous_types() -> List[AlerteIDS]:
 @pytest.fixture
 def alerte_factory():
     """Factory pour créer des alertes personnalisées."""
+
     def _create(
         source_ip: str = "192.168.1.1",
         destination_ip: str = "10.0.0.1",
         port: int = 443,
         severite: SeveriteAlerte = SeveriteAlerte.MOYENNE,
         type_alerte: TypeAlerte = TypeAlerte.INTRUSION,
-        **kwargs
+        **kwargs,
     ) -> AlerteIDS:
         return AlerteIDS(
             source_ip=source_ip,
@@ -114,9 +116,9 @@ def alerte_factory():
             port=port,
             severite=severite,
             type_alerte=type_alerte,
-            **kwargs
+            **kwargs,
         )
-    
+
     return _create
 
 

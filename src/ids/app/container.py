@@ -2,19 +2,16 @@
 Injection de dependances - conteneur DI avec punq.
 """
 
-from pathlib import Path as _Path
-from typing import Any, Callable, Dict, Type, TypeVar, Union
 import logging
 from functools import lru_cache
+from pathlib import Path as _Path
+from typing import Any, Callable, Dict, Type, TypeVar, Union
 
 try:
     import punq
 except ImportError as exc:  # pragma: no cover - runtime safeguard
-    raise ImportError(
-        "punq n'est pas installe. Installez-le avec: pip install punq"
-    ) from exc
+    raise ImportError("punq n'est pas installe. Installez-le avec: pip install punq") from exc
 
-from ..domain import ConfigurationIDS
 # Import directly from modules to avoid circular import
 from ..composants.connectivity import ConnectivityTester as ConnectivityChecker
 from ..composants.docker_manager import DockerManager
@@ -22,13 +19,14 @@ from ..composants.metrics_server import MetricsCollector
 from ..composants.resource_controller import ResourceController
 from ..composants.vector_manager import VectorManager
 from ..config.loader import ConfigManager
+from ..domain import ConfigurationIDS
+from ..infrastructure import AWSOpenSearchManager, InMemoryAlertStore, RedisClient
 from ..interfaces import (
     AlerteSource,
     GestionnaireConfig,
     MetriquesProvider,
     PersistanceAlertes,
 )
-from ..infrastructure import AWSOpenSearchManager, InMemoryAlertStore, RedisClient
 from ..suricata import SuricataManager
 from .pipeline_status import (
     ComposantStatusProvider,
@@ -136,11 +134,11 @@ class ConteneurFactory:
     """Factory pour creer et configurer un conteneur DI."""
 
     @staticmethod
-    def creer_conteneur_test() -> 'ConteneurDI':
+    def creer_conteneur_test() -> "ConteneurDI":
         return ConteneurDI()
 
     @staticmethod
-    def creer_conteneur_prod(config_path: str) -> 'ConteneurDI':
+    def creer_conteneur_prod(config_path: str) -> "ConteneurDI":
         container = ConteneurDI()
         container.enregistrer_services(config_path)
         return container

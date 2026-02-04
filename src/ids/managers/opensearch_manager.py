@@ -20,15 +20,19 @@ logger = logging.getLogger(__name__)
 try:
     from opensearchpy import OpenSearch, RequestsHttpConnection
     from requests_aws4auth import AWS4Auth
+
     OPENSEARCH_AVAILABLE = True
 except ImportError:
     OPENSEARCH_AVAILABLE = False
-    logger.warning("opensearch-py not available. Install with: pip install opensearch-py requests-aws4auth")
+    logger.warning(
+        "opensearch-py not available. Install with: pip install opensearch-py requests-aws4auth"
+    )
 
 
 @dataclass
 class OpenSearchDomainStatus:
     """Statut d'un domaine OpenSearch."""
+
     domain_name: str
     domain_id: str
     arn: str
@@ -45,6 +49,7 @@ class OpenSearchDomainStatus:
 @dataclass
 class OpenSearchIndex:
     """Représente un index OpenSearch."""
+
     name: str
     health: str  # green, yellow, red
     status: str  # open, close
@@ -57,7 +62,7 @@ class OpenSearchIndex:
 class OpenSearchDomainManager:
     """
     Gestionnaire complet pour les domaines AWS OpenSearch.
-    
+
     Fonctionnalités:
     - Création/suppression de domaines
     - Monitoring du statut
@@ -75,7 +80,7 @@ class OpenSearchDomainManager:
     ):
         """
         Initialise le gestionnaire OpenSearch.
-        
+
         Args:
             aws_access_key_id: AWS access key
             aws_secret_access_key: AWS secret key
@@ -83,7 +88,7 @@ class OpenSearchDomainManager:
             region: Région AWS
         """
         self.region = region
-        
+
         # Créer session boto3
         if aws_access_key_id and aws_secret_access_key:
             self.session = boto3.Session(
@@ -95,7 +100,7 @@ class OpenSearchDomainManager:
         else:
             # Utiliser les credentials par défaut (IAM role, env vars, etc.)
             self.session = boto3.Session(region_name=region)
-        
+
         # Client OpenSearch (ou ES pour anciennes régions)
         try:
             self.client = self.session.client("opensearch")
@@ -118,7 +123,7 @@ class OpenSearchDomainManager:
     ) -> OpenSearchDomainStatus:
         """
         Crée un nouveau domaine OpenSearch.
-        
+
         Args:
             domain_name: Nom du domaine
             instance_type: Type d'instance
@@ -127,18 +132,18 @@ class OpenSearchDomainManager:
             engine_version: Version du moteur
             wait: Attendre que le domaine soit prêt
             timeout: Timeout d'attente en secondes
-            
+
         Returns:
             Statut du domaine
         """
         logger.info(f"Creating OpenSearch domain: {domain_name}")
-        
+
         # Vérifier si le domaine existe déjà
         existing = self.get_domain_status(domain_name)
         if existing and not existing.deleted:
             logger.info(f"Domain already exists: {domain_name}")
             return existing
-        
+
         # Construire la configuration
         payload = {
             "DomainName": domain_name,
@@ -162,24 +167,24 @@ class OpenSearchDomainManager:
             "NodeToNodeEncryptionOptions": {"Enabled": True},
             "EncryptionAtRestOptions": {"Enabled": True},
         }
-        
+
         # Créer le domaine
         response = self.client.create_domain(**payload)
         domain_status = self._parse_domain_status(response["DomainStatus"])
-        
+
         # Attendre que le domaine soit prêt
         if wait:
             domain_status = self.wait_for_domain_ready(domain_name, timeout=timeout)
-        
+
         return domain_status
 
     def get_domain_status(self, domain_name: str) -> Optional[OpenSearchDomainStatus]:
         """
         Récupère le statut d'un domaine.
-        
+
         Args:
             domain_name: Nom du domaine
-            
+
         Returns:
             Statut du domaine ou None si non trouvé
         """
@@ -194,7 +199,7 @@ class OpenSearchDomainManager:
     def list_domains(self) -> List[str]:
         """
         Liste tous les domaines OpenSearch du compte.
-        
+
         Returns:
             Liste des noms de domaines
         """
@@ -204,10 +209,10 @@ class OpenSearchDomainManager:
     def delete_domain(self, domain_name: str) -> bool:
         """
         Supprime un domaine OpenSearch.
-        
+
         Args:
             domain_name: Nom du domaine
-            
+
         Returns:
             True si succès
         """
@@ -227,31 +232,31 @@ class OpenSearchDomainManager:
     ) -> OpenSearchDomainStatus:
         """
         Attend qu'un domaine soit prêt.
-        
+
         Args:
             domain_name: Nom du domaine
             timeout: Timeout en secondes
             poll_interval: Intervalle de polling en secondes
-            
+
         Returns:
             Statut final du domaine
         """
         logger.info(f"Waiting for domain {domain_name} to be ready (timeout: {timeout}s)...")
-        
+
         start_time = time.time()
         while time.time() - start_time < timeout:
             status = self.get_domain_status(domain_name)
-            
+
             if not status:
                 raise ValueError(f"Domain {domain_name} not found")
-            
+
             if status.endpoint and not status.processing:
                 logger.info(f"Domain ready: {domain_name} -> {status.endpoint}")
                 return status
-            
+
             logger.info(f"Domain still processing... ({int(time.time() - start_time)}s elapsed)")
             time.sleep(poll_interval)
-        
+
         raise TimeoutError(f"Domain {domain_name} not ready after {timeout}s")
 
     # =========================================================================
@@ -261,17 +266,17 @@ class OpenSearchDomainManager:
     def get_opensearch_client(self, endpoint: str) -> Optional[OpenSearch]:
         """
         Crée un client OpenSearch pour interagir avec les index.
-        
+
         Args:
             endpoint: Endpoint du domaine (sans https://)
-            
+
         Returns:
             Client OpenSearch
         """
         if not OPENSEARCH_AVAILABLE:
             logger.error("opensearch-py not available")
             return None
-        
+
         # Créer AWS4Auth pour l'authentification
         credentials = self.session.get_credentials()
         aws_auth = AWS4Auth(
@@ -281,7 +286,7 @@ class OpenSearchDomainManager:
             "es",
             session_token=credentials.token,
         )
-        
+
         client = OpenSearch(
             hosts=[{"host": endpoint, "port": 443}],
             http_auth=aws_auth,
@@ -290,41 +295,43 @@ class OpenSearchDomainManager:
             connection_class=RequestsHttpConnection,
             timeout=30,
         )
-        
+
         return client
 
     def list_indexes(self, endpoint: str) -> List[OpenSearchIndex]:
         """
         Liste tous les index d'un domaine.
-        
+
         Args:
             endpoint: Endpoint du domaine
-            
+
         Returns:
             Liste des index
         """
         client = self.get_opensearch_client(endpoint)
         if not client:
             return []
-        
+
         try:
             # Récupérer les stats des index
             cat_response = client.cat.indices(format="json")
-            
+
             indexes = []
             for idx in cat_response:
-                indexes.append(OpenSearchIndex(
-                    name=idx.get("index", ""),
-                    health=idx.get("health", "unknown"),
-                    status=idx.get("status", "unknown"),
-                    doc_count=int(idx.get("docs.count", 0)),
-                    size_bytes=int(idx.get("store.size", 0)),
-                    primary_shards=int(idx.get("pri", 1)),
-                    replica_shards=int(idx.get("rep", 0)),
-                ))
-            
+                indexes.append(
+                    OpenSearchIndex(
+                        name=idx.get("index", ""),
+                        health=idx.get("health", "unknown"),
+                        status=idx.get("status", "unknown"),
+                        doc_count=int(idx.get("docs.count", 0)),
+                        size_bytes=int(idx.get("store.size", 0)),
+                        primary_shards=int(idx.get("pri", 1)),
+                        replica_shards=int(idx.get("rep", 0)),
+                    )
+                )
+
             return indexes
-            
+
         except Exception as e:
             logger.error(f"Failed to list indexes: {e}")
             return []
@@ -338,26 +345,26 @@ class OpenSearchDomainManager:
     ) -> bool:
         """
         Crée un nouvel index.
-        
+
         Args:
             endpoint: Endpoint du domaine
             index_name: Nom de l'index
             mappings: Mappings de l'index
             settings: Settings de l'index
-            
+
         Returns:
             True si succès
         """
         client = self.get_opensearch_client(endpoint)
         if not client:
             return False
-        
+
         body = {}
         if mappings:
             body["mappings"] = mappings
         if settings:
             body["settings"] = settings
-        
+
         try:
             client.indices.create(index=index_name, body=body)
             logger.info(f"Index created: {index_name}")
@@ -369,18 +376,18 @@ class OpenSearchDomainManager:
     def delete_index(self, endpoint: str, index_name: str) -> bool:
         """
         Supprime un index.
-        
+
         Args:
             endpoint: Endpoint du domaine
             index_name: Nom de l'index
-            
+
         Returns:
             True si succès
         """
         client = self.get_opensearch_client(endpoint)
         if not client:
             return False
-        
+
         try:
             client.indices.delete(index=index_name)
             logger.info(f"Index deleted: {index_name}")
@@ -396,21 +403,23 @@ class OpenSearchDomainManager:
     def ping_domain(self, endpoint: str, timeout: int = 10) -> bool:
         """
         Teste la connectivité à un domaine OpenSearch.
-        
+
         Args:
             endpoint: Endpoint du domaine
             timeout: Timeout en secondes
-            
+
         Returns:
             True si accessible
         """
         client = self.get_opensearch_client(endpoint)
         if not client:
             return False
-        
+
         try:
             info = client.info(request_timeout=timeout)
-            logger.info(f"OpenSearch ping successful: {info.get('version', {}).get('number', 'unknown')}")
+            logger.info(
+                f"OpenSearch ping successful: {info.get('version', {}).get('number', 'unknown')}"
+            )
             return True
         except Exception as e:
             logger.error(f"OpenSearch ping failed: {e}")
@@ -439,11 +448,11 @@ class OpenSearchDomainManager:
     def _build_open_access_policy(self, domain_name: str) -> str:
         """
         Construit une policy d'accès ouverte (pour dev/test).
-        
+
         ATTENTION: À restreindre en production !
         """
         account_id = self._get_account_id()
-        
+
         policy = {
             "Version": "2012-10-17",
             "Statement": [
@@ -455,7 +464,7 @@ class OpenSearchDomainManager:
                 }
             ],
         }
-        
+
         return json.dumps(policy)
 
     def _get_account_id(self) -> str:

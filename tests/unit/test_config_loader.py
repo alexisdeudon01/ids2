@@ -1,6 +1,6 @@
-import pytest
 from pathlib import Path
 
+import pytest
 import yaml
 
 from ids.config.loader import ConfigManager
@@ -21,9 +21,7 @@ def test_secret_merge_includes_keys(tmp_path: Path) -> None:
             "aws": {"opensearch_endpoint": "https://search.example.com"},
         },
     )
-    secret_path.write_text(
-        '{"aws": {"access_key_id": "abc", "secret_access_key": "xyz"}}'
-    )
+    secret_path.write_text('{"aws": {"access_key_id": "abc", "secret_access_key": "xyz"}}')
 
     manager = ConfigManager(str(config_path), secret_path=str(secret_path))
     assert manager.obtenir("aws.access_key_id") == "abc"

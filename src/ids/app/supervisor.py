@@ -9,12 +9,12 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from .container import ConteneurFactory
-from .decorateurs import log_appel, metriques, retry
-from .pipeline_status import PipelineStatusAggregator
 from ..composants import DockerManager, ResourceController
 from ..config.loader import ConfigManager
 from ..suricata import SuricataManager
+from .container import ConteneurFactory
+from .decorateurs import log_appel, metriques, retry
+from .pipeline_status import PipelineStatusAggregator
 
 logging.basicConfig(
     level=logging.INFO,

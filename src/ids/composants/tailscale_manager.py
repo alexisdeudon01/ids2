@@ -513,9 +513,7 @@ CMD ["tailscaled"]
             # Install Tailscale if not present
             if not capabilities.tailscale_installed:
                 logger.info("Installing Tailscale on target...")
-                install_result = run_remote(
-                    "curl -fsSL https://tailscale.com/install.sh | sh"
-                )
+                install_result = run_remote("curl -fsSL https://tailscale.com/install.sh | sh")
                 if install_result.returncode != 0:
                     return DeploymentResult(
                         success=False,
@@ -704,10 +702,12 @@ volumes:
                 ssh_cmd = ["ssh", "-o", "BatchMode=yes"]
                 if ssh_key:
                     ssh_cmd.extend(["-i", ssh_key])
-                ssh_cmd.extend([
-                    f"{ssh_user}@{target_host}",
-                    "cd /tmp && docker compose -f tailscale-compose.yml up -d",
-                ])
+                ssh_cmd.extend(
+                    [
+                        f"{ssh_user}@{target_host}",
+                        "cd /tmp && docker compose -f tailscale-compose.yml up -d",
+                    ]
+                )
                 result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=120)
             else:
                 result = subprocess.run(
@@ -802,7 +802,9 @@ volumes:
                     ssh_cmd.extend([f"{ssh_user}@{target_host}", cmd])
                     return subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=60)
                 else:
-                    return subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
+                    return subprocess.run(
+                        cmd, shell=True, capture_output=True, text=True, timeout=60
+                    )
 
             # Determine deployment mode
             mode = node.deployment_mode if node else None
@@ -875,12 +877,16 @@ volumes:
                     tailnet_ip=tailnet_ip,
                     status=NodeStatus.ONLINE if device.get("online") else NodeStatus.OFFLINE,
                     authorized=device.get("authorized", False),
-                    last_seen=datetime.fromisoformat(device["lastSeen"].replace("Z", "+00:00"))
-                    if device.get("lastSeen")
-                    else None,
-                    created_at=datetime.fromisoformat(device["created"].replace("Z", "+00:00"))
-                    if device.get("created")
-                    else None,
+                    last_seen=(
+                        datetime.fromisoformat(device["lastSeen"].replace("Z", "+00:00"))
+                        if device.get("lastSeen")
+                        else None
+                    ),
+                    created_at=(
+                        datetime.fromisoformat(device["created"].replace("Z", "+00:00"))
+                        if device.get("created")
+                        else None
+                    ),
                     tags=[t.replace("tag:", "") for t in device.get("tags", [])],
                 )
                 nodes.append(node)
@@ -924,9 +930,7 @@ volumes:
         """Generate a systemd service file for Tailscale."""
         return self.SYSTEMD_SERVICE_TEMPLATE
 
-    def generate_compose_snippet(
-        self, hostname: str, auth_key: str, extra_args: str = ""
-    ) -> str:
+    def generate_compose_snippet(self, hostname: str, auth_key: str, extra_args: str = "") -> str:
         """Generate a docker-compose snippet for Tailscale."""
         return self.DOCKER_COMPOSE_TEMPLATE.format(
             hostname=hostname,

@@ -8,7 +8,7 @@ Charge et merge les secrets depuis secret.json.
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import yaml
 
@@ -18,10 +18,10 @@ from ..domain.exceptions import ErreurConfiguration
 class ConfigManager:
     """
     Gère le chargement et l'accès à la configuration YAML.
-    
+
     Implémente le Protocol GestionnaireConfig.
     """
-    
+
     def __init__(
         self,
         config_path: Union[str, Dict[str, Any]] = "config.yaml",
@@ -29,11 +29,11 @@ class ConfigManager:
     ):
         """
         Initialise le gestionnaire de configuration.
-        
+
         Args:
             config_path: Chemin vers le fichier config.yaml ou dict en mémoire
             secret_path: Chemin vers le fichier secret.json
-            
+
         Raises:
             FileNotFoundError: Si le fichier config n'existe pas
         """
@@ -47,9 +47,7 @@ class ConfigManager:
 
         if self.config_path is not None:
             if not self.config_path.exists():
-                raise FileNotFoundError(
-                    f"Fichier de configuration introuvable: {self.config_path}"
-                )
+                raise FileNotFoundError(f"Fichier de configuration introuvable: {self.config_path}")
             self._config = self._charger_config()
         self._charger_secrets()
         if self.config_path is not None:
@@ -65,44 +63,42 @@ class ConfigManager:
     ) -> "ConfigManager":
         """Crée un ConfigManager à partir d'un dict en mémoire."""
         return cls(config, secret_path=secret_path)
-    
+
     def _charger_config(self) -> Dict[str, Any]:
         """Charge le fichier YAML."""
         try:
-            with open(self.config_path, 'r', encoding='utf-8') as f:
+            with open(self.config_path, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f) or {}
         except yaml.YAMLError as e:
             self.logger.error(f"Erreur lors du parsing YAML: {e}")
             raise
-    
+
     def _charger_secrets(self) -> None:
         """
         Charge et merge les secrets depuis secret.json dans la configuration.
-        
+
         Les secrets sont mergés dans self._config, avec priorité aux secrets
         sur la config de base.
         """
         if not self.secret_path.exists():
             if self._aws_endpoint_configured() and not self._use_instance_profile():
-                raise ErreurConfiguration(
-                    f"Fichier secret.json introuvable: {self.secret_path}"
-                )
+                raise ErreurConfiguration(f"Fichier secret.json introuvable: {self.secret_path}")
             self.logger.warning(
                 f"Fichier secret.json introuvable: {self.secret_path}. "
                 "Les credentials AWS ne seront pas chargés."
             )
             return
-        
+
         try:
-            with open(self.secret_path, 'r', encoding='utf-8') as f:
+            with open(self.secret_path, "r", encoding="utf-8") as f:
                 secrets = json.load(f)
-            
+
             self._merge_dicts(self._config, secrets)
             if "aws" in secrets:
                 self.logger.info("Secrets AWS chargés depuis secret.json")
 
             self._valider_credentials_aws()
-        
+
         except json.JSONDecodeError as e:
             self.logger.error(f"Erreur lors du parsing JSON de secret.json: {e}")
             raise
@@ -141,61 +137,60 @@ class ConfigManager:
         secret_key = aws_config.get("secret_access_key")
         if not access_key or not secret_key:
             raise ErreurConfiguration(
-                "Endpoint OpenSearch configure mais credentials AWS manquants "
-                "dans secret.json"
+                "Endpoint OpenSearch configure mais credentials AWS manquants " "dans secret.json"
             )
-    
+
     def obtenir(self, clé: str, defaut: Any = None) -> Any:
         """
         Obtient une valeur de configuration.
-        
+
         Supporte les clés imbriquées avec notée pointée :
         Ex: "suricata.config_path" -> self._config["suricata"]["config_path"]
-        
+
         Args:
             clé: Clé de configuration (peut contenir des points)
             defaut: Valeur par défaut si la clé n'existe pas
-            
+
         Returns:
             La valeur de configuration ou la valeur par défaut
         """
-        parties = clé.split('.')
+        parties = clé.split(".")
         valeur = self._config
-        
+
         for partie in parties:
             if isinstance(valeur, dict) and partie in valeur:
                 valeur = valeur[partie]
             else:
                 return defaut
-        
+
         return valeur
-    
+
     def get(self, clé: str, defaut: Any = None) -> Any:
         """Alias pour obtenir() pour la rétrocompatibilité."""
         return self.obtenir(clé, defaut)
-    
+
     def definir(self, clé: str, valeur: Any) -> None:
         """
         Définit une valeur de configuration.
-        
+
         Warning: Cela modifie la configuration en mémoire uniquement,
         pas le fichier sur disque.
-        
+
         Args:
             clé: Clé de configuration
             valeur: Valeur à définir
         """
-        parties = clé.split('.')
+        parties = clé.split(".")
         config = self._config
-        
+
         for partie in parties[:-1]:
             if partie not in config:
                 config[partie] = {}
             config = config[partie]
-        
+
         config[parties[-1]] = valeur
         self.logger.debug(f"Configuration modifiée: {clé} = {valeur}")
-    
+
     def recharger(self) -> None:
         """Recharge la configuration depuis le fichier et les secrets."""
         if self.config_path is None:
@@ -204,11 +199,11 @@ class ConfigManager:
         self._config = self._charger_config()
         self._charger_secrets()
         self.logger.info("Configuration rechargée")
-    
+
     def get_all(self) -> Dict[str, Any]:
         """Retourne la configuration complète."""
         return self._config.copy()
-    
+
     def __repr__(self) -> str:
         return f"ConfigManager({self.config_path})"
 

@@ -1,7 +1,9 @@
 """Fixtures pour les tests d'infrastructure (AWS, Config Validator)."""
+
+from typing import Any, Dict
+from unittest.mock import AsyncMock, MagicMock, Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock, MagicMock
-from typing import Dict, Any
 
 
 @pytest.fixture
@@ -11,7 +13,7 @@ def mock_boto3_session():
     session.get_credentials.return_value = Mock(
         access_key="AKIAIOSFODNN7EXAMPLE",
         secret_key="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-        token=None
+        token=None,
     )
     session.region_name = "eu-west-1"
     return session
@@ -36,11 +38,9 @@ def aws_config() -> Dict[str, Any]:
             "opensearch": {
                 "endpoint": "https://search-ids2-test.eu-west-1.es.amazonaws.com",
                 "index_prefix": "ids2-alerts-",
-                "bulk_size": 100
+                "bulk_size": 100,
             },
-            "credentials": {
-                "use_instance_profile": True
-            }
+            "credentials": {"use_instance_profile": True},
         }
     }
 
@@ -54,8 +54,8 @@ def invalid_aws_config() -> Dict[str, Any]:
             "opensearch": {
                 "endpoint": "not-a-valid-url",  # Invalid: not HTTPS
                 "index_prefix": "",
-                "bulk_size": -1  # Invalid: negative
-            }
+                "bulk_size": -1,  # Invalid: negative
+            },
         }
     }
 

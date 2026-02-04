@@ -64,7 +64,9 @@ class AWSOpenSearchManager:
             return payload
 
         domain_config = self._config.obtenir("aws.opensearch.domain", {}) or {}
-        engine_version = domain_config.get("engine_version") or self._config.obtenir("aws.opensearch.engine_version")
+        engine_version = domain_config.get("engine_version") or self._config.obtenir(
+            "aws.opensearch.engine_version"
+        )
         if engine_version:
             payload["EngineVersion"] = engine_version
 
