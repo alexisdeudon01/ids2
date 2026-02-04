@@ -39,11 +39,11 @@ except ImportError as e:  # pragma: no cover - optional import fallback
         print(f"⚠️  Warning: Could not import ids.deploy.opensearch_domain: {e}")
 
 try:
-    from ids.config.loader import ConfigManager
+    from ids.config import ConfigManager
 except ImportError as e:  # pragma: no cover - optional import fallback
     ConfigManager = None
     if __name__ == "__main__":
-        print(f"⚠️  Warning: Could not import ids.config.loader: {e}")
+        print(f"⚠️  Warning: Could not import ids.config: {e}")
 
 try:
     from ids.domain.exceptions import ErreurConfiguration
@@ -51,8 +51,7 @@ except ImportError as e:  # pragma: no cover - optional import fallback
     ErreurConfiguration = Exception
     if __name__ == "__main__":
         print(f"⚠️  Warning: Could not import ids.domain.exceptions: {e}")
-    if __name__ == "__main__":
-        print(f"⚠️  Warning: Could not import ids.config.loader: {e}")
+
 
 
 @dataclass
