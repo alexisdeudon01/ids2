@@ -38,7 +38,11 @@ try:
     import networkx as nx
     from anthropic import Anthropic
 except ImportError as e:
-    print(f"❌ pip install networkx anthropic psutil")
+    print(f"❌ Missing required dependencies: {e}")
+    print(f"Install with: pip install networkx anthropic psutil")
+    sys.exit(1)
+except Exception as e:
+    print(f"❌ Unexpected error importing dependencies: {e}")
     sys.exit(1)
 
 # =============================================================================
@@ -144,12 +148,17 @@ class ResourceMonitor:
         self._throttle = threading.Event()
         self._stats = {'active': 0, 'total': 0, 'phase': 'init'}
         self._lock = threading.Lock()
+        self._thread = None
     
     def start(self):
-        threading.Thread(target=self._loop, daemon=True).start()
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
     
     def stop(self):
         self._stop.set()
+        if self._thread and self._thread.is_alive():
+            # Wait for thread to finish (with timeout)
+            self._thread.join(timeout=2.0)
         print()
     
     def update(self, active=None, total=None, phase=None):
@@ -194,6 +203,15 @@ class WorkflowAnalyzer:
         self.cfg = cfg or Config()
         if not self.cfg.api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable is required. Set it with: export ANTHROPIC_API_KEY=your_key")
+        # Validate API key format (should start with 'sk-ant-')
+        if not self.cfg.api_key.startswith('sk-ant-'):
+            raise ValueError("Invalid ANTHROPIC_API_KEY format. API keys should start with 'sk-ant-'")
+        # Test network connectivity before making API calls
+        try:
+            import socket
+            socket.create_connection(("api.anthropic.com", 443), timeout=5)
+        except (socket.error, OSError) as e:
+            raise ConnectionError(f"Cannot reach Anthropic API. Check network connectivity: {e}")
         self.client = Anthropic(api_key=self.cfg.api_key)
         self.G = nx.DiGraph()
         self.cache = self._load_cache()
@@ -1473,12 +1491,14 @@ if __name__ == "__main__":
             for chunk_idx, chunk in enumerate(chunks):
                 self.monitor.update(phase=f"Analyse {chunk_idx+1}/{len(chunks)}")
                 
+                # Use lock to ensure thread-safe access to shared resources
                 with ThreadPoolExecutor(max_workers=self.cfg.max_workers) as executor:
                     futures = {executor.submit(self._process_file, f): f for f in chunk}
                     
                     for future in as_completed(futures):
-                        processed += 1
-                        self.monitor.update(active=processed)
+                        with self._lock:  # Thread-safe update of shared state
+                            processed += 1
+                            self.monitor.update(active=processed)
                         try:
                             future.result()
                         except Exception as e:
@@ -1496,8 +1516,16 @@ if __name__ == "__main__":
             Log.warn("\n⚠️ Interruption...")
         
         finally:
+            # Ensure proper cleanup of monitoring thread
             self.monitor.stop()
+            # Wait a bit for thread to finish
+            time.sleep(0.5)
+            # Force cleanup if thread is still alive (check if attribute exists)
+            if hasattr(self.monitor, '_thread') and self.monitor._thread and self.monitor._thread.is_alive():
+                Log.warn("Monitoring thread still alive, forcing cleanup...")
             self._save_cache()
+            # Ensure all threads are cleaned up
+            gc.collect()
         
         # Phase 2: Construction workflows
         Log.header("🔄 PHASE 2: Construction des Workflows")

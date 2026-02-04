@@ -10,31 +10,40 @@ import shutil
 import subprocess
 import sys
 import time
+import fcntl
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 REPO_ROOT = Path(__file__).resolve().parent
 SRC_ROOT = REPO_ROOT / "src"
-if str(SRC_ROOT) not in sys.path:
+if SRC_ROOT.exists() and str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
+elif not SRC_ROOT.exists():
+    print(f"⚠️  Warning: SRC_ROOT {SRC_ROOT} does not exist. Some imports may fail.")
 
 try:
     from ids.deploy import pi_uploader
-except Exception:  # pragma: no cover - optional import fallback
+except ImportError as e:  # pragma: no cover - optional import fallback
     pi_uploader = None
+    if __name__ == "__main__":
+        print(f"⚠️  Warning: Could not import ids.deploy.pi_uploader: {e}")
 
 try:
     from ids.deploy import opensearch_domain
-except Exception:  # pragma: no cover - optional import fallback
+except ImportError as e:  # pragma: no cover - optional import fallback
     opensearch_domain = None
+    if __name__ == "__main__":
+        print(f"⚠️  Warning: Could not import ids.deploy.opensearch_domain: {e}")
 
 try:
     from ids.config.loader import ConfigManager
     from ids.domain.exceptions import ErreurConfiguration
-except Exception:  # pragma: no cover - optional import fallback
+except ImportError as e:  # pragma: no cover - optional import fallback
     ConfigManager = None
     ErreurConfiguration = Exception
+    if __name__ == "__main__":
+        print(f"⚠️  Warning: Could not import ids.config.loader: {e}")
 
 
 @dataclass
@@ -86,7 +95,7 @@ def run_local(
 ) -> subprocess.CompletedProcess:
     if verbose:
         print(f"$ {_format_command(command)}")
-    kwargs = {"check": check, "text": True, "capture_output": capture_output}
+    kwargs: Dict[str, Any] = {"text": True, "capture_output": capture_output, "check": check}
     if input_data is not None:
         kwargs["input"] = input_data
     return subprocess.run(command, **kwargs)
@@ -101,6 +110,24 @@ def run_ssh(
     sudo: bool = False,
     input_data: Optional[str] = None,
 ) -> subprocess.CompletedProcess:
+    # Test SSH connectivity before executing command
+    test_result = run_local(
+        [
+            "ssh",
+            "-p",
+            str(config.port),
+            "-o", "ConnectTimeout=5",
+            "-o", "BatchMode=yes",
+            *_ssh_options(config),
+            f"{config.user}@{config.host}",
+            "echo 'SSH connection test'",
+        ],
+        check=False,
+        capture_output=True,
+    )
+    if test_result.returncode != 0 and check:
+        raise ConnectionError(f"Cannot connect to {config.user}@{config.host}:{config.port}. Check connectivity and credentials.")
+    
     display_command = remote_command
     if sudo:
         remote_command = f"sh -lc {shlex.quote(remote_command)}"
@@ -155,12 +182,23 @@ def load_yaml_data(path: Path) -> Dict[str, Any]:
         return {}
     try:
         import yaml
-    except Exception:
+    except ImportError as e:
+        logging.warning(f"yaml module not available: {e}")
+        return {}
+    except Exception as e:
+        logging.warning(f"Unexpected error importing yaml: {e}")
         return {}
     try:
         with path.open("r", encoding="utf-8") as handle:
             data = yaml.safe_load(handle) or {}
-    except Exception:
+    except yaml.YAMLError as e:
+        logging.error(f"YAML parsing error in {path}: {e}")
+        return {}
+    except IOError as e:
+        logging.error(f"IO error reading {path}: {e}")
+        return {}
+    except Exception as e:
+        logging.error(f"Unexpected error reading {path}: {e}")
         return {}
     return data if isinstance(data, dict) else {}
 
@@ -171,7 +209,14 @@ def load_json_data(path: Path) -> Dict[str, Any]:
     try:
         with path.open("r", encoding="utf-8") as handle:
             data = json.load(handle) or {}
-    except Exception:
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON parsing error in {path}: {e}")
+        return {}
+    except IOError as e:
+        logging.error(f"IO error reading {path}: {e}")
+        return {}
+    except Exception as e:
+        logging.error(f"Unexpected error reading {path}: {e}")
         return {}
     return data if isinstance(data, dict) else {}
 
@@ -740,13 +785,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         print("Pi host is required.")
         return 1
 
+    # Validate remote directory path
+    remote_dir_path = Path(args.remote_dir)
+    if not remote_dir_path.is_absolute():
+        logging.warning(f"Remote directory '{remote_dir_path}' is not absolute. Using as-is.")
+    
     ssh_config = SSHConfig(
         host=host,
         user=user or "pi",
         port=args.pi_port,
         key_path=Path(args.ssh_key).expanduser() if args.ssh_key else None,
         sudo_password=sudo_password,
-        remote_dir=Path(args.remote_dir),
+        remote_dir=remote_dir_path,
         verbose=args.verbose,
     )
     if args.verbose:

@@ -1,12 +1,25 @@
 #!/bin/bash
+set -euo pipefail
 
 echo "--- Configuration de l'environnement virtuel ---"
 
-# 1. Se déplacer dans le répertoire du projet
-#cd /home/tor/Downloads/ids2
+# Check python3 availability
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "❌ python3 command not found. Please install Python 3 first."
+  exit 1
+fi
+
+# Check python3-venv module availability
+if ! python3 -c "import venv" 2>/dev/null; then
+  echo "❌ python3-venv module not available."
+  echo "Install with: sudo apt-get install -y python3-venv"
+  exit 1
+fi
+
+# 1. Se déplacer dans le répertoire du projet (use script directory)
+cd "$(dirname "$0")" || exit 1
 
 # 2. Créer l'environnement virtuel nommé 'venv'
-# Assurez-vous d'avoir 'python3-venv' installé si nécessaire (sudo apt install python3-venv)
 python3 -m venv venv
 
 echo "Environnement 'venv' créé."

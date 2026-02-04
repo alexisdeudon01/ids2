@@ -15,6 +15,7 @@ services:
     volumes:
       - ./src:/app/src:ro
       - ./tests:/app/tests
+      # Mount config.yaml only if it exists, otherwise use defaults
       - ./config.yaml:/app/config.yaml:ro
       - test-results:/app/test-results
     networks:

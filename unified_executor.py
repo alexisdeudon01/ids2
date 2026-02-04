@@ -13,6 +13,8 @@ import sys
 import subprocess
 import time
 import signal
+import fcntl
+import shutil
 from pathlib import Path
 from enum import Enum, auto
 from dataclasses import dataclass
@@ -20,15 +22,30 @@ from typing import Optional, List, Callable
 import logging
 
 # Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s | %(levelname)-8s | %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('unified_execution.log')
-    ]
-)
-log = logging.getLogger(__name__)
+def setup_logging(log_file: str = 'unified_execution.log'):
+    """Setup logging with validated log file path."""
+    log_path = Path(log_file)
+    # Ensure log directory exists
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    # Validate we can write to log file
+    try:
+        log_path.touch(exist_ok=True)
+    except (IOError, PermissionError) as e:
+        print(f"⚠️  Warning: Cannot write to log file {log_path}: {e}")
+        log_file = '/tmp/unified_execution.log'
+        log_path = Path(log_file)
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s | %(levelname)-8s | %(message)s',
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(str(log_path))
+        ]
+    )
+    return logging.getLogger(__name__)
+
+log = setup_logging()
 
 # =============================================================================
 # FSM STATES
@@ -285,6 +302,16 @@ class UnifiedExecutor:
         self.current_state = State.START
         self.execution_log: List[dict] = []
         self.start_time = time.time()
+        self.lock_file = self.project_dir / ".unified_executor.lock"
+        self._shutdown_requested = False
+        # Setup signal handlers for graceful shutdown
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+    
+    def _signal_handler(self, signum, frame):
+        """Handle shutdown signals gracefully."""
+        self._shutdown_requested = True
+        log.warning(f"Received signal {signum}, shutting down gracefully...")
         
     def _run_script(self, step: StepConfig) -> bool:
         """Exécute un script avec gestion des erreurs et timeout."""
@@ -297,13 +324,24 @@ class UnifiedExecutor:
         log.info(f"▶ Exécution: {step.script}")
         log.info(f"  Description: {step.description}")
         
-        # Préparer la commande
+        # Préparer la commande avec vérification des exécutables
         if step.script.endswith('.py'):
+            if not shutil.which(sys.executable):
+                log.error(f"Python executable not found: {sys.executable}")
+                return False
             cmd = [sys.executable, str(script_path)]
         elif step.script.endswith(('.sh', '.bash')):
-            cmd = ['bash', str(script_path)]
+            bash_path = shutil.which('bash')
+            if not bash_path:
+                log.error("bash executable not found")
+                return False
+            cmd = [bash_path, str(script_path)]
         else:
             cmd = [str(script_path)]
+            # Check if script is executable
+            if not os.access(script_path, os.X_OK):
+                log.error(f"Script is not executable: {script_path}")
+                return False
         
         # Exécuter avec timeout
         retries = 0
@@ -357,11 +395,25 @@ class UnifiedExecutor:
     
     def run(self, start_from: Optional[str] = None, dry_run: bool = False) -> bool:
         """Exécute tous les steps dans l'ordre."""
-        log.info("=" * 60)
-        log.info("UNIFIED EXECUTION - START")
-        log.info(f"Project: {self.project_dir}")
-        log.info(f"Steps: {len(EXECUTION_STEPS)}")
-        log.info("=" * 60)
+        # File locking to prevent concurrent executions
+        import fcntl
+        try:
+            lock_fd = self.lock_file.open('w')
+            try:
+                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                log.error(f"Another instance is already running (lock file: {self.lock_file})")
+                return False
+        except Exception as e:
+            log.warning(f"Could not acquire lock file: {e}. Continuing anyway...")
+            lock_fd = None
+        
+        try:
+            log.info("=" * 60)
+            log.info("UNIFIED EXECUTION - START")
+            log.info(f"Project: {self.project_dir}")
+            log.info(f"Steps: {len(EXECUTION_STEPS)}")
+            log.info("=" * 60)
         
         started = start_from is None
         
@@ -380,6 +432,13 @@ class UnifiedExecutor:
             
             self.current_state = step.state
             
+            # Check for shutdown request
+            if self._shutdown_requested:
+                log.warning("Shutdown requested, stopping execution...")
+                self.current_state = State.ERROR
+                self._print_summary()
+                return False
+            
             if not self._run_script(step):
                 log.error(f"\n💀 EXECUTION FAILED at step: {step.name}")
                 self.current_state = State.ERROR
@@ -393,6 +452,15 @@ class UnifiedExecutor:
         
         self._print_summary()
         return True
+        finally:
+            # Release lock
+            if lock_fd is not None:
+                try:
+                    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+                    lock_fd.close()
+                    self.lock_file.unlink(missing_ok=True)
+                except Exception:
+                    pass
     
     def _print_summary(self):
         """Affiche le résumé d'exécution."""
