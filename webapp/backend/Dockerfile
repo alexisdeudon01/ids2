@@ -21,7 +21,7 @@ COPY --from=builder /usr/local /usr/local
 COPY --chown=ids:ids src/ ./src/
 COPY --chown=ids:ids config.yaml ./
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
+ENV PYTHONDONTWRITEBYTECODE=1 \ 
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src
 
