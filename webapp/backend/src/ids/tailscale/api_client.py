@@ -13,11 +13,10 @@ from .models import DeviceState
 try:
     from tailscale import Tailscale  # type: ignore
 except ImportError:
+    Tailscale = None  # type: ignore[assignment]
     TAILSCALE_LIB_AVAILABLE = False
 else:
     TAILSCALE_LIB_AVAILABLE = True
-
-Tailscale = None
 
 class TailscaleLibraryClient(BaseAPIClient):
     """
@@ -37,7 +36,7 @@ class TailscaleLibraryClient(BaseAPIClient):
         """
         if not TAILSCALE_LIB_AVAILABLE:
             raise ImportError(
-                "The 'tailscale' library is required. " "Install with: pip install tailscale"
+                "The 'tailscale' library is required. Install with: pip install tailscale"
             )
         super().__init__(tailnet, api_key)
 
