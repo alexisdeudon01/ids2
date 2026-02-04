@@ -35,15 +35,15 @@ class SecretManager:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
+                    cls._instance._initialized: bool = False
         return cls._instance
     
     def __init__(self) -> None:
         """Initialise le gestionnaire de secrets."""
-        if self._initialized:
+        if hasattr(self, '_initialized') and self._initialized:
             return
         
-        self._initialized = True
+        self._initialized: bool = True
         self._session = None
         self._secrets_cache: Dict[str, Optional[str]] = {}
         self._db_initialized = False

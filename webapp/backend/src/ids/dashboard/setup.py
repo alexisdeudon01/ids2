@@ -4,6 +4,10 @@ Setup and configuration module for IDS Dashboard.
 Handles automatic setup of:
 - Tailscale tailnet configuration
 - OpenSearch/Elasticsearch domain creation
+- Database initialization
+- Secret management integration
+- Dependency management integration
+- Docker orchestrator integration
 """
 
 from __future__ import annotations
@@ -17,6 +21,11 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ids.storage import crud, models
+from ids.infrastructure import (
+    dependency_manager,
+    docker_orchestrator,
+    secret_manager,
+)
 
 logger = logging.getLogger(__name__)
 

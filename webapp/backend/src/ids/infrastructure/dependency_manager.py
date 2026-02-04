@@ -35,15 +35,15 @@ class DependencyManager:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
+                    cls._instance._initialized: bool = False
         return cls._instance
     
     def __init__(self) -> None:
         """Initialise le gestionnaire de dépendances."""
-        if self._initialized:
+        if hasattr(self, '_initialized') and self._initialized:
             return
         
-        self._initialized = True
+        self._initialized: bool = True
         self._installed_python_packages: Set[str] = set()
         self._installed_docker_services: Set[str] = set()
         self._module_dependencies: Dict[str, List[str]] = {}

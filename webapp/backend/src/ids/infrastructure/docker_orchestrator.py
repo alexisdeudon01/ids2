@@ -35,15 +35,15 @@ class DockerOrchestrator:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
+                    cls._instance._initialized: bool = False
         return cls._instance
     
     def __init__(self) -> None:
         """Initialise l'orchestrateur Docker."""
-        if self._initialized:
+        if hasattr(self, '_initialized') and self._initialized:
             return
         
-        self._initialized = True
+        self._initialized: bool = True
         self._built_images: Set[str] = set()
         self._running_containers: Set[str] = set()
         self._project_root: Optional[Path] = None
@@ -412,14 +412,16 @@ class DockerOrchestrator:
             with open(self._docker_compose_file) as f:
                 compose_data = yaml.safe_load(f)
             
-            communication_info = {
+            communication_info: Dict[str, Any] = {
                 "network": self._docker_network,
                 "services": {},
             }
             
-            if "services" in compose_data:
+            if "services" in compose_data and isinstance(compose_data["services"], dict):
                 for service_name, service_config in compose_data["services"].items():
-                    service_info = {
+                    if not isinstance(service_config, dict):
+                        continue
+                    service_info: Dict[str, Any] = {
                         "ports": service_config.get("ports", []),
                         "environment": service_config.get("environment", {}),
                         "depends_on": service_config.get("depends_on", []),
@@ -428,13 +430,14 @@ class DockerOrchestrator:
                     }
                     
                     # Extraire les variables d'environnement qui indiquent la communication
-                    env = service_info["environment"]
+                    env = service_info.get("environment", {})
                     if isinstance(env, dict):
                         # Chercher les URLs/hosts de connexion
-                        connection_vars = {
-                            k: v for k, v in env.items()
-                            if any(keyword in k.lower() for keyword in ["host", "url", "endpoint", "address"])
-                        }
+                        connection_vars: Dict[str, str] = {}
+                        for k, v in env.items():
+                            if isinstance(k, str) and isinstance(v, str):
+                                if any(keyword in k.lower() for keyword in ["host", "url", "endpoint", "address"]):
+                                    connection_vars[k] = v
                         service_info["connection_variables"] = connection_vars
                     
                     communication_info["services"][service_name] = service_info
