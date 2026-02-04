@@ -1,0 +1,30 @@
+.venv/
+scripts/actions_secrets.map
+secret.json
+data/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Test and coverage artifacts
+.coverage
+.pytest_cache/
+htmlcov/
+tests/pytest.log
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+frontend/node_modules/
+webapp/frontend/node_modules/
+
+# IDE
+.idea/
+
+# Generated architecture documentation
+architecture_docs/*.json
+architecture_docs/*.png

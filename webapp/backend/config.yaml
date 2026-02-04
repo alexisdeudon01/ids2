@@ -1,0 +1,96 @@
+aws:
+  region: "eu-central-1"
+  domain_name: "suricata-prod"
+  opensearch_endpoint: "search-suricata-prod-wnz4vkegm72j5gefcf4vf27zne.eu-central-1.es.amazonaws.com"# Sera rempli après le provisioning du domaine
+  # Note: access_key_id et secret_access_key sont dans secret.json
+
+raspberry_pi: # Renommé de 'sensor' pour être plus générique
+  home_net: "192.168.178.0/24"
+  pi_ip: "192.168.178.66"
+  network_interface: "eth0" # Renommé de 'eth_interface' pour être cohérent
+  cpu_limit_percent: 70
+  ram_limit_percent: 70
+  swap_size_gb: 2
+  cpu_limit_medium_percent: 75 # Seuil configurable pour la régulation
+  ram_limit_medium_percent: 75 # Seuil configurable pour la régulation
+  cpu_limit_high_percent: 80 # Seuil configurable pour la régulation
+  ram_limit_high_percent: 80 # Seuil configurable pour la régulation
+
+resource_controller:
+  check_interval: 1 # Intervalle de vérification pour ResourceController
+
+suricata:
+  log_path: "/mnt/ram_logs/eve.json"
+  config_path: "suricata/suricata.yaml"
+  rules_path: "suricata/rules" # Chemin pour les règles Suricata
+  eve_log_options: # Options configurables pour eve-log
+    payload: no
+    packet: no
+    http: yes
+    dns: yes
+    tls: yes
+
+vector:
+  index_pattern: "suricata-ids2-%Y.%m.%d" # Pattern d'index plus spécifique
+  config_path: "vector/vector.toml"
+  log_read_path: "/mnt/ram_logs/eve.json"
+  disk_buffer_max_size: "100 GiB" # Taille maximale du tampon disque principal
+  redis_buffer_max_size: "10 GiB" # Taille maximale du tampon disque pour Redis
+  opensearch_buffer_max_size: "50 GiB" # Taille maximale du tampon disque pour OpenSearch
+  batch_max_events: 500 # Taille de lot optimisée pour Pi
+  batch_timeout_secs: 2 # Timeout de lot
+
+redis:
+  host: "redis"
+  port: 6379
+  db: 0
+
+prometheus:
+  port: 9100 # Port pour l'exporteur de métriques de l'agent
+  docker_port: 9090 # Port pour le serveur Prometheus dans Docker
+  update_interval: 5 # Intervalle de mise à jour des métriques de l'agent
+
+grafana:
+  docker_port: 3000 # Port pour le serveur Grafana dans Docker
+
+docker:
+  compose_file: "docker/docker-compose.yml"
+  required_services: ["vector", "redis", "prometheus", "grafana", "cadvisor", "node_exporter", "fastapi"] # Suricata retiré, FastAPI ajouté
+  vector_cpu: 1.0
+  vector_ram_mb: 1024
+  redis_cpu: 0.5
+  redis_ram_mb: 512
+  prometheus_cpu: 0.2
+  prometheus_ram_mb: 256
+  grafana_cpu: 0.2
+  grafana_ram_mb: 256
+  cadvisor_cpu: 0.1
+  cadvisor_ram_mb: 64
+  node_exporter_cpu: 0.1
+  node_exporter_ram_mb: 64
+  fastapi_cpu: 0.5 # Limites CPU pour FastAPI
+  fastapi_ram_mb: 256 # Limites RAM pour FastAPI
+
+connectivity:
+  check_interval: 10
+  max_retries: 5
+  initial_backoff: 1
+
+fastapi: # Nouvelle section pour la configuration FastAPI
+  port: 8080
+  host: "0.0.0.0"
+
+tailscale: # Configuration Tailscale pour la gestion du réseau
+  # tailnet: "example.com"  # Nom du tailnet (organization ou domaine)
+  # api_key: ""  # Clé API Tailscale (dans secret.json de préférence)
+  # oauth_client_id: ""  # OAuth client ID (dans secret.json)
+  # oauth_client_secret: ""  # OAuth client secret (dans secret.json)
+  # auth_key: ""  # Clé d'authentification pré-générée (dans secret.json)
+  default_tags:
+    - "ci"
+    - "ids2"
+  dns_enabled: true
+  magic_dns: true
+  exit_node_enabled: false
+  subnet_routes: []  # Routes à annoncer, ex: ["192.168.178.0/24"]
+  deployment_mode: "auto"  # auto, linux_service, docker, docker_compose, sidecar

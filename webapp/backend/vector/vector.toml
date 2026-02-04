@@ -1,0 +1,81 @@
+# Configuration Vector pour IDS2 SOC Pipeline
+# Généré par l'agent Python
+
+# Source : Lecture des logs Suricata
+[sources.suricata_logs]
+type = "file"
+include = ["/mnt/ram_logs/eve.json"]
+read_from = "beginning"
+fingerprint_bytes = 1024 # Pour gérer les rotations de fichiers
+
+# Transformation : Parser les logs JSON de Suricata
+[transforms.parse_json]
+type = "remap"
+inputs = ["suricata_logs"]
+source = '''
+  . = parse_json!(.message)
+  # Assurez-vous que les champs sont conformes à ECS si possible
+  # Exemple de renommage/enrichissement pour ECS
+  .event.kind = "event"
+  .event.category = "network"
+  .event.type = "connection" # Ou "alert", "flow", etc. selon le type d'événement Suricata
+  .source.ip = .src_ip
+  .destination.ip = .dest_ip
+  .source.port = .src_port
+  .destination.port = .dest_port
+  .network.protocol = .proto
+  del(.src_ip)
+  del(.dest_ip)
+  del(.src_port)
+  del(.dest_port)
+  del(.proto)
+'''
+
+# Tampon disque pour Vector (obligatoire pour la résilience)
+[buffers.disk_buffer]
+type = "disk"
+path = "/var/lib/vector/buffer" # Chemin persistant pour le tampon disque
+max_size = 100 GiB # Taille maximale du tampon disque
+when_full = "block"
+
+# Sink : Envoi à Redis comme fallback
+[sinks.redis_fallback]
+type = "redis"
+inputs = ["parse_json"]
+address = "redis:6379" # Utiliser le nom du service Docker Compose
+key = "vector_logs"
+encoding = "json"
+batch.max_events = 1000 # Taille de lot optimisée pour Pi
+batch.timeout_secs = 5
+healthcheck.enabled = true
+# Utilise le tampon disque si Redis est lent/indisponible
+buffer.type = "disk"
+buffer.path = "/var/lib/vector/redis_buffer"
+buffer.max_size = 10 GiB
+
+# Sink : Envoi à AWS OpenSearch
+[sinks.opensearch_sink]
+type = "elasticsearch"
+inputs = ["parse_json"]
+endpoint = "${OPENSEARCH_ENDPOINT}"
+index = "ids2-logs-%Y.%m.%d" # Index quotidien
+auth.strategy = "aws"
+auth.region = "${AWS_REGION}"
+auth.access_key_id = "${AWS_ACCESS_KEY_ID}"
+auth.secret_access_key = "${AWS_SECRET_ACCESS_KEY}"
+compression = "gzip"
+batch.max_events = 500 # Taille de lot optimisée pour Pi
+batch.timeout_secs = 2
+request.timeout_secs = 30
+healthcheck.enabled = true
+# Utilise le tampon disque si OpenSearch est lent/indisponible
+buffer.type = "disk"
+buffer.path = "/var/lib/vector/opensearch_buffer"
+buffer.max_size = 50 GiB
+
+# Routes pour la résilience :
+# Si OpenSearch est prêt, envoie directement. Sinon, utilise Redis.
+# Cette logique est plus complexe à gérer directement dans vector.toml sans conditionnalité avancée.
+# L'agent Python gérera la logique de basculement entre les sinks si nécessaire,
+# ou Vector utilisera ses propres mécanismes de buffer et de retry.
+# Pour l'instant, les deux sinks sont configurés avec des buffers disques.

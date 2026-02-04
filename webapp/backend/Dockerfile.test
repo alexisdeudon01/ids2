@@ -1,0 +1,30 @@
+# IDS Agent - Test Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt pyproject.toml ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir pytest pytest-asyncio pytest-cov pytest-mock
+
+# Copy application
+COPY src/ ./src/
+COPY tests/ ./tests/
+COPY config.yaml ./
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src
+
+# Run tests by default
+CMD ["python", "-m", "pytest", "tests/", "-v", "--tb=short", "--cov=src/ids", "--cov-report=term-missing"]

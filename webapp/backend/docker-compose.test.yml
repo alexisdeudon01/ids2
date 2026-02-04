@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # IDS Test Runner
+  # ==========================================================================
+  ids-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: ids-test-runner
+    environment:
+      - PYTHONPATH=/app/src
+      - PYTEST_ARGS=-v --tb=short
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests
+      - ./config.yaml:/app/config.yaml:ro
+      - test-results:/app/test-results
+    networks:
+      - ids-test-network
+    command: >
+      python -m pytest tests/ -v --tb=short 
+      --cov=src/ids --cov-report=term-missing 
+      --cov-report=html:/app/test-results/htmlcov
+      --junitxml=/app/test-results/junit.xml
+      --log-file=/tmp/pytest.log
+
+  # ==========================================================================
+  # Unit Tests Only
+  # ==========================================================================
+  ids-unit-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: ids-unit-test
+    environment:
+      - PYTHONPATH=/app/src
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+    networks:
+      - ids-test-network
+    command: python -m pytest tests/unit/ -v --tb=short -m "not aws"
+
+  # ==========================================================================
+  # Integration Tests (with mocked AWS)
+  # ==========================================================================
+  ids-integration-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: ids-integration-test
+    environment:
+      - PYTHONPATH=/app/src
+      - AWS_ACCESS_KEY_ID=testing
+      - AWS_SECRET_ACCESS_KEY=testing
+      - AWS_DEFAULT_REGION=eu-central-1
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+    networks:
+      - ids-test-network
+    command: python -m pytest tests/integration/ -v --tb=short
+
+  # ==========================================================================
+  # Lint & Type Check
+  # ==========================================================================
+  ids-lint:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: ids-lint
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+    command: >
+      sh -c "
+        echo '=== Running flake8 ===' &&
+        pip install flake8 --quiet &&
+        flake8 src/ --max-line-length=120 --ignore=E501,W503 || true &&
+        echo '=== Lint complete ==='
+      "
+
+networks:
+  ids-test-network:
+    driver: bridge
+
+volumes:
+  test-results:

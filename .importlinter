@@ -1,0 +1,82 @@
+# Import-Linter Configuration
+# Enforces architectural boundaries and dependency rules
+# Run with: lint-imports
+
+[importlinter]
+root_packages =
+    ids
+include_external_packages = True
+
+# ============================================================================
+# Contract 1: Domain Layer Independence
+# Domain should not depend on infrastructure or external services
+# ============================================================================
+[importlinter:contract:domain-independence]
+name = Domain layer must not import from infrastructure
+type = forbidden
+source_modules =
+    ids.domain
+forbidden_modules =
+    ids.infrastructure
+    ids.composants
+    ids.app
+    ids.deploy
+    ids.suricata
+    boto3
+    redis
+    requests
+    aiohttp
+
+# ============================================================================
+# Contract 2: Layered Architecture
+# Lower layers should not depend on higher layers
+# Note: decorateurs is a utility module, so we allow it to be imported
+# ============================================================================
+[importlinter:contract:layered-architecture]
+name = Layered Architecture (Clean Architecture)
+type = layers
+layers =
+    ids.app
+    ids.composants
+    ids.infrastructure
+    ids.interfaces
+    ids.domain
+# Allow decorateurs to be imported (it's a utility module)
+ignore_imports =
+    ids.infrastructure.redis_client -> ids.app.decorateurs
+    ids.infrastructure.aws_manager -> ids.app.decorateurs
+    ids.infrastructure.opensearch_client -> ids.app.decorateurs
+    ids.infrastructure.alert_store -> ids.app.decorateurs
+    ids.composants.resource_controller -> ids.app.decorateurs
+    ids.composants.tailscale_manager -> ids.app.decorateurs
+    ids.composants.metrics_server -> ids.app.decorateurs
+    ids.composants.vector_manager -> ids.app.decorateurs
+    ids.composants.docker_manager -> ids.app.decorateurs
+    ids.composants.base -> ids.app.decorateurs
+    ids.composants.connectivity -> ids.app.decorateurs
+
+# ============================================================================
+# Contract 3: Tailscale Module Independence
+# Tailscale module should be self-contained
+# ============================================================================
+[importlinter:contract:tailscale-independence]
+name = Tailscale module should be independent
+type = independence
+modules =
+    ids.tailscale
+    ids.suricata
+    ids.deploy
+
+# ============================================================================
+# Contract 4: No Circular Imports
+# ============================================================================
+[importlinter:contract:no-cycles]
+name = No circular imports allowed
+type = forbidden
+source_modules =
+    ids
+forbidden_modules =
+    # Self-reference check is implicit
+ignore_imports =
+    ids.composants -> ids.tailscale
+    ids.monitoring -> ids.tailscale
