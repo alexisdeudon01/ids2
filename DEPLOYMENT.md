@@ -11,7 +11,7 @@
 ## Configuration
 
 ### Default Values
-- **AWS Region**: `u-west-1`
+- **AWS Region**: `eu-west-1`
 - **Pi Hostname**: `sinik`
 - **Pi IP**: `192.168.178.66`
 - **Pi User**: `pi`

@@ -43,7 +43,7 @@ Les valeurs par défaut peuvent être personnalisées dans `config.json` à la r
 
 | Paramètre | Valeur | Description |
 |-----------|--------|-------------|
-| **AWS Region** | `u-west-1` | Région AWS pour ELK |
+| **AWS Region** | `eu-west-1` | Région AWS pour ELK |
 | **Pi Hostname** | `sinik` | Nom d'hôte du Raspberry Pi |
 | **Pi IP** | `192.168.178.66` | Adresse IP du Raspberry Pi |
 | **Pi User** | `pi` | Utilisateur SSH |
