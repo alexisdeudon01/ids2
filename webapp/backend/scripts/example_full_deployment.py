@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from ids.managers import (
+from ids.infrastructure import (
     OpenSearchDomainManager,
     RaspberryPiManager,
     TailscaleManager,
