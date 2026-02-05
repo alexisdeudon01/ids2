@@ -80,7 +80,7 @@ def _get_account_id(session: boto3.Session) -> str | None:
         sts = session.client("sts")
         return sts.get_caller_identity().get("Account")
     except Exception as exc:
-        logger.warning(f"Unable to resolve AWS account id: {exc}")
+        logger.warning("Unable to resolve AWS account id: %s", exc)
         return None
 
 
@@ -275,7 +275,7 @@ def creer_domaine(
     existing = _describe_domain(client, resolved_domain)
     response: dict[str, Any]
     if existing:
-        logger.info(f"OpenSearch domain already exists: {resolved_domain}")
+        logger.info("OpenSearch domain already exists: %s", resolved_domain)
         response = {"DomainStatus": existing}
     else:
         response = client.create_domain(**payload)
@@ -285,7 +285,7 @@ def creer_domaine(
         endpoint = _wait_for_endpoint(client, resolved_domain, timeout, poll)
 
     if endpoint:
-        logger.info(f"OpenSearch endpoint: {endpoint}")
+        logger.info("OpenSearch endpoint: %s", endpoint)
         if apply_endpoint:
             _update_config_endpoint(config_file, endpoint)
     else:
