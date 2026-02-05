@@ -14,10 +14,10 @@ WORKDIR /app
 RUN pip install --upgrade pip
 
 # Copy and install Python dependencies (cached if requirements don't change)
-COPY requirements-core.txt ./requirements.txt
+COPY docker/base/requirements-core.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app/src
+    PYTHONPATH=/app/srcit co

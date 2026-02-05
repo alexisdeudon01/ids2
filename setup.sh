@@ -86,4 +86,94 @@ for script in depancecmd/*.sh; do
   fi
 done
 
-echo "✅ Installation terminée. Vérifiez les services et l'interface web."
+echo ""
+echo "🐳 Vérification de Docker..."
+if ! run_remote "docker --version" >/dev/null 2>&1; then
+  echo "❌ Docker n'est pas installé. Installation en cours..."
+  run_remote_sudo "curl -fsSL https://get.docker.com -o /tmp/get-docker.sh && sh /tmp/get-docker.sh"
+  run_remote_sudo "usermod -aG docker '$PI_USER'"
+  run_remote_sudo "systemctl enable docker && systemctl start docker"
+  echo "✅ Docker installé"
+else
+  echo "✅ Docker est installé: $(run_remote 'docker --version')"
+  # S'assurer que Docker est démarré
+  run_remote_sudo "systemctl start docker || true"
+fi
+
+# Vérifier docker compose
+if ! run_remote "docker compose version" >/dev/null 2>&1; then
+  echo "⚠️  docker compose non disponible, installation..."
+  run_remote_sudo "apt-get update && apt-get install -y docker-compose-plugin || apt-get install -y docker-compose"
+fi
+
+echo ""
+echo "🔨 Construction et démarrage des services Docker (progressif)..."
+COMPOSE_DIR="$REMOTE_DIR/webapp/backend/docker"
+BACKEND_DIR="$REMOTE_DIR/webapp/backend"
+
+# Créer le réseau Docker si nécessaire
+run_remote_sudo "docker network create ids-network || true"
+
+# Construire et démarrer les services dans l'ordre de dépendance
+# docker-compose gère automatiquement les dépendances, mais on démarre progressivement pour voir l'avancement
+
+echo "📦 Construction de toutes les images..."
+run_remote_sudo "cd '$COMPOSE_DIR' && docker compose build --parallel"
+
+# Démarrer les services dans l'ordre de dépendance
+echo "🚀 [1/8] Démarrage de Redis (service de base)..."
+run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d redis"
+sleep 2
+
+echo "🚀 [2/8] Démarrage de Node Exporter..."
+run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d node_exporter"
+sleep 1
+
+echo "🚀 [3/8] Démarrage de cAdvisor..."
+run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d cadvisor"
+sleep 2
+
+echo "🚀 [4/8] Démarrage de Vector (dépend de Redis)..."
+run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d vector"
+sleep 2
+
+echo "🚀 [5/8] Démarrage de Prometheus (dépend de node_exporter et cadvisor)..."
+run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d prometheus"
+sleep 2
+
+echo "🚀 [6/8] Démarrage de Grafana (dépend de Prometheus)..."
+run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d grafana"
+sleep 2
+
+echo "🚀 [7/8] Démarrage du runtime IDS..."
+run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d ids-runtime"
+sleep 2
+
+echo "🚀 [8/8] Démarrage de l'API FastAPI..."
+run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d ids-api"
+sleep 2
+
+echo ""
+echo "📊 Vérification des services Docker..."
+run_remote "cd '$COMPOSE_DIR' && docker compose ps"
+
+echo ""
+echo "✅ Installation terminée !"
+echo ""
+echo "📋 Services démarrés :"
+echo "  ✅ Redis (cache) - port interne"
+echo "  ✅ Vector (logs) - port interne"
+echo "  ✅ FastAPI (API) - http://${PI_HOST}:8080"
+echo "  ✅ Prometheus (métriques) - http://${PI_HOST}:9090"
+echo "  ✅ Grafana (dashboards) - http://${PI_HOST}:3000"
+echo "  ✅ Node Exporter (métriques système) - http://${PI_HOST}:9100"
+echo "  ✅ cAdvisor (métriques containers) - http://${PI_HOST}:8081"
+echo "  ✅ IDS Runtime (agent) - port interne"
+echo ""
+echo "🔍 Pour voir les logs :"
+echo "  ssh ${PI_USER}@${PI_HOST} 'cd $COMPOSE_DIR && docker compose logs -f [service]'"
+echo ""
+echo "🛠️  Commandes utiles :"
+echo "  - Arrêter: ssh ${PI_USER}@${PI_HOST} 'cd $COMPOSE_DIR && docker compose down'"
+echo "  - Redémarrer: ssh ${PI_USER}@${PI_HOST} 'cd $COMPOSE_DIR && docker compose restart [service]'"
+echo "  - Statut: ssh ${PI_USER}@${PI_HOST} 'cd $COMPOSE_DIR && docker compose ps'"
