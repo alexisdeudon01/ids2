@@ -107,7 +107,137 @@ if ! run_remote "docker compose version" >/dev/null 2>&1; then
 fi
 
 echo ""
-echo "🔨 Construction et démarrage des services Docker (progressif)..."
+echo "🔐 Vérification des connexions AWS et OpenSearch..."
+BACKEND_DIR="$REMOTE_DIR/webapp/backend"
+CONFIG_FILE="$BACKEND_DIR/config.yaml"
+SECRET_FILE="$BACKEND_DIR/secret.json"
+
+# Fonction pour vérifier AWS et OpenSearch
+check_aws_opensearch() {
+  echo "  📡 Vérification des credentials AWS..."
+  run_remote "cd '$BACKEND_DIR' && python3 << 'PYEOF'
+import sys
+import os
+import json
+from pathlib import Path
+
+try:
+    import boto3
+    from opensearchpy import OpenSearch, RequestsHttpConnection
+    from requests_aws4auth import AWS4Auth
+except ImportError as e:
+    print(f'❌ Bibliothèques manquantes: {e}')
+    print('   Installez: pip install boto3 opensearch-py requests-aws4auth')
+    sys.exit(1)
+
+# Charger la configuration
+config_path = Path('$CONFIG_FILE')
+secret_path = Path('$SECRET_FILE')
+
+aws_config = {}
+if config_path.exists():
+    import yaml
+    with open(config_path) as f:
+        config = yaml.safe_load(f) or {}
+        aws_config = config.get('aws', {})
+
+# Charger les secrets
+access_key = os.getenv('AWS_ACCESS_KEY_ID')
+secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+session_token = os.getenv('AWS_SESSION_TOKEN')
+
+if secret_path.exists():
+    with open(secret_path) as f:
+        secrets = json.load(f)
+        access_key = access_key or secrets.get('aws_access_key_id')
+        secret_key = secret_key or secrets.get('aws_secret_access_key')
+        session_token = session_token or secrets.get('aws_session_token')
+
+region = aws_config.get('region') or os.getenv('AWS_REGION', 'eu-central-1')
+opensearch_endpoint = aws_config.get('opensearch_endpoint') or aws_config.get('opensearch', {}).get('endpoint')
+domain_name = aws_config.get('domain_name') or aws_config.get('opensearch', {}).get('domain_name')
+
+if not access_key or not secret_key:
+    print('⚠️  Credentials AWS non configurés (optionnel si instance profile)')
+    print('   Les services fonctionneront mais OpenSearch nécessite des credentials')
+    sys.exit(0)
+
+# Vérifier AWS credentials
+print(f'  🔑 Test des credentials AWS (region: {region})...')
+try:
+    session = boto3.Session(
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        aws_session_token=session_token,
+        region_name=region
+    )
+    sts = session.client('sts')
+    identity = sts.get_caller_identity()
+    print(f'  ✅ AWS credentials valides (Account: {identity.get(\"Account\", \"N/A\")})')
+except Exception as e:
+    print(f'  ❌ Erreur AWS credentials: {e}')
+    sys.exit(1)
+
+# Vérifier OpenSearch si configuré
+if opensearch_endpoint or domain_name:
+    endpoint = opensearch_endpoint
+    if not endpoint and domain_name:
+        # Essayer de récupérer l'endpoint depuis AWS
+        try:
+            opensearch_client = session.client('opensearch')
+            domain_info = opensearch_client.describe_domain(DomainName=domain_name)
+            endpoint = domain_info.get('DomainStatus', {}).get('Endpoint') or domain_info.get('DomainStatus', {}).get('Endpoints', {}).get('vpc')
+            if not endpoint:
+                print(f'  ⚠️  Domaine {domain_name} existe mais endpoint non disponible')
+                sys.exit(0)
+        except Exception as e:
+            print(f'  ⚠️  Impossible de récupérer endpoint pour {domain_name}: {e}')
+            sys.exit(0)
+    
+    if endpoint:
+        # Nettoyer l'endpoint (enlever https://)
+        endpoint = endpoint.replace('https://', '').replace('http://', '').split('/')[0]
+        print(f'  🔍 Test de connexion OpenSearch (endpoint: {endpoint})...')
+        try:
+            credentials = session.get_credentials()
+            aws_auth = AWS4Auth(
+                credentials.access_key,
+                credentials.secret_key,
+                region,
+                'es',
+                session_token=credentials.token
+            )
+            client = OpenSearch(
+                hosts=[{'host': endpoint, 'port': 443}],
+                http_auth=aws_auth,
+                use_ssl=True,
+                verify_certs=True,
+                connection_class=RequestsHttpConnection,
+                timeout=10
+            )
+            info = client.info()
+            print(f'  ✅ OpenSearch accessible (version: {info.get(\"version\", {}).get(\"number\", \"N/A\")})')
+        except Exception as e:
+            print(f'  ❌ Erreur connexion OpenSearch: {e}')
+            print('     Vérifiez: endpoint, credentials, région, sécurité réseau')
+            sys.exit(1)
+    else:
+        print('  ⚠️  OpenSearch configuré mais endpoint non disponible')
+else:
+    print('  ℹ️  OpenSearch non configuré (optionnel)')
+
+print('  ✅ Vérifications AWS/OpenSearch terminées')
+PYEOF
+" || {
+    echo "  ⚠️  Vérification AWS/OpenSearch échouée (peut être optionnel)"
+    echo "     Les services Docker démarreront quand même"
+  }
+}
+
+check_aws_opensearch
+
+echo ""
+echo "🔨 Construction et démarrage des services Docker (progressif avec vérifications)..."
 COMPOSE_DIR="$REMOTE_DIR/webapp/backend/docker"
 BACKEND_DIR="$REMOTE_DIR/webapp/backend"
 
@@ -120,38 +250,84 @@ run_remote_sudo "docker network create ids-network || true"
 echo "📦 Construction de toutes les images..."
 run_remote_sudo "cd '$COMPOSE_DIR' && docker compose build --parallel"
 
-# Démarrer les services dans l'ordre de dépendance
+# Fonction pour attendre qu'un service soit prêt
+wait_for_service() {
+  local service=$1
+  local max_attempts=${2:-30}
+  local attempt=0
+  
+  echo "  ⏳ Attente que $service soit prêt..."
+  while [ $attempt -lt $max_attempts ]; do
+    if run_remote "cd '$COMPOSE_DIR' && docker compose ps $service | grep -q 'Up.*healthy\|Up (unhealthy)\|Up'" 2>/dev/null; then
+      echo "  ✅ $service est prêt"
+      return 0
+    fi
+    sleep 2
+    attempt=$((attempt + 1))
+    echo -n "."
+  done
+  echo ""
+  echo "  ⚠️  $service n'est pas encore prêt après ${max_attempts} tentatives (continuons...)"
+  return 1
+}
+
+# Démarrer les services dans l'ordre de dépendance avec vérifications
 echo "🚀 [1/8] Démarrage de Redis (service de base)..."
 run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d redis"
-sleep 2
+wait_for_service "redis" 15
 
 echo "🚀 [2/8] Démarrage de Node Exporter..."
 run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d node_exporter"
-sleep 1
+wait_for_service "node_exporter" 10
 
 echo "🚀 [3/8] Démarrage de cAdvisor..."
 run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d cadvisor"
-sleep 2
+wait_for_service "cadvisor" 15
 
 echo "🚀 [4/8] Démarrage de Vector (dépend de Redis)..."
-run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d vector"
-sleep 2
+# Vérifier que Redis répond avant de démarrer Vector
+if run_remote "cd '$COMPOSE_DIR' && docker compose exec -T redis redis-cli ping 2>/dev/null | grep -q PONG"; then
+  echo "  ✅ Redis répond, démarrage de Vector..."
+  run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d vector"
+  wait_for_service "vector" 20
+else
+  echo "  ⚠️  Redis ne répond pas encore, démarrage de Vector quand même..."
+  run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d vector"
+  sleep 5
+fi
 
 echo "🚀 [5/8] Démarrage de Prometheus (dépend de node_exporter et cadvisor)..."
-run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d prometheus"
-sleep 2
+# Vérifier que les dépendances sont prêtes
+if run_remote "cd '$COMPOSE_DIR' && docker compose ps node_exporter cadvisor | grep -q 'Up'"; then
+  echo "  ✅ Dépendances prêtes, démarrage de Prometheus..."
+  run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d prometheus"
+  wait_for_service "prometheus" 30
+else
+  echo "  ⚠️  Dépendances non prêtes, démarrage de Prometheus quand même..."
+  run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d prometheus"
+  sleep 5
+fi
 
 echo "🚀 [6/8] Démarrage de Grafana (dépend de Prometheus)..."
-run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d grafana"
-sleep 2
+# Vérifier que Prometheus répond
+if run_remote "curl -sf http://localhost:9090/-/healthy >/dev/null 2>&1" || \
+   run_remote "cd '$COMPOSE_DIR' && docker compose exec -T prometheus wget -qO- http://localhost:9090/-/healthy 2>/dev/null | grep -q 'Prometheus'"; then
+  echo "  ✅ Prometheus répond, démarrage de Grafana..."
+  run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d grafana"
+  wait_for_service "grafana" 30
+else
+  echo "  ⚠️  Prometheus ne répond pas encore, démarrage de Grafana quand même..."
+  run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d grafana"
+  sleep 5
+fi
 
 echo "🚀 [7/8] Démarrage du runtime IDS..."
 run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d ids-runtime"
-sleep 2
+wait_for_service "ids-runtime" 20
 
 echo "🚀 [8/8] Démarrage de l'API FastAPI..."
 run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d ids-api"
-sleep 2
+wait_for_service "ids-api" 20
 
 echo ""
 echo "📊 Vérification des services Docker..."
