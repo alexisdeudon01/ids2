@@ -38,6 +38,7 @@ dependencies = [
     "toml>=0.10",
     "prometheus-client>=0.17",
     "python-json-logger>=2.0",
+    "loguru>=0.7.0",
     "dataclasses-json>=0.5.14",
     "fastapi>=0.110.0",
     "uvicorn>=0.23.0",

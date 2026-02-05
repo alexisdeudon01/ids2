@@ -2,7 +2,6 @@
 .venv/
 venv/
 env/
-.env
 
 # Python cache
 __pycache__/
@@ -30,13 +29,7 @@ test-results/
 .gitignore
 
 # Docker
-Dockerfile*
-docker-compose*.yml
 .dockerignore
-
-# Documentation
-*.md
-docs/
 
 # Mermaid diagrams
 mermaid/

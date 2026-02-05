@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import logging
 import re
 import time
 from pathlib import Path
 from typing import Any
+
+from loguru import logger
 
 try:
     import boto3
@@ -26,8 +27,6 @@ except ImportError:  # pragma: no cover - optional dependency
     tqdm = None
 
 from ..config import ConfigManager
-
-logger = logging.getLogger(__name__)
 
 DEFAULT_ENGINE_VERSION = "OpenSearch_2.11"
 DEFAULT_CLUSTER_CONFIG = {
@@ -80,7 +79,7 @@ def _get_account_id(session: boto3.Session) -> str | None:
         sts = session.client("sts")
         return sts.get_caller_identity().get("Account")
     except Exception as exc:
-        logger.warning("Unable to resolve AWS account id: %s", exc)
+        logger.warning(f"Unable to resolve AWS account id: {exc}")
         return None
 
 
@@ -275,7 +274,7 @@ def creer_domaine(
     existing = _describe_domain(client, resolved_domain)
     response: dict[str, Any]
     if existing:
-        logger.info("OpenSearch domain already exists: %s", resolved_domain)
+        logger.info(f"OpenSearch domain already exists: {resolved_domain}")
         response = {"DomainStatus": existing}
     else:
         response = client.create_domain(**payload)
@@ -285,7 +284,7 @@ def creer_domaine(
         endpoint = _wait_for_endpoint(client, resolved_domain, timeout, poll)
 
     if endpoint:
-        logger.info("OpenSearch endpoint: %s", endpoint)
+        logger.info(f"OpenSearch endpoint: {endpoint}")
         if apply_endpoint:
             _update_config_endpoint(config_file, endpoint)
     else:
@@ -335,8 +334,15 @@ def main() -> None:
     parser.add_argument("--verbose", action="store_true", help="Logs verbeux")
     args = parser.parse_args()
 
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(level=log_level, format="%(asctime)s - %(levelname)s - %(message)s")
+    # Configuration loguru
+    logger.remove()  # Retire le handler par défaut
+    logger.add(
+        lambda msg: print(msg, end=""),
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+        level="DEBUG" if args.verbose else "INFO",
+        colorize=True,
+    )
+    
     response = creer_domaine(
         args.config,
         secret_path=args.secret,

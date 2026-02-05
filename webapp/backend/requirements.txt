@@ -22,6 +22,7 @@ redis>=4.5.0  # Redis client
 # Monitoring & Logging
 prometheus-client>=0.17.0  # Prometheus metrics
 python-json-logger>=2.0.4  # JSON logging
+loguru>=0.7.0  # Modern logging library
 
 # Tailscale Network Monitoring & Visualization
 pyvis>=0.3.2  # Interactive network visualization
