@@ -11,7 +11,7 @@ from typing import Any
 
 from elasticsearch import AsyncElasticsearch
 
-from ids.datastructures import ElasticsearchHealth
+from ids.domain import ElasticsearchHealth
 
 logger = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from ids.datastructures import TailscaleNode
+from ids.domain import TailscaleNode
 
 logger = logging.getLogger(__name__)
 

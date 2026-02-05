@@ -12,7 +12,7 @@ from pathlib import Path as Path
 from typing import Any, AsyncIterator, Iterator
 
 import logging
-from ids.datastructures import AlertEvent
+from ids.domain import AlertEvent
 
 logger = logging.getLogger(__name__)
 
