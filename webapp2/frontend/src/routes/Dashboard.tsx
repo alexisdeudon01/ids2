@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { Activity, Cpu, ShieldAlert, TerminalSquare } from "lucide-react";
 import { Card, Metric, ProgressBar, Text, Title } from "@tremor/react";
 
@@ -126,12 +125,7 @@ export default function Dashboard() {
 
       <div className="grid gap-6 md:grid-cols-3">
         {stats.map((stat) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
+          <div key={stat.label} className="transition-transform duration-300 hover:-translate-y-1">
             <Card className="border border-white/10 bg-glass backdrop-blur">
               <div className="flex items-center justify-between">
                 <div>
@@ -142,7 +136,7 @@ export default function Dashboard() {
               </div>
               <ProgressBar value={stat.delta} color="cyan" className="mt-4" />
             </Card>
-          </motion.div>
+          </div>
         ))}
       </div>
 

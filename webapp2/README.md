@@ -12,9 +12,7 @@ WebApp2 contient :
 
 ```bash
 cd webapp2
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+./install_prereqs.sh
 python3 orchestrator_gui.py
 ```
 
@@ -26,6 +24,7 @@ Sur Linux, installez Tk si besoin: `sudo apt install -y python3-tk`.
 
 ```
 webapp2/
+├── install_prereqs.sh       # Install prerequisites (FastAPI, Tk, etc.)
 ├── orchestrator_gui.py      # GUI Tkinter (progress + logs)
 ├── orchestrator.py          # Orchestration AWS + stream Suricata
 ├── install_pi_probe.sh      # Installation Sonde Pi2
