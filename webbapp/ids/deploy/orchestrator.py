@@ -46,7 +46,13 @@ class DeploymentOrchestrator:
                 advance("Docker installed")
 
             advance("Deploying AWS")
-            aws = AWSDeployer(config.aws_region, config.elastic_password, self._log)
+            aws = AWSDeployer(
+                config.aws_region,
+                config.elastic_password,
+                self._log,
+                aws_access_key_id=config.aws_access_key_id,
+                aws_secret_access_key=config.aws_secret_access_key,
+            )
             elk_ip = aws.deploy_elk_stack()
 
             advance("Configuring Elasticsearch")

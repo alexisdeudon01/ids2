@@ -36,7 +36,9 @@ class TestDeploymentIntegration(unittest.TestCase):
             mirror_interface="wlan0",
             reset_first=True,
             install_docker=True,
-            remove_docker=False
+            remove_docker=False,
+            aws_access_key_id="access",
+            aws_secret_access_key="secret",
         )
         
         self.assertEqual(config.elastic_password, "my_password")
@@ -48,13 +50,15 @@ class TestDeploymentIntegration(unittest.TestCase):
         self.assertTrue(config.reset_first)
         self.assertTrue(config.install_docker)
         self.assertFalse(config.remove_docker)
+        self.assertEqual(config.aws_access_key_id, "access")
+        self.assertEqual(config.aws_secret_access_key, "secret")
 
     def test_lazy_import_config(self):
         """Test that config can be imported via lazy loading."""
         from ids.deploy import DeployConfig as LazyConfig
         
         config = LazyConfig(elastic_password="test")
-        self.assertEqual(config.pi_host, "192.168.178.66")
+        self.assertEqual(config.pi_host, "es-sink")
 
 
 if __name__ == "__main__":

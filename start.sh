@@ -50,4 +50,4 @@ install_python_deps() {
 ensure_tk
 install_python_deps
 
-exec python3 "$APP_DIR/orchestrator_gui.py"
+exec python3 "$ROOT_DIR/orchestrator.py"

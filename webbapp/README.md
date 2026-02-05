@@ -26,7 +26,8 @@ Le démarrage utilise l'environnement Python système (pas de venv).
 
 ```
 webbapp/
-├── orchestrator_gui.py      # GUI Tkinter (progress + logs)
+├── ids/
+│   └── deploy/              # Orchestrator (GUI, AWS, Pi, SSH)
 ├── main.py                  # FastAPI app
 ├── requirements.txt         # Dépendances
 ├── db/
@@ -49,7 +50,7 @@ webbapp/
 
 Le GUI propose un **reset complet** qui supprime :
 - Services systemd (`webbapp`, `ids`, `suricata`)
-- Répertoire d’installation (`/opt/webbapp` par défaut)
+- Répertoire d’installation (`/opt/ids2` par défaut)
 - Paquets liés (suricata, docker, etc.)
 - Règles UFW
 

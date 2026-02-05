@@ -14,11 +14,29 @@ from elasticsearch import Elasticsearch
 class AWSDeployer:
     """Deploy and configure ELK stack on AWS EC2."""
     
-    def __init__(self, region: str, elastic_password: str, log_callback: Callable[[str], None]) -> None:
+    def __init__(
+        self,
+        region: str,
+        elastic_password: str,
+        log_callback: Callable[[str], None],
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+    ) -> None:
         self.region = region
         self.elastic_password = elastic_password
         self._log = log_callback
-        self.ec2 = boto3.resource("ec2", region_name=region)
+
+        access_key = aws_access_key_id or None
+        secret_key = aws_secret_access_key or None
+        if access_key and secret_key:
+            session = boto3.Session(
+                aws_access_key_id=access_key,
+                aws_secret_access_key=secret_key,
+                region_name=region,
+            )
+            self.ec2 = session.resource("ec2")
+        else:
+            self.ec2 = boto3.resource("ec2", region_name=region)
 
     def deploy_elk_stack(self) -> str:
         """Deploy ELK stack on EC2, returns public IP."""
@@ -100,6 +118,20 @@ class AWSDeployer:
             headers={"kbn-xsrf": "true"},
             timeout=10,
         )
+
+    def list_instances(self) -> list[dict[str, str | None]]:
+        """List EC2 instances in the configured region."""
+        instances = []
+        for instance in self.ec2.instances.all():
+            instances.append(
+                {
+                    "id": instance.id,
+                    "state": instance.state.get("Name") if instance.state else None,
+                    "public_ip": getattr(instance, "public_ip_address", None),
+                    "private_ip": getattr(instance, "private_ip_address", None),
+                }
+            )
+        return instances
 
     def _build_docker_compose(self) -> str:
         return (

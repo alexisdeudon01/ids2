@@ -2,23 +2,17 @@
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Run Orchestrator GUI
 
 ```bash
-pip install boto3 elasticsearch paramiko requests
-```
-
-### 2. Run Orchestrator GUI
-
-```bash
-python3 orchestrator.py
+./start.sh
 ```
 
 ## Configuration
 
 ### Default Values
 - **AWS Region**: `eu-west-1`
-- **Pi Host**: `192.168.178.66`
+- **Pi Host**: `es-sink`
 - **Pi User**: `pi`
 - **Pi Password**: `pi`
 - **Sudo Password**: `pi`

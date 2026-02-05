@@ -77,7 +77,7 @@ ids2/
 DeployConfig(
     elastic_password="<REQUIRED>",
     aws_region="eu-west-1",
-    pi_host="192.168.178.66",
+    pi_host="es-sink",
     pi_user="pi",
     pi_password="pi",
     sudo_password="pi",

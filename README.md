@@ -31,16 +31,10 @@ python3 run_tests.py
 
 ## 🚀 Démarrage Rapide
 
-### 1. Installer les dépendances
+### 1. Lancer l'orchestrateur (UI)
 
 ```bash
-pip install -r requirements-deploy.txt
-```
-
-### 2. Lancer l'orchestrateur
-
-```bash
-python3 orchestrator.py
+./start.sh
 ```
 
 ## 📋 Configuration par Défaut
@@ -48,13 +42,16 @@ python3 orchestrator.py
 | Paramètre | Valeur | Description |
 |-----------|--------|-------------|
 | **AWS Region** | `eu-west-1` | Région AWS pour ELK |
-| **Pi Host** | `192.168.178.66` | Adresse IP du Raspberry Pi |
+| **Pi Host** | `es-sink` | Adresse IP / nom d'hôte du Raspberry Pi |
 | **Pi User** | `pi` | Utilisateur SSH |
 | **Pi Password** | `pi` | Mot de passe SSH |
 | **Sudo Password** | `pi` | Mot de passe sudo |
 | **Remote Dir** | `/opt/ids2` | Répertoire d'installation |
 | **Mirror Interface** | `eth0` | Interface réseau pour capture |
 | **Elastic Password** | *(requis)* | Mot de passe Elasticsearch |
+
+Les credentials AWS peuvent être fournis via variables d'environnement :
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.
 
 ## 🔍 Mirror Interface
 

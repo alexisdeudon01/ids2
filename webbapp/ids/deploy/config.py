@@ -1,5 +1,6 @@
 """Deployment configuration."""
 
+import os
 from dataclasses import dataclass, field
 
 
@@ -9,7 +10,9 @@ class DeployConfig:
     
     elastic_password: str
     aws_region: str = "eu-west-1"
-    pi_host: str = "192.168.178.66"
+    aws_access_key_id: str = field(default_factory=lambda: os.getenv("AWS_ACCESS_KEY_ID", ""))
+    aws_secret_access_key: str = field(default_factory=lambda: os.getenv("AWS_SECRET_ACCESS_KEY", ""))
+    pi_host: str = "es-sink"
     pi_user: str = "pi"
     pi_password: str = "pi"
     sudo_password: str = "pi"

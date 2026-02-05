@@ -1,7 +1,9 @@
 """Tests for deployment configuration."""
 
+import os
 import sys
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "webbapp"))
 
@@ -17,7 +19,7 @@ class TestDeployConfig(unittest.TestCase):
         config = DeployConfig(elastic_password="test123")
         
         self.assertEqual(config.aws_region, "eu-west-1")
-        self.assertEqual(config.pi_host, "192.168.178.66")
+        self.assertEqual(config.pi_host, "es-sink")
         self.assertEqual(config.pi_user, "pi")
         self.assertEqual(config.pi_password, "pi")
         self.assertEqual(config.sudo_password, "pi")
@@ -48,6 +50,14 @@ class TestDeployConfig(unittest.TestCase):
         self.assertFalse(config.reset_first)
         self.assertFalse(config.install_docker)
         self.assertFalse(config.remove_docker)
+
+    def test_aws_credentials_from_env(self):
+        """Test AWS credentials default to environment variables."""
+        with mock.patch.dict(os.environ, {"AWS_ACCESS_KEY_ID": "test_key", "AWS_SECRET_ACCESS_KEY": "test_secret"}):
+            config = DeployConfig(elastic_password="test")
+
+        self.assertEqual(config.aws_access_key_id, "test_key")
+        self.assertEqual(config.aws_secret_access_key, "test_secret")
 
     def test_boolean_flags_custom(self):
         """Test boolean flags can be set to True."""
