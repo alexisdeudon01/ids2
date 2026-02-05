@@ -272,7 +272,6 @@ stateDiagram
   SupervisorRunning --> DockerServices:Supervise Docker
   SupervisorRunning --> Stopping:Stop requested
   [*] --> Stopped:Hard exit
-  Pipeline --> s1
   WaitUser:Awaiting user action
   Stopped:System stopped
   note right of WaitUser 
@@ -293,6 +292,25 @@ stateDiagram
   class Stopped,CompStopping,DSStopping stopping
     </div>
     </div>
+
+    <h2>Meta-FSM (transitions inter-machines)</h2>
+    <div class="diagram-container">
+        <div class="mermaid">
+stateDiagram
+  direction TB
+  [*] --> SupervisorFSM: user start
+  SupervisorFSM --> ComponentsFSM: start components
+  ComponentsFSM --> SupervisorFSM: health status
+  SupervisorFSM --> PipelineFSM: collect status
+  PipelineFSM --> SupervisorFSM: status report
+  SupervisorFSM --> DeploymentFSM: deploy run
+  DeploymentFSM --> DockerFSM: start services
+  DockerFSM --> DeploymentFSM: service health
+  DeploymentFSM --> SupervisorFSM: deploy health
+  SupervisorFSM --> [*]: stop
+        </div>
+    </div>
+
 
     <script>
         mermaid.initialize({ 

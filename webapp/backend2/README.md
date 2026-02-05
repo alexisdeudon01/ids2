@@ -1,86 +1,150 @@
-# Backend2 - Minimal API for Frontend
+# Backend2 - Complete IDS Dashboard
 
 ## 📋 Overview
 
-Minimal FastAPI backend matching **only** the endpoints used by the frontend (`App.tsx`).
+Complete minimal backend for IDS Dashboard with database, frontend, and all necessary endpoints.
 
 ## 🎯 Implemented Endpoints
 
-| Endpoint | Method | Description | Frontend Usage |
-|----------|--------|-------------|----------------|
-| `/api/system/health` | GET | CPU, RAM, Disk metrics | Stats card "Pi CPU Load" |
-| `/api/db/health` | GET | Database status | Pipeline Health section |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/system/health` | GET | CPU, RAM, Disk, Temperature |
+| `/api/db/health` | GET | Database connectivity check |
+| `/api/alerts/recent` | GET | Recent security alerts |
+| `/api/alerts/add` | POST | Add new alert (testing) |
+| `/api/network/stats` | GET | Network interface statistics |
+| `/api/pipeline/status` | GET | Pipeline components status |
 
 ## 📁 Structure
 
 ```
 backend2/
 ├── main.py                 # FastAPI app
-├── requirements.txt        # Dependencies
-├── MAPPING.md             # Architecture diagrams
+├── start.sh               # Startup script
+├── Dockerfile             # Docker image
+├── docker-compose.yml     # Docker orchestration
+├── requirements.txt       # Dependencies
+├── MAPPING.md            # Architecture diagrams
+├── api/
+│   ├── system_health.py  # System metrics
+│   ├── db_health.py      # DB health
+│   ├── alerts.py         # Alerts management
+│   ├── network.py        # Network stats
+│   └── pipeline.py       # Pipeline status
 ├── models/
-│   └── schemas.py         # Data models
-└── api/
-    ├── system_health.py   # System metrics
-    └── db_health.py       # DB health
+│   └── schemas.py        # Pydantic models
+├── db/
+│   ├── database.py       # SQLite wrapper
+│   └── ids.db           # SQLite database (auto-created)
+└── frontend/
+    └── (React app copied from webapp/frontend)
 ```
 
 ## 🚀 Quick Start
 
+### Option 1: Direct Run
 ```bash
 cd backend2
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run server
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+./start.sh
 ```
 
-## 🔗 API Documentation
+### Option 2: Docker
+```bash
+cd backend2
+docker-compose up -d
+```
 
-Once running, visit:
-- **Swagger UI:** http://localhost:8000/docs
-- **ReDoc:** http://localhost:8000/redoc
+### Option 3: Manual
+```bash
+cd backend2
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
 
-## 📊 Response Examples
+## 🌐 Access
+
+- **API:** http://localhost:8000
+- **Docs:** http://localhost:8000/docs
+- **Frontend:** http://localhost:8000 (after building)
+
+## 🗄️ Database
+
+SQLite database automatically created at `db/ids.db` with tables:
+- **alerts** - Security alerts
+- **system_metrics** - System health history
+
+## 📊 API Examples
 
 ### System Health
-```json
-{
-  "cpu_percent": 45.2,
-  "memory_percent": 62.8,
-  "disk_percent": 38.5,
-  "temperature": 52.3
-}
+```bash
+curl http://localhost:8000/api/system/health
 ```
 
-### Database Health
-```json
-{
-  "status": "ok"
-}
+### Add Test Alert
+```bash
+curl -X POST "http://localhost:8000/api/alerts/add?severity=1&signature=Test+Alert&src_ip=192.168.1.100"
 ```
 
-## ⚠️ Limitations
+### Network Stats
+```bash
+curl http://localhost:8000/api/network/stats?interface=eth0
+```
 
-- **No WebSocket:** Real-time alerts not implemented
-- **No AI Healing:** Diagnostic endpoints missing
-- **No Configuration:** Config pages not needed
-- **Hardcoded Frontend Data:** Traffic and alerts are static in frontend
+## 🔧 Frontend Build
 
-## 🔄 Differences from Full Backend
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+Frontend will be served at http://localhost:8000
+
+## 📦 Dependencies
+
+- **FastAPI** - Web framework
+- **Uvicorn** - ASGI server
+- **psutil** - System metrics
+- **SQLite** - Database (built-in Python)
+
+## 🐳 Docker
+
+Build and run with Docker:
+```bash
+docker-compose up --build
+```
+
+## 🔄 Development
+
+Hot reload enabled by default:
+```bash
+uvicorn main:app --reload
+```
+
+## 📖 Documentation
+
+- `MAPPING.md` - Architecture and data flow diagrams
+- `/docs` - Interactive API documentation (Swagger)
+- `/redoc` - Alternative API documentation
+
+## ✅ Features
+
+- ✅ Real system metrics (CPU, RAM, Disk, Temp)
+- ✅ SQLite database with health checks
+- ✅ Network statistics
+- ✅ Pipeline status monitoring
+- ✅ Alerts management
+- ✅ CORS enabled
+- ✅ Docker support
+- ✅ Frontend serving
+- ✅ Auto-reload development mode
+
+## 🎯 Differences from Full Backend
 
 | Feature | Full Backend | Backend2 |
 |---------|--------------|----------|
-| Endpoints | 30+ | 2 |
+| Database | PostgreSQL/SQLAlchemy | SQLite |
+| Endpoints | 30+ | 6 |
 | WebSocket | ✅ | ❌ |
 | AI Healing | ✅ | ❌ |
-| Configuration | ✅ | ❌ |
-| Database | SQLAlchemy | Mock |
-| Size | ~5000 lines | ~100 lines |
-
-## 📖 See Also
-
-- `MAPPING.md` - Architecture diagrams and data flow
-- Frontend: `../frontend/src/App.tsx`
+| Lines of Code | ~5000 | ~300 |
