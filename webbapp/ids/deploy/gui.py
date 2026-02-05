@@ -43,7 +43,7 @@ class OrchestratorGUI(tk.Tk):
         for idx in range(2):
             creds.columnconfigure(idx, weight=1)
 
-        self.aws_region = self._add_entry(creds, "AWS Region", 0, self._config_default("aws_region", "us-west-1"))
+        self.aws_region = self._add_entry(creds, "AWS Region", 0, self._config_default("aws_region", "eu-west-1"))
         self.aws_access_key_id = self._add_entry(
             creds,
             "AWS Access Key ID (optional)",
@@ -158,7 +158,7 @@ class OrchestratorGUI(tk.Tk):
         pi_host = self.pi_host.get().strip() or self.pi_ip.get().strip() or "sinik"
         return DeployConfig(
             elastic_password=self.elastic_password.get().strip(),
-            aws_region=self.aws_region.get().strip() or "us-west-1",
+            aws_region=self.aws_region.get().strip() or "eu-west-1",
             aws_access_key_id=self.aws_access_key_id.get().strip(),
             aws_secret_access_key=self.aws_secret_access_key.get().strip(),
             ssh_key_path=self.ssh_key_path.get().strip(),
