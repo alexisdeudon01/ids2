@@ -1,20 +1,20 @@
 """Deployment configuration."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class DeployConfig:
     """Configuration for IDS deployment."""
     
-    aws_region: str
     elastic_password: str
-    pi_host: str
-    pi_user: str
-    pi_password: str
-    sudo_password: str
-    remote_dir: str
-    mirror_interface: str
+    aws_region: str = "eu-west-1"
+    pi_host: str = "192.168.178.66"
+    pi_user: str = "pi"
+    pi_password: str = "pi"
+    sudo_password: str = "pi"
+    remote_dir: str = "/opt/ids2"
+    mirror_interface: str = "eth0"  # Network interface for port mirroring
     reset_first: bool = False
     install_docker: bool = False
     remove_docker: bool = False

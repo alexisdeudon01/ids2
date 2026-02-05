@@ -40,13 +40,13 @@ class OrchestratorGUI(tk.Tk):
             creds.columnconfigure(idx, weight=1)
 
         self.aws_region = self._add_entry(creds, "AWS Region", 0, "eu-west-1")
-        self.elastic_password = self._add_entry(creds, "Elastic Password", 1, "", show=True)
-        self.pi_host = self._add_entry(creds, "Pi Host/IP", 2, "")
+        self.elastic_password = self._add_entry(creds, "Elastic Password (required)", 1, "", show=True)
+        self.pi_host = self._add_entry(creds, "Pi Host/IP", 2, "192.168.178.66")
         self.pi_user = self._add_entry(creds, "Pi User", 3, "pi")
-        self.pi_password = self._add_entry(creds, "Pi Password", 4, "", show=True)
-        self.sudo_password = self._add_entry(creds, "Sudo Password", 5, "", show=True)
-        self.remote_dir = self._add_entry(creds, "Remote Dir", 6, "/opt/webbapp")
-        self.mirror_interface = self._add_entry(creds, "Mirror Interface", 7, "eth0")
+        self.pi_password = self._add_entry(creds, "Pi Password", 4, "pi", show=True)
+        self.sudo_password = self._add_entry(creds, "Sudo Password", 5, "pi", show=True)
+        self.remote_dir = self._add_entry(creds, "Remote Directory", 6, "/opt/ids2")
+        self.mirror_interface = self._add_entry(creds, "Mirror Interface (network port for traffic capture)", 7, "eth0")
 
         self.reset_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=8, column=0, columnspan=2, sticky="w", pady=(8, 0))
@@ -121,14 +121,14 @@ class OrchestratorGUI(tk.Tk):
 
     def _collect_config(self, reset_override: bool | None = None) -> DeployConfig:
         return DeployConfig(
-            aws_region=self.aws_region.get().strip(),
             elastic_password=self.elastic_password.get().strip(),
-            pi_host=self.pi_host.get().strip(),
-            pi_user=self.pi_user.get().strip(),
-            pi_password=self.pi_password.get().strip(),
-            sudo_password=self.sudo_password.get().strip(),
-            remote_dir=self.remote_dir.get().strip(),
-            mirror_interface=self.mirror_interface.get().strip(),
+            aws_region=self.aws_region.get().strip() or "eu-west-1",
+            pi_host=self.pi_host.get().strip() or "192.168.178.66",
+            pi_user=self.pi_user.get().strip() or "pi",
+            pi_password=self.pi_password.get().strip() or "pi",
+            sudo_password=self.sudo_password.get().strip() or "pi",
+            remote_dir=self.remote_dir.get().strip() or "/opt/ids2",
+            mirror_interface=self.mirror_interface.get().strip() or "eth0",
             reset_first=self.reset_var.get() if reset_override is None else reset_override,
             install_docker=self.install_docker_var.get(),
             remove_docker=self.remove_docker_var.get(),
@@ -138,8 +138,8 @@ class OrchestratorGUI(tk.Tk):
         if self.worker and self.worker.is_alive():
             return
         config = self._collect_config()
-        if not config.pi_host or not config.pi_user or not config.aws_region or not config.elastic_password:
-            messagebox.showerror("Error", "All required fields must be filled")
+        if not config.elastic_password:
+            messagebox.showerror("Error", "Elastic Password is required")
             return
         self._start_worker(lambda: self._run_deploy(config))
 
@@ -147,27 +147,18 @@ class OrchestratorGUI(tk.Tk):
         if self.worker and self.worker.is_alive():
             return
         config = self._collect_config(reset_override=True)
-        if not config.pi_host or not config.pi_user:
-            messagebox.showerror("Error", "Pi Host/IP and user required")
-            return
         self._start_worker(lambda: self._run_reset_only(config))
 
     def start_install_docker_only(self) -> None:
         if self.worker and self.worker.is_alive():
             return
         config = self._collect_config()
-        if not config.pi_host or not config.pi_user:
-            messagebox.showerror("Error", "Pi Host/IP and user required")
-            return
         self._start_worker(lambda: self._run_install_docker(config))
 
     def start_remove_docker_only(self) -> None:
         if self.worker and self.worker.is_alive():
             return
         config = self._collect_config()
-        if not config.pi_host or not config.pi_user:
-            messagebox.showerror("Error", "Pi Host/IP and user required")
-            return
         self._start_worker(lambda: self._run_remove_docker(config))
 
     def _start_worker(self, target) -> None:
