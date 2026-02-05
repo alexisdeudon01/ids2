@@ -8,15 +8,146 @@ import os
 import posixpath
 import queue
 import threading
+import time
 import tkinter as tk
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from tkinter import messagebox, ttk
 import uuid
 
+import boto3
 import paramiko
+import requests
+from elasticsearch import Elasticsearch, helpers
 
-from orchestrator import SuricataMaster
+
+class SuricataMaster:
+    """Deploy ELK on AWS and stream Suricata logs."""
+
+    def __init__(self, region: str, es_pwd: str, log) -> None:
+        self.region = region
+        self.es_pwd = es_pwd
+        self.log_path = "/var/log/suricata/eve.json"
+        self.ec2 = boto3.resource("ec2", region_name=region)
+        self._log = log
+
+    def deploy_aws(self) -> str:
+        self._log("☁️ Déploiement EC2 + ELK (Full Metadata)...")
+        my_ip = (
+            urllib.request.urlopen("https://checkip.amazonaws.com")
+            .read()
+            .decode("utf-8")
+            .strip()
+        )
+        sg = self.ec2.create_security_group(
+            GroupName=f"ids-sg-{int(time.time())}",
+            Description="IDS Access",
+        )
+        sg.authorize_ingress(IpProtocol="tcp", FromPort=9200, ToPort=9200, CidrIp=f"{my_ip}/32")
+        sg.authorize_ingress(IpProtocol="tcp", FromPort=5601, ToPort=5601, CidrIp=f"{my_ip}/32")
+
+        compose = (
+            "version: '3.8'\n"
+            "services:\n"
+            "  elasticsearch:\n"
+            "    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0\n"
+            "    environment: [discovery.type=single-node, xpack.security.enabled=true, "
+            f"ELASTIC_PASSWORD={self.es_pwd}, 'ES_JAVA_OPTS=-Xms2g -Xmx2g']\n"
+            "    ports: ['9200:9200']\n"
+            "  kibana:\n"
+            "    image: docker.elastic.co/kibana/kibana:8.12.0\n"
+            "    ports: ['5601:5601']\n"
+            "    depends_on: [elasticsearch]\n"
+            "    environment: [ELASTICSEARCH_HOSTS=http://elasticsearch:9200, "
+            f"ELASTICSEARCH_USERNAME=elastic, ELASTICSEARCH_PASSWORD={self.es_pwd}]"
+        )
+
+        user_data = (
+            "#!/bin/bash\n"
+            "apt update && apt install -y docker.io docker-compose\n"
+            "sysctl -w vm.max_map_count=262144\n"
+            "mkdir -p /home/ubuntu/elk && echo \""
+            + compose.replace('"', '\\"')
+            + "\" > /home/ubuntu/elk/docker-compose.yml\n"
+            "cd /home/ubuntu/elk && docker-compose up -d"
+        )
+
+        instances = self.ec2.create_instances(
+            ImageId="ami-00c71bd4d220aa22a",
+            InstanceType="t3.medium",
+            MinCount=1,
+            MaxCount=1,
+            SecurityGroupIds=[sg.id],
+            UserData=user_data,
+        )
+        instance = instances[0]
+        instance.wait_until_running()
+        instance.reload()
+        return instance.public_ip_address
+
+    def configure_es_mapping(self, ip: str) -> None:
+        self._log("📊 Configuration Mapping (IP/Flow/Alert) & Rétention...")
+        time.sleep(180)
+        es = Elasticsearch(f"http://{ip}:9200", basic_auth=("elastic", self.es_pwd))
+
+        es.ilm.put_lifecycle(
+            name="ids-retention",
+            body={
+                "policy": {
+                    "phases": {
+                        "hot": {"actions": {"rollover": {"max_age": "1d"}}},
+                        "delete": {"min_age": "7d", "actions": {"delete": {}}},
+                    }
+                }
+            },
+        )
+        es.indices.put_index_template(
+            name="ids-template",
+            body={
+                "index_patterns": ["suricata-*"],
+                "template": {
+                    "settings": {"index.lifecycle.name": "ids-retention"},
+                    "mappings": {
+                        "properties": {
+                            "@timestamp": {"type": "date"},
+                            "src_ip": {"type": "ip"},
+                            "dest_ip": {"type": "ip"},
+                            "src_port": {"type": "integer"},
+                            "dest_port": {"type": "integer"},
+                            "proto": {"type": "keyword"},
+                            "event_type": {"type": "keyword"},
+                            "flow.total_bytes": {"type": "long"},
+                            "alert.severity": {"type": "integer"},
+                            "alert.signature": {"type": "keyword"},
+                        }
+                    },
+                },
+            },
+        )
+        requests.post(
+            f"http://{ip}:5601/api/data_views/data_view",
+            auth=("elastic", self.es_pwd),
+            json={"data_view": {"title": "suricata-*", "name": "Suricata Full Specs", "timeFieldName": "@timestamp"}},
+            headers={"kbn-xsrf": "true"},
+            timeout=10,
+        )
+
+    @staticmethod
+    def build_systemd_service(service_path: str, ip: str, pwd: str) -> str:
+        return (
+            "[Unit]\n"
+            "Description=IDS-Full-Meta-Streamer\n"
+            "After=suricata.service\n"
+            "\n"
+            "[Service]\n"
+            f"ExecStart=/usr/bin/python3 {service_path} {ip} {pwd}\n"
+            "Restart=always\n"
+            "User=root\n"
+            "\n"
+            "[Install]\n"
+            "WantedBy=multi-user.target\n"
+        )
 
 
 @dataclass
@@ -30,6 +161,8 @@ class DeployConfig:
     remote_dir: str
     mirror_interface: str
     reset_first: bool
+    install_docker: bool
+    remove_docker: bool
 
 
 class SSHSession:
@@ -128,7 +261,7 @@ class OrchestratorGUI(tk.Tk):
         self.pi_user = self._add_entry(creds, "Pi2 User", 3, "pi")
         self.pi_password = self._add_entry(creds, "Pi2 Password", 4, "", show=True)
         self.sudo_password = self._add_entry(creds, "Pi2 Sudo Password", 5, "", show=True)
-        self.remote_dir = self._add_entry(creds, "Remote Dir", 6, "/opt/ids-dashboard")
+        self.remote_dir = self._add_entry(creds, "Remote Dir", 6, "/opt/webbapp")
         self.mirror_interface = self._add_entry(creds, "Mirror Interface", 7, "eth0")
 
         self.reset_var = tk.BooleanVar(value=False)
@@ -139,18 +272,44 @@ class OrchestratorGUI(tk.Tk):
         )
         reset_check.grid(row=8, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
+        self.install_docker_var = tk.BooleanVar(value=False)
+        install_docker_check = ttk.Checkbutton(
+            creds,
+            text="Installer Docker sur Pi2 (optionnel)",
+            variable=self.install_docker_var,
+        )
+        install_docker_check.grid(row=9, column=0, columnspan=2, sticky="w")
+
+        self.remove_docker_var = tk.BooleanVar(value=False)
+        remove_docker_check = ttk.Checkbutton(
+            creds,
+            text="Supprimer Docker sur Pi2 (optionnel)",
+            variable=self.remove_docker_var,
+        )
+        remove_docker_check.grid(row=10, column=0, columnspan=2, sticky="w")
+
         action_frame = ttk.Frame(main)
         action_frame.grid(row=1, column=0, sticky="ew", pady=10)
-        action_frame.columnconfigure(1, weight=1)
+        action_frame.columnconfigure(3, weight=1)
 
         self.deploy_button = ttk.Button(action_frame, text="Déployer", command=self.start_deploy)
         self.deploy_button.grid(row=0, column=0, padx=(0, 10))
 
         self.reset_button = ttk.Button(action_frame, text="Reset uniquement", command=self.start_reset_only)
-        self.reset_button.grid(row=0, column=1, sticky="w")
+        self.reset_button.grid(row=0, column=1, sticky="w", padx=(0, 10))
+
+        self.install_docker_button = ttk.Button(
+            action_frame, text="Installer Docker", command=self.start_install_docker_only
+        )
+        self.install_docker_button.grid(row=0, column=2, sticky="w", padx=(0, 10))
+
+        self.remove_docker_button = ttk.Button(
+            action_frame, text="Supprimer Docker", command=self.start_remove_docker_only
+        )
+        self.remove_docker_button.grid(row=0, column=3, sticky="w")
 
         self.progress_label = ttk.Label(action_frame, text="Idle")
-        self.progress_label.grid(row=0, column=2, sticky="e")
+        self.progress_label.grid(row=0, column=4, sticky="e")
 
         self.progress = ttk.Progressbar(main, mode="determinate")
         self.progress.grid(row=2, column=0, sticky="ew", pady=(0, 10))
@@ -203,6 +362,8 @@ class OrchestratorGUI(tk.Tk):
             remote_dir=self.remote_dir.get().strip(),
             mirror_interface=self.mirror_interface.get().strip(),
             reset_first=reset_first,
+            install_docker=self.install_docker_var.get(),
+            remove_docker=self.remove_docker_var.get(),
         )
 
     def start_deploy(self) -> None:
@@ -226,9 +387,29 @@ class OrchestratorGUI(tk.Tk):
             return
         self._start_worker(lambda: self._run_reset_only(config))
 
+    def start_install_docker_only(self) -> None:
+        if self.worker and self.worker.is_alive():
+            return
+        config = self._collect_config(reset_override=False)
+        if not config.pi_host or not config.pi_user:
+            messagebox.showerror("Erreur", "Pi2 Host/IP et utilisateur sont requis.")
+            return
+        self._start_worker(lambda: self._run_install_docker(config))
+
+    def start_remove_docker_only(self) -> None:
+        if self.worker and self.worker.is_alive():
+            return
+        config = self._collect_config(reset_override=False)
+        if not config.pi_host or not config.pi_user:
+            messagebox.showerror("Erreur", "Pi2 Host/IP et utilisateur sont requis.")
+            return
+        self._start_worker(lambda: self._run_remove_docker(config))
+
     def _start_worker(self, target) -> None:
         self.deploy_button.config(state="disabled")
         self.reset_button.config(state="disabled")
+        self.install_docker_button.config(state="disabled")
+        self.remove_docker_button.config(state="disabled")
         self.progress["value"] = 0
         self.log_text.delete("1.0", "end")
         self.worker = threading.Thread(target=target, daemon=True)
@@ -237,6 +418,8 @@ class OrchestratorGUI(tk.Tk):
     def _finish_worker(self) -> None:
         self.deploy_button.config(state="normal")
         self.reset_button.config(state="normal")
+        self.install_docker_button.config(state="normal")
+        self.remove_docker_button.config(state="normal")
 
     def _run_reset_only(self, config: DeployConfig) -> None:
         try:
@@ -250,10 +433,40 @@ class OrchestratorGUI(tk.Tk):
         finally:
             self._finish_worker()
 
+    def _run_install_docker(self, config: DeployConfig) -> None:
+        try:
+            self.set_progress(10, "Connexion Pi2")
+            with self._ssh_session(config) as ssh:
+                self._install_docker(ssh)
+            self.set_progress(100, "Docker installé")
+        except Exception as exc:
+            self.log(f"❌ Erreur docker: {exc}")
+            self.set_progress(0, "Erreur")
+        finally:
+            self._finish_worker()
+
+    def _run_remove_docker(self, config: DeployConfig) -> None:
+        try:
+            self.set_progress(10, "Connexion Pi2")
+            with self._ssh_session(config) as ssh:
+                self._remove_docker(ssh)
+            self.set_progress(100, "Docker supprimé")
+        except Exception as exc:
+            self.log(f"❌ Erreur suppression docker: {exc}")
+            self.set_progress(0, "Erreur")
+        finally:
+            self._finish_worker()
+
     def _run_deploy(self, config: DeployConfig) -> None:
         try:
             step = 0
-            total_steps = 7 + (1 if config.reset_first else 0)
+            total_steps = 7
+            if config.reset_first:
+                total_steps += 1
+            if config.remove_docker:
+                total_steps += 1
+            if config.install_docker:
+                total_steps += 1
 
             def advance(label: str) -> None:
                 nonlocal step
@@ -265,6 +478,14 @@ class OrchestratorGUI(tk.Tk):
                 if config.reset_first:
                     self._reset_remote(ssh, config)
                     advance("Reset complet")
+
+                if config.remove_docker:
+                    self._remove_docker(ssh)
+                    advance("Suppression Docker")
+
+                if config.install_docker:
+                    self._install_docker(ssh)
+                    advance("Installation Docker")
 
                 advance("Déploiement AWS")
                 master = SuricataMaster(config.aws_region, config.elastic_password, log=self.log)
@@ -317,53 +538,126 @@ class OrchestratorGUI(tk.Tk):
 
     def _reset_remote(self, ssh: SSHSession, config: DeployConfig) -> None:
         self.log("🧹 Reset complet en cours...")
-        ssh.run("systemctl disable --now webapp2 || true", sudo=True, check=False)
+        ssh.run("systemctl disable --now webbapp || true", sudo=True, check=False)
         ssh.run("systemctl disable --now ids || true", sudo=True, check=False)
         ssh.run("systemctl disable --now suricata || true", sudo=True, check=False)
-        ssh.run("rm -f /etc/systemd/system/webapp2.service /etc/systemd/system/ids.service", sudo=True, check=False)
+        ssh.run("rm -f /etc/systemd/system/webbapp.service /etc/systemd/system/ids.service", sudo=True, check=False)
         ssh.run("systemctl daemon-reload", sudo=True, check=False)
         ssh.run(f"rm -rf '{config.remote_dir}'", sudo=True, check=False)
         ssh.run("ufw --force reset", sudo=True, check=False)
-        ssh.run("apt purge -y docker.io docker-compose containerd runc || true", sudo=True, check=False)
+        self._remove_docker(ssh)
         ssh.run("apt purge -y suricata || true", sudo=True, check=False)
         ssh.run("rm -rf /etc/suricata /var/log/suricata || true", sudo=True, check=False)
         ssh.run("pip3 uninstall -y boto3 elasticsearch requests || true", sudo=True, check=False)
         self.log("✅ Reset complet terminé.")
 
+    def _install_docker(self, ssh: SSHSession) -> None:
+        self.log("🐳 Installation Docker...")
+        ssh.run("apt update && apt install -y docker.io docker-compose", sudo=True, check=False)
+        ssh.run("systemctl enable --now docker", sudo=True, check=False)
+        self.log("✅ Docker installé.")
+
+    def _remove_docker(self, ssh: SSHSession) -> None:
+        self.log("🧹 Suppression Docker...")
+        ssh.run("apt purge -y docker.io docker-compose containerd runc || true", sudo=True, check=False)
+        ssh.run("rm -rf /var/lib/docker /var/lib/containerd || true", sudo=True, check=False)
+        self.log("✅ Docker supprimé.")
+
     def _install_probe(self, ssh: SSHSession, config: DeployConfig) -> None:
-        local_script = Path(__file__).parent / "install_pi_probe.sh"
-        script_content = local_script.read_text(encoding="utf-8")
-        ssh.write_remote_file("/tmp/install_pi_probe.sh", script_content, sudo=False)
-        ssh.run("chmod +x /tmp/install_pi_probe.sh", sudo=True)
-        ssh.run(f"MIRROR_INTERFACE={config.mirror_interface} bash /tmp/install_pi_probe.sh", sudo=True)
+        self.log("📦 Installation des dépendances sonde...")
+        ssh.run("apt update && apt install -y suricata python3-pip awscli ufw curl", sudo=True)
+        ssh.run("pip3 install --break-system-packages boto3 elasticsearch requests", sudo=True, check=False)
+
+        self.log("🛡️ Configuration réseau & furtivité...")
+        ssh.run(f"ip link set {config.mirror_interface} promisc on", sudo=True)
+        ssh.run("ufw --force reset", sudo=True)
+        ssh.run("ufw allow 22/tcp", sudo=True)
+        ssh.run("ufw --force enable", sudo=True)
+
+        self.log("📝 Injection des règles...")
+        ssh.run(
+            "echo 'alert icmp any any -> any any (msg:\"[IDS] ICMP DETECTE\"; sid:1000001; rev:1;)' "
+            "| tee /etc/suricata/rules/local.rules",
+            sudo=True,
+        )
+        ssh.run("chmod 644 /var/log/suricata/eve.json", sudo=True, check=False)
+        ssh.run(\"sed -i 's/payload: yes/payload: no/g' /etc/suricata/suricata.yaml\", sudo=True, check=False)
+        ssh.run("systemctl enable --now suricata", sudo=True)
+        self.log("✅ Sonde prête.")
 
     def _deploy_webapp2(self, ssh: SSHSession, config: DeployConfig) -> None:
         local_dir = Path(__file__).parent
         ssh.run(f"mkdir -p '{config.remote_dir}'", sudo=True)
         ssh.run(f"chown -R {config.pi_user}:{config.pi_user} '{config.remote_dir}'", sudo=True)
         ssh.put_dir(local_dir, config.remote_dir)
-        ssh.run(f"chmod +x '{config.remote_dir}/start.sh'", sudo=True)
-        ssh.run("apt update && apt install -y python3-venv python3-pip", sudo=True)
+        ssh.run("apt update && apt install -y python3-pip", sudo=True)
+        ssh.run(
+            f"cd '{config.remote_dir}' && "
+            "python3 -m pip install --break-system-packages -r requirements.txt "
+            "|| python3 -m pip install -r requirements.txt",
+            sudo=True,
+        )
 
         service = (
             "[Unit]\n"
-            "Description=IDS WebApp2\n"
+            "Description=IDS Webbapp API\n"
             "After=network.target\n\n"
             "[Service]\n"
             f"WorkingDirectory={config.remote_dir}\n"
-            f"ExecStart=/bin/bash -lc '{config.remote_dir}/start.sh'\n"
-            "Environment=RUN_MODE=prod\n"
+            "ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000\n"
+            "Environment=PYTHONUNBUFFERED=1\n"
             "Restart=always\n"
             f"User={config.pi_user}\n\n"
             "[Install]\n"
             "WantedBy=multi-user.target\n"
         )
-        ssh.write_remote_file("/etc/systemd/system/webapp2.service", service, sudo=True)
+        ssh.write_remote_file("/etc/systemd/system/webbapp.service", service, sudo=True)
         ssh.run("systemctl daemon-reload", sudo=True)
-        ssh.run("systemctl enable --now webapp2", sudo=True)
+        ssh.run("systemctl enable --now webbapp", sudo=True)
+
+    def _build_streamer_script(self) -> str:
+        return (
+            "#!/usr/bin/env python3\n"
+            "import json\n"
+            "import os\n"
+            "import sys\n"
+            "import time\n"
+            "from elasticsearch import Elasticsearch, helpers\n\n"
+            "def main(ip, pwd):\n"
+            "    es = Elasticsearch(f\"http://{ip}:9200\", basic_auth=(\"elastic\", pwd))\n"
+            "    log_path = \"/var/log/suricata/eve.json\"\n"
+            "    while True:\n"
+            "        if os.path.exists(log_path) and os.path.getsize(log_path) > 0:\n"
+            "            try:\n"
+            "                with open(log_path, \"r+\", encoding=\"utf-8\") as handle:\n"
+            "                    lines = handle.readlines()\n"
+            "                    if lines:\n"
+            "                        actions = []\n"
+            "                        for line in lines:\n"
+            "                            data = json.loads(line)\n"
+            "                            if \"timestamp\" in data:\n"
+            "                                data[\"@timestamp\"] = data.pop(\"timestamp\")\n"
+            "                            data.pop(\"payload\", None)\n"
+            "                            data.pop(\"payload_printable\", None)\n"
+            "                            if \"flow\" in data:\n"
+            "                                data[\"flow\"][\"total_bytes\"] = data[\"flow\"].get(\"bytes_toclient\", 0) + data[\"flow\"].get(\"bytes_toserver\", 0)\n"
+            "                            actions.append({\"_index\": f\"suricata-{time.strftime('%Y.%m.%d')}\", \"_source\": data})\n"
+            "                        helpers.bulk(es, actions)\n"
+            "                        handle.seek(0)\n"
+            "                        handle.truncate()\n"
+            "            except Exception:\n"
+            "                pass\n"
+            "        time.sleep(1)\n\n"
+            "if __name__ == \"__main__\":\n"
+            "    if len(sys.argv) < 3:\n"
+            "        sys.exit(1)\n"
+            "    main(sys.argv[1], sys.argv[2])\n"
+        )
 
     def _install_streamer_service(self, ssh: SSHSession, config: DeployConfig, elk_ip: str) -> None:
-        service_path = posixpath.join(config.remote_dir, "orchestrator.py")
+        service_path = posixpath.join(config.remote_dir, "streamer.py")
+        ssh.write_remote_file(service_path, self._build_streamer_script(), sudo=False)
+        ssh.run(f"chmod +x '{service_path}'", sudo=True)
         service = SuricataMaster.build_systemd_service(service_path, elk_ip, config.elastic_password)
         ssh.write_remote_file("/etc/systemd/system/ids.service", service, sudo=True)
         ssh.run("systemctl daemon-reload", sudo=True)
