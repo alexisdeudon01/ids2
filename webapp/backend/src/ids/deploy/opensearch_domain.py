@@ -165,8 +165,12 @@ def _wait_for_endpoint(client, domain_name: str, timeout: int, poll: int) -> str
     start = time.monotonic()
     last = start
     progress = _progress_bar(timeout)
+    endpoint: str | None = None
     try:
-        while time.monotonic() < deadline:
+        while True:
+            current_time = time.monotonic()
+            if current_time >= deadline:
+                break
             status = _describe_domain(client, domain_name)
             endpoint = _resolve_endpoint(status or {})
             if endpoint and not status.get("Processing", True):
@@ -187,6 +191,7 @@ def _wait_for_endpoint(client, domain_name: str, timeout: int, poll: int) -> str
                 progress.set_postfix_str("waiting")
                 last = now
             time.sleep(poll)
+        # Timeout reached - return None if no endpoint found
         return None
     finally:
         if progress is not None:

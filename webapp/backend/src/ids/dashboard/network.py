@@ -31,8 +31,9 @@ class NetworkMonitor:
 
     async def get_interface_stats(self) -> NetworkStats | None:
         """Get current network interface statistics."""
+        import asyncio
         return await safe_execute_async(
-            lambda: self._get_stats_impl(),
+            lambda: asyncio.to_thread(self._get_stats_impl),  # type: ignore[arg-type]
             logger,
             "Error getting interface stats: %s"
         )

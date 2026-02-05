@@ -304,7 +304,8 @@ class OpenSearchSetup:
                     "status": status,
                 }
 
-            return {
+            # Result is not a dict - this is reachable
+            return {  # type: ignore[unreachable]
                 "success": False,
                 "error": "Unexpected response format",
             }

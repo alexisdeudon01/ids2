@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 TAILSCALE_AVAILABLE = False
 TAILSCALE_SDK = None
-PythonTailscale = None
+PythonTailscale: type | None = None
 try:
-    from python_tailscale import Tailscale as PythonTailscale
+    from python_tailscale import Tailscale as PythonTailscale  # type: ignore[assignment,no-redef]
 
     TAILSCALE_AVAILABLE = True
     TAILSCALE_SDK = "python-tailscale"

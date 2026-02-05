@@ -54,8 +54,9 @@ class SuricataLogMonitor:
         self._task: asyncio.Task | None = None
         self._position = 0
         self._suricata_log: Any | None = None
-        if PYTHON_SURICATA_AVAILABLE and suricata and hasattr(suricata, "__version__"):
-            print(f"python-suricata detected (version {suricata.__version__})")
+        if PYTHON_SURICATA_AVAILABLE and suricata is not None:
+            if hasattr(suricata, "__version__"):  # type: ignore[unreachable]
+                print(f"python-suricata detected (version {suricata.__version__})")
 
     async def start(self) -> None:
         """Start monitoring the log file."""
@@ -69,7 +70,7 @@ class SuricataLogMonitor:
 
         self._running = True
         if SURICATALOG_AVAILABLE and SuricataLogClient:
-            try:
+            try:  # type: ignore[unreachable]
                 self._suricata_log = SuricataLogClient(str(self.log_path))
             except OSError as exc:
                 print(f"Failed to initialize SuricataLog: {exc}")
@@ -207,7 +208,7 @@ class SuricataLogMonitor:
             return None
 
         if PYEVE_AVAILABLE and Eve:
-            try:
+            try:  # type: ignore[unreachable]
                 parser = Eve() if hasattr(Eve, "__call__") else None
                 if parser and hasattr(parser, "loads"):
                     data = parser.loads(line)

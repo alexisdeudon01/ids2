@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from elasticsearch import AsyncElasticsearch
@@ -16,11 +16,11 @@ from ids.datastructures import ElasticsearchHealth
 logger = logging.getLogger(__name__)
 
 DSL_AVAILABLE = False
-Index = None
-connections = None
+Index: type | None = None
+connections: Any | None = None
 try:
-    from elasticsearch_dsl import Index
-    from elasticsearch_dsl.connections import connections
+    from elasticsearch_dsl import Index  # type: ignore[assignment,no-redef]
+    from elasticsearch_dsl.connections import connections  # type: ignore[assignment,no-redef]
 
     DSL_AVAILABLE = True
 except ImportError:
@@ -62,8 +62,8 @@ class ElasticsearchMonitor:
                 request_timeout=10,
             )
 
-            if DSL_AVAILABLE and connections:
-                connections.add_connection("default", self._client)
+            if DSL_AVAILABLE and connections is not None:
+                connections.add_connection("default", self._client)  # type: ignore[unreachable]
 
             # Test connection
             info = await self._client.info()
@@ -123,7 +123,7 @@ class ElasticsearchMonitor:
 
     async def _count_daily_indices(
         self,
-        today: datetime.date,
+        today: date,
         indices_response: list[dict[str, Any]],
     ) -> int:
         if DSL_AVAILABLE and Index is not None:
@@ -155,7 +155,7 @@ class ElasticsearchMonitor:
         return count
 
     @staticmethod
-    def _index_name_matches_date(index_name: str, today: datetime.date) -> bool:
+    def _index_name_matches_date(index_name: str, today: date) -> bool:
         if "." not in index_name:
             return False
         try:
