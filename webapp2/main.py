@@ -1,6 +1,7 @@
 """Minimal FastAPI app matching frontend requirements."""
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -40,12 +41,12 @@ def create_app() -> FastAPI:
     frontend_dist = Path(__file__).parent / "frontend" / "dist"
     if frontend_dist.exists():
         app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
-        
-        @app.get("/")
-        async def serve_frontend():
+
+        @app.get("/{path:path}")
+        async def serve_frontend(path: str):
             index_file = frontend_dist / "index.html"
             if index_file.exists():
-                return index_file.read_text()
+                return FileResponse(index_file)
             return "Frontend not built"
     
     return app

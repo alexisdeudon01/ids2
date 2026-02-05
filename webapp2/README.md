@@ -82,11 +82,13 @@ npm install
 npm run build
 ```
 
+Chaque route frontend dispose d'un fichier dédié dans `frontend/src/routes`.
+
 ## 📦 Dépendances principales
 
 - `fastapi`, `uvicorn`, `psutil`, `pydantic`
 - `boto3`, `elasticsearch`, `requests`, `paramiko`
 
-## 🐳 Docker (optionnel)
+## 🐳 Docker
 
-`docker-compose.yml` est fourni mais le déploiement GUI ne l’utilise pas.
+Docker a été retiré pour simplifier le déploiement local et sur Pi2.
