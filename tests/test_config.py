@@ -18,7 +18,7 @@ class TestDeployConfig(unittest.TestCase):
         """Test that default values are set correctly."""
         config = DeployConfig(elastic_password="test123")
         
-        self.assertEqual(config.aws_region, "u-west-1")
+        self.assertEqual(config.aws_region, "us-west-1")
         self.assertEqual(config.pi_host, "sinik")
         self.assertEqual(config.pi_ip, "192.168.178.66")
         self.assertEqual(config.pi_user, "pi")
