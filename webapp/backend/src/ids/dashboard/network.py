@@ -9,10 +9,9 @@ from typing import Any
 
 import psutil
 
-from ids.datastructures import NetworkStats
-from ids.utils import SafeLogger, safe_execute_async
+from ids.domain import NetworkStats
 
-logger = SafeLogger(logging.getLogger(__name__))
+logger = logging.getLogger(__name__)
 
 
 class NetworkMonitor:
@@ -31,12 +30,12 @@ class NetworkMonitor:
 
     async def get_interface_stats(self) -> NetworkStats | None:
         """Get current network interface statistics."""
-        import asyncio
-        return await safe_execute_async(
-            lambda: asyncio.to_thread(self._get_stats_impl),  # type: ignore[arg-type]
-            logger,
-            "Error getting interface stats: %s"
-        )
+        try:
+            import asyncio
+            return await asyncio.to_thread(self._get_stats_impl)
+        except Exception as e:
+            logger.error("Error getting interface stats: %s", e)
+            return None
     
     def _get_stats_impl(self) -> NetworkStats | None:
         """Implementation of get_interface_stats."""

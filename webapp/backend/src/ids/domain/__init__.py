@@ -8,6 +8,16 @@ Utilise dataclasses pour la clarté et la performance.
 # Import depuis les modules séparés
 from .alerte import AlerteIDS, SeveriteAlerte, TypeAlerte
 from .configuration import ConfigurationIDS
+from .dashboard_models import (
+    AIHealingResponse,
+    AlertEvent,
+    ElasticsearchHealth,
+    MirrorStatus,
+    NetworkStats,
+    PipelineStatus,
+    SystemHealth,
+    TailscaleNode,
+)
 from .exceptions import (
     AlerteSourceIndisponible,
     ErreurAWS,
@@ -28,6 +38,8 @@ from .tailscale import (
 )
 
 __all__ = [
+    "AIHealingResponse",
+    "AlertEvent",
     "AlerteIDS",
     "AlerteSourceIndisponible",
     "ConditionSante",
@@ -35,14 +47,19 @@ __all__ = [
     # Tailscale domain models
     "DeploymentMode",
     "DeploymentResult",
+    "ElasticsearchHealth",
     "ErreurAWS",
     "ErreurConfiguration",
     "ErreurIDS",
     "ErreurSuricata",
     "MetriquesSystem",
+    "MirrorStatus",
+    "NetworkStats",
     "NodeStatus",
     "NodeType",
+    "PipelineStatus",
     "SeveriteAlerte",
+    "SystemHealth",
     "TailnetConfig",
     "TailscaleAuthKey",
     "TailscaleDeploymentConfig",

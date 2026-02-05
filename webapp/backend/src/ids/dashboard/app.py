@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from .ai_healing import AIHealingService
 from .elasticsearch import ElasticsearchMonitor
 from .hardware import HardwareController
-from ids.datastructures import (
+from ids.domain import (
     AIHealingResponse,
     ElasticsearchHealth,
     MirrorStatus,
