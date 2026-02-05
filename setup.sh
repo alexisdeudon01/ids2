@@ -15,7 +15,7 @@ prompt() {
 }
 
 # ====================== FSM (docs/kl.md) ======================
-FSM_STATE="WAIT_USER"
+FSM_STATE="WaitUser"
 INIT_SUBSTATE=""
 COMPONENT_SUBSTATE=""
 DEPLOY_STATE="NotStarted"
@@ -32,14 +32,13 @@ fsm_transition() {
   local next="$1"
   local allowed=""
   case "$FSM_STATE" in
-    WAIT_USER) allowed="START_COMMAND HALTED" ;;
-    START_COMMAND) allowed="INITIALIZING" ;;
-    INITIALIZING) allowed="COMPONENTS_STARTING FATAL_ERROR" ;;
-    COMPONENTS_STARTING) allowed="SUPERVISOR_RUNNING FATAL_ERROR" ;;
-    SUPERVISOR_RUNNING) allowed="STOPPING FATAL_ERROR" ;;
-    STOPPING) allowed="HALTED" ;;
-    HALTED) allowed="WAIT_USER" ;;
-    FATAL_ERROR) allowed="HALTED" ;;
+    WaitUser) allowed="StartCommand Stopped" ;;
+    StartCommand) allowed="Initializing" ;;
+    Initializing) allowed="ComponentsStarting Stopped" ;;
+    ComponentsStarting) allowed="SupervisorRunning Stopped" ;;
+    SupervisorRunning) allowed="Stopping" ;;
+    Stopping) allowed="Stopped" ;;
+    Stopped) allowed="" ;;
   esac
   if [[ " $allowed " != *" $next "* ]]; then
     echo "❌ Transition FSM invalide: $FSM_STATE -> $next" >&2
@@ -57,6 +56,14 @@ fsm_init_substate() {
 fsm_component_substate() {
   COMPONENT_SUBSTATE="$1"
   fsm_log "ComponentsStarting::$COMPONENT_SUBSTATE"
+}
+
+fsm_supervisor_substate() {
+  fsm_log "SupervisorRunning::$1"
+}
+
+fsm_stopping_substate() {
+  fsm_log "Stopping::$1"
 }
 
 deploy_transition() {
@@ -124,7 +131,7 @@ docker_transition() {
 die() {
   local msg="$1"
   echo "❌ $msg"
-  fsm_transition "FATAL_ERROR" || true
+  fsm_stop
   exit 1
 }
 
@@ -146,10 +153,31 @@ on_error() {
     StartingServices) deploy_transition "ServicesFailed" || true ;;
     VerifyingHealth) deploy_transition "HealthFailed" || true ;;
   esac
-  fsm_transition "FATAL_ERROR" || true
+  fsm_stop
   echo "❌ Erreur inattendue (code $code)."
   exit "$code"
 }
+# ====================== FSM STOP ======================
+fsm_stop() {
+  case "$FSM_STATE" in
+    SupervisorRunning)
+      fsm_transition "Stopping" || true
+      fsm_stopping_substate "StopSuricata"
+      fsm_stopping_substate "StopDocker"
+      fsm_stopping_substate "StopResourceController"
+      fsm_stopping_substate "AllStopped"
+      ;;
+    StartCommand)
+      fsm_transition "Initializing" || true
+      ;;
+    Initializing|ComponentsStarting|WaitUser)
+      ;;
+  esac
+  if [ "$FSM_STATE" != "Stopped" ]; then
+    fsm_transition "Stopped" || true
+  fi
+}
+
 
 trap 'on_error' ERR
 
@@ -161,7 +189,7 @@ require_command() {
 }
 
 # ====================== USER INPUT (WAIT_USER) ======================
-fsm_log "WAIT_USER: en attente d'action utilisateur"
+fsm_log "WaitUser: en attente d'action utilisateur"
 PI_HOST="$(prompt 'IP du Raspberry Pi')"
 PI_USER="$(prompt 'Utilisateur SSH' 'pi')"
 read -r -s -p "Mot de passe SSH: " PI_PASS
@@ -189,8 +217,8 @@ run_remote_sudo() {
 }
 
 # ====================== MAIN FSM ======================
-fsm_transition "START_COMMAND"
-fsm_transition "INITIALIZING"
+fsm_transition "StartCommand"
+fsm_transition "Initializing"
 
 fsm_init_substate "LoadingConfig"
 CONFIG_PATH="webapp/backend/config.yaml"
@@ -209,7 +237,7 @@ if [ -z "$PI_HOST" ] || [ -z "$PI_USER" ]; then
 fi
 fsm_init_substate "ConfigValid"
 
-fsm_transition "COMPONENTS_STARTING"
+fsm_transition "ComponentsStarting"
 fsm_component_substate "StartResourceController"
 echo "🔌 Vérification de la connectivité SSH..."
 if ! run_remote "echo 'ok'" >/dev/null 2>&1; then
@@ -228,7 +256,8 @@ run_remote_sudo "mkdir -p '$REMOTE_DIR' && chown -R '${PI_USER}:${PI_USER}' '$RE
 
 fsm_component_substate "AllComponentsStarted"
 
-fsm_transition "SUPERVISOR_RUNNING"
+fsm_transition "SupervisorRunning"
+fsm_supervisor_substate "SupervisorMonitoring"
 
 # ====================== DEPLOYMENT FSM ======================
 deploy_transition "CheckingPrereq"
@@ -601,6 +630,8 @@ fi
 deploy_transition "ServicesStarted"
 deploy_transition "VerifyingHealth"
 
+fsm_supervisor_substate "SupervisorMonitoring"
+
 health_check() {
   local api_url="http://localhost:8080/api/health"
   run_remote "python3 - << 'PYEOF'
@@ -620,15 +651,20 @@ MAX_HEALTH_RETRIES=2
 attempt=0
 while [ $attempt -le $MAX_HEALTH_RETRIES ]; do
   if health_check; then
+    fsm_supervisor_substate "HealthOK"
     deploy_transition "HealthOK"
     deploy_transition "Deployed"
+    fsm_supervisor_substate "SupervisorMonitoring"
     break
   fi
   if [ $attempt -eq $MAX_HEALTH_RETRIES ]; then
+    fsm_supervisor_substate "SupervisorDegraded"
     deploy_transition "HealthFailed"
     deploy_fail "HealthFailed" "Health check FastAPI échoué."
   fi
+  fsm_supervisor_substate "SupervisorDegraded"
   deploy_transition "HealthFailed"
+  fsm_supervisor_substate "SupervisorRecovering"
   deploy_transition "Retrying"
   deploy_transition "StartingServices"
   attempt=$((attempt + 1))

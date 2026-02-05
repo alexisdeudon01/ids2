@@ -6,92 +6,57 @@ import pytest
 
 
 class AgentState(Enum):
-    """Agent states from state machine diagram."""
+    """Agent states from docs/kl.md."""
 
-    CHECKING_CONFIG = auto()
-    VALIDATING_CONFIGURATION = auto()
-    SPINNING_UP_CONTAINERS = auto()
-    PREPARING_ENVIRONMENT = auto()
-    STARTING_SERVICES = auto()
-    MONITORING = auto()
-    CHECKING_SERVICE_HEALTH = auto()
-    NORMAL_MONITORING = auto()
-    RESOURCE_LIMIT_EXCEEDED = auto()
-    PAUSED_ALERT_SENT = auto()
-    ATTEMPT_RECOVERY = auto()
-    RESTARTING_CONTAINERS = auto()
+    WAIT_USER = auto()
+    START_COMMAND = auto()
+    INITIALIZING = auto()
+    COMPONENTS_STARTING = auto()
+    SUPERVISOR_RUNNING = auto()
+    STOPPING = auto()
+    STOPPED = auto()
 
 
 class AgentEvent(Enum):
     """Events that trigger state transitions."""
 
-    INIT_COMPLETE = auto()
+    USER_START = auto()
+    INIT_BEGIN = auto()
+    USER_CANCEL = auto()
     CONFIG_VALID = auto()
-    DOCKER_HEALTHY = auto()
-    DOCKER_FAILED = auto()
-    ENV_READY = auto()
-    SERVICES_READY = auto()
-    SERVICES_FAILED = auto()
-    HIGH_CPU = auto()
-    HIGH_MEM = auto()
-    NORMAL_RESOURCES = auto()
-    SCHEDULE_CHECK = auto()
-    OK = auto()
-    INTERRUPT = auto()
-    MAX_RETRIES = auto()
-    PI_API_OK = auto()
-    RECOVERY_ATTEMPTED = auto()
+    CONFIG_INVALID = auto()
+    COMPONENTS_STARTED = auto()
+    COMPONENTS_FAILED = auto()
+    STOP_REQUESTED = auto()
+    STOP_COMPLETE = auto()
 
 
 class StateMachine:
     """State machine implementation."""
 
     def __init__(self):
-        self.current_state = AgentState.CHECKING_CONFIG
+        self.current_state = AgentState.WAIT_USER
         self._transitions = {
-            AgentState.CHECKING_CONFIG: {
-                AgentEvent.INIT_COMPLETE: AgentState.VALIDATING_CONFIGURATION,
+            AgentState.WAIT_USER: {
+                AgentEvent.USER_START: AgentState.START_COMMAND,
+                AgentEvent.USER_CANCEL: AgentState.STOPPED,
             },
-            AgentState.VALIDATING_CONFIGURATION: {
-                AgentEvent.CONFIG_VALID: AgentState.SPINNING_UP_CONTAINERS,
+            AgentState.START_COMMAND: {
+                AgentEvent.INIT_BEGIN: AgentState.INITIALIZING,
             },
-            AgentState.SPINNING_UP_CONTAINERS: {
-                AgentEvent.DOCKER_HEALTHY: AgentState.PREPARING_ENVIRONMENT,
-                AgentEvent.DOCKER_FAILED: AgentState.ATTEMPT_RECOVERY,
+            AgentState.INITIALIZING: {
+                AgentEvent.CONFIG_VALID: AgentState.COMPONENTS_STARTING,
+                AgentEvent.CONFIG_INVALID: AgentState.STOPPED,
             },
-            AgentState.PREPARING_ENVIRONMENT: {
-                AgentEvent.ENV_READY: AgentState.STARTING_SERVICES,
+            AgentState.COMPONENTS_STARTING: {
+                AgentEvent.COMPONENTS_STARTED: AgentState.SUPERVISOR_RUNNING,
+                AgentEvent.COMPONENTS_FAILED: AgentState.STOPPED,
             },
-            AgentState.STARTING_SERVICES: {
-                AgentEvent.SERVICES_READY: AgentState.MONITORING,
-                AgentEvent.SERVICES_FAILED: AgentState.ATTEMPT_RECOVERY,
+            AgentState.SUPERVISOR_RUNNING: {
+                AgentEvent.STOP_REQUESTED: AgentState.STOPPING,
             },
-            AgentState.MONITORING: {
-                AgentEvent.SCHEDULE_CHECK: AgentState.CHECKING_SERVICE_HEALTH,
-                AgentEvent.HIGH_CPU: AgentState.RESOURCE_LIMIT_EXCEEDED,
-                AgentEvent.HIGH_MEM: AgentState.RESOURCE_LIMIT_EXCEEDED,
-            },
-            AgentState.CHECKING_SERVICE_HEALTH: {
-                AgentEvent.OK: AgentState.NORMAL_MONITORING,
-                AgentEvent.INTERRUPT: AgentState.PAUSED_ALERT_SENT,
-            },
-            AgentState.NORMAL_MONITORING: {
-                AgentEvent.HIGH_CPU: AgentState.RESOURCE_LIMIT_EXCEEDED,
-                AgentEvent.SCHEDULE_CHECK: AgentState.CHECKING_SERVICE_HEALTH,
-            },
-            AgentState.RESOURCE_LIMIT_EXCEEDED: {
-                AgentEvent.NORMAL_RESOURCES: AgentState.NORMAL_MONITORING,
-                AgentEvent.INTERRUPT: AgentState.PAUSED_ALERT_SENT,
-            },
-            AgentState.ATTEMPT_RECOVERY: {
-                AgentEvent.RECOVERY_ATTEMPTED: AgentState.STARTING_SERVICES,
-                AgentEvent.MAX_RETRIES: AgentState.PAUSED_ALERT_SENT,
-            },
-            AgentState.PAUSED_ALERT_SENT: {
-                AgentEvent.PI_API_OK: AgentState.RESTARTING_CONTAINERS,
-            },
-            AgentState.RESTARTING_CONTAINERS: {
-                AgentEvent.SERVICES_READY: AgentState.MONITORING,
+            AgentState.STOPPING: {
+                AgentEvent.STOP_COMPLETE: AgentState.STOPPED,
             },
         }
 
@@ -114,50 +79,42 @@ class TestStateMachine:
 
     @pytest.mark.unit
     def test_initial_state(self, sm):
-        assert sm.current_state == AgentState.CHECKING_CONFIG
+        assert sm.current_state == AgentState.WAIT_USER
 
     @pytest.mark.unit
     def test_happy_path_to_monitoring(self, sm):
-        assert sm.transition(AgentEvent.INIT_COMPLETE)
-        assert sm.current_state == AgentState.VALIDATING_CONFIGURATION
+        assert sm.transition(AgentEvent.USER_START)
+        assert sm.current_state == AgentState.START_COMMAND
+
+        assert sm.transition(AgentEvent.INIT_BEGIN)
+        assert sm.current_state == AgentState.INITIALIZING
 
         assert sm.transition(AgentEvent.CONFIG_VALID)
-        assert sm.current_state == AgentState.SPINNING_UP_CONTAINERS
+        assert sm.current_state == AgentState.COMPONENTS_STARTING
 
-        assert sm.transition(AgentEvent.DOCKER_HEALTHY)
-        assert sm.current_state == AgentState.PREPARING_ENVIRONMENT
-
-        assert sm.transition(AgentEvent.ENV_READY)
-        assert sm.current_state == AgentState.STARTING_SERVICES
-
-        assert sm.transition(AgentEvent.SERVICES_READY)
-        assert sm.current_state == AgentState.MONITORING
+        assert sm.transition(AgentEvent.COMPONENTS_STARTED)
+        assert sm.current_state == AgentState.SUPERVISOR_RUNNING
 
     @pytest.mark.unit
-    def test_docker_failure_recovery(self, sm):
-        sm.transition(AgentEvent.INIT_COMPLETE)
-        sm.transition(AgentEvent.CONFIG_VALID)
-
-        assert sm.transition(AgentEvent.DOCKER_FAILED)
-        assert sm.current_state == AgentState.ATTEMPT_RECOVERY
+    def test_config_failure(self, sm):
+        sm.transition(AgentEvent.USER_START)
+        sm.transition(AgentEvent.INIT_BEGIN)
+        assert sm.transition(AgentEvent.CONFIG_INVALID)
+        assert sm.current_state == AgentState.STOPPED
 
     @pytest.mark.unit
-    def test_resource_limit_exceeded(self, sm):
-        # Get to monitoring
-        sm.transition(AgentEvent.INIT_COMPLETE)
+    def test_stop_flow(self, sm):
+        sm.transition(AgentEvent.USER_START)
+        sm.transition(AgentEvent.INIT_BEGIN)
         sm.transition(AgentEvent.CONFIG_VALID)
-        sm.transition(AgentEvent.DOCKER_HEALTHY)
-        sm.transition(AgentEvent.ENV_READY)
-        sm.transition(AgentEvent.SERVICES_READY)
-
-        assert sm.transition(AgentEvent.HIGH_CPU)
-        assert sm.current_state == AgentState.RESOURCE_LIMIT_EXCEEDED
-
-        assert sm.transition(AgentEvent.NORMAL_RESOURCES)
-        assert sm.current_state == AgentState.NORMAL_MONITORING
+        sm.transition(AgentEvent.COMPONENTS_STARTED)
+        assert sm.transition(AgentEvent.STOP_REQUESTED)
+        assert sm.current_state == AgentState.STOPPING
+        assert sm.transition(AgentEvent.STOP_COMPLETE)
+        assert sm.current_state == AgentState.STOPPED
 
     @pytest.mark.unit
     def test_invalid_transition(self, sm):
-        result = sm.transition(AgentEvent.SERVICES_READY)
+        result = sm.transition(AgentEvent.COMPONENTS_STARTED)
         assert result is False
-        assert sm.current_state == AgentState.CHECKING_CONFIG
+        assert sm.current_state == AgentState.WAIT_USER

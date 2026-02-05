@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import asdict
+from enum import Enum
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +17,16 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from ..interfaces import GestionnaireComposant, MetriquesProvider, PipelineStatusProvider
+
+
+class PipelineState(Enum):
+    PIPE_UNKNOWN = "PipeUnknown"
+    PIPE_COLLECTING = "PipeCollecting"
+    PIPE_PROCESSING = "PipeProcessing"
+    PIPE_OK = "PipeOK"
+    PIPE_DEGRADED = "PipeDegraded"
+    PIPE_KO = "PipeKO"
+    PIPE_RECOVERING = "PipeRecovering"
 
 
 class StaticStatusProvider:
@@ -72,6 +83,8 @@ class PipelineStatusAggregator:
     def __init__(self, providers: Iterable[PipelineStatusProvider] | None = None) -> None:
         self._providers: list[PipelineStatusProvider] = list(providers) if providers else []
         self._metriques_provider: MetriquesProvider | None = None
+        self._state = PipelineState.PIPE_UNKNOWN
+        self._pending_state: PipelineState | None = None
 
     def ajouter_provider(self, provider: PipelineStatusProvider) -> None:
         self._providers.append(provider)
@@ -87,8 +100,10 @@ class PipelineStatusAggregator:
     @metriques("pipeline_status.collecte")
     @retry(nb_tentatives=2, delai_initial=0.5)
     async def collecter(self) -> dict[str, Any]:
+        self._state = PipelineState.PIPE_COLLECTING
         timestamp = _utc_iso()
         if not self._providers:
+            self._state = PipelineState.PIPE_UNKNOWN
             return {
                 "timestamp": timestamp,
                 "etat_pipeline": "inconnu",
@@ -102,6 +117,7 @@ class PipelineStatusAggregator:
             return_exceptions=True,
         )
 
+        self._state = PipelineState.PIPE_PROCESSING
         composants: list[dict[str, Any]] = []
         erreurs: list[str] = []
         sains = 0
@@ -124,6 +140,7 @@ class PipelineStatusAggregator:
 
         total = len(composants)
         etat = _etat_pipeline(total, sains)
+        self._update_fsm_state(etat)
 
         payload: dict[str, Any] = {
             "timestamp": timestamp,
@@ -136,6 +153,32 @@ class PipelineStatusAggregator:
         if metriques is not None:
             payload["metriques"] = metriques
         return payload
+
+    def _update_fsm_state(self, etat: str) -> None:
+        target = {
+            "inconnu": PipelineState.PIPE_UNKNOWN,
+            "ok": PipelineState.PIPE_OK,
+            "degrade": PipelineState.PIPE_DEGRADED,
+            "ko": PipelineState.PIPE_KO,
+        }.get(etat, PipelineState.PIPE_UNKNOWN)
+
+        if self._pending_state is not None:
+            self._state = self._pending_state
+            self._pending_state = None
+            return
+
+        if self._state == PipelineState.PIPE_KO and target in (
+            PipelineState.PIPE_OK,
+            PipelineState.PIPE_DEGRADED,
+        ):
+            self._state = PipelineState.PIPE_RECOVERING
+            self._pending_state = target
+            return
+
+        self._state = target
+
+    def etat_fsm(self) -> PipelineState:
+        return self._state
 
 
 class PipelineStatusService:
@@ -224,5 +267,6 @@ __all__ = [
     "ComposantStatusProvider",
     "PipelineStatusAggregator",
     "PipelineStatusService",
+    "PipelineState",
     "StaticStatusProvider",
 ]
