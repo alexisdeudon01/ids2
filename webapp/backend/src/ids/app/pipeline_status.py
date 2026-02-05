@@ -84,7 +84,6 @@ class PipelineStatusAggregator:
         self._providers: list[PipelineStatusProvider] = list(providers) if providers else []
         self._metriques_provider: MetriquesProvider | None = None
         self._state = PipelineState.PIPE_UNKNOWN
-        self._pending_state: PipelineState | None = None
 
     def ajouter_provider(self, provider: PipelineStatusProvider) -> None:
         self._providers.append(provider)
@@ -162,9 +161,8 @@ class PipelineStatusAggregator:
             "ko": PipelineState.PIPE_KO,
         }.get(etat, PipelineState.PIPE_UNKNOWN)
 
-        if self._pending_state is not None:
-            self._state = self._pending_state
-            self._pending_state = None
+        if self._state == PipelineState.PIPE_RECOVERING:
+            self._state = target
             return
 
         if self._state == PipelineState.PIPE_KO and target in (
@@ -172,7 +170,6 @@ class PipelineStatusAggregator:
             PipelineState.PIPE_DEGRADED,
         ):
             self._state = PipelineState.PIPE_RECOVERING
-            self._pending_state = target
             return
 
         self._state = target
