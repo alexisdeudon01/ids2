@@ -14,26 +14,165 @@ prompt() {
   fi
 }
 
-for cmd in sshpass tar ssh scp; do
-  if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "Error: '$cmd' is required. Install it first."
+# ====================== FSM (docs/kl.md) ======================
+FSM_STATE="WAIT_USER"
+INIT_SUBSTATE=""
+COMPONENT_SUBSTATE=""
+DEPLOY_STATE="NotStarted"
+DEPLOY_STEP=""
+
+declare -A DOCKER_STATE
+DOCKER_SERVICES=(redis node_exporter cadvisor vector prometheus grafana ids-runtime ids-api)
+
+fsm_log() {
+  echo "🧭 [FSM] $*"
+}
+
+fsm_transition() {
+  local next="$1"
+  local allowed=""
+  case "$FSM_STATE" in
+    WAIT_USER) allowed="START_COMMAND HALTED" ;;
+    START_COMMAND) allowed="INITIALIZING" ;;
+    INITIALIZING) allowed="COMPONENTS_STARTING FATAL_ERROR" ;;
+    COMPONENTS_STARTING) allowed="SUPERVISOR_RUNNING FATAL_ERROR" ;;
+    SUPERVISOR_RUNNING) allowed="STOPPING FATAL_ERROR" ;;
+    STOPPING) allowed="HALTED" ;;
+    HALTED) allowed="WAIT_USER" ;;
+    FATAL_ERROR) allowed="HALTED" ;;
+  esac
+  if [[ " $allowed " != *" $next "* ]]; then
+    echo "❌ Transition FSM invalide: $FSM_STATE -> $next" >&2
     exit 1
   fi
-done
+  fsm_log "$FSM_STATE -> $next"
+  FSM_STATE="$next"
+}
 
+fsm_init_substate() {
+  INIT_SUBSTATE="$1"
+  fsm_log "Initializing::$INIT_SUBSTATE"
+}
+
+fsm_component_substate() {
+  COMPONENT_SUBSTATE="$1"
+  fsm_log "ComponentsStarting::$COMPONENT_SUBSTATE"
+}
+
+deploy_transition() {
+  local next="$1"
+  local allowed=""
+  case "$DEPLOY_STATE" in
+    NotStarted) allowed="CheckingPrereq" ;;
+    CheckingPrereq) allowed="PrereqOK PrereqFailed" ;;
+    PrereqOK) allowed="InstallingDeps" ;;
+    InstallingDeps) allowed="DepsInstalled DepsFailed" ;;
+    DepsInstalled) allowed="BuildingDockerImages" ;;
+    BuildingDockerImages) allowed="ImagesBuilt BuildFailed" ;;
+    ImagesBuilt) allowed="StartingServices" ;;
+    StartingServices) allowed="ServicesStarted ServicesFailed" ;;
+    ServicesStarted) allowed="VerifyingHealth" ;;
+    VerifyingHealth) allowed="HealthOK HealthFailed" ;;
+    HealthFailed) allowed="Retrying" ;;
+    Retrying) allowed="StartingServices" ;;
+    HealthOK) allowed="Deployed" ;;
+  esac
+  if [[ " $allowed " != *" $next "* ]]; then
+    echo "❌ Transition Deployment invalide: $DEPLOY_STATE -> $next" >&2
+    exit 1
+  fi
+  fsm_log "Deployment::$DEPLOY_STATE -> $next"
+  DEPLOY_STATE="$next"
+}
+
+deploy_step() {
+  DEPLOY_STEP="$1"
+  fsm_log "DeploymentStep::$DEPLOY_STEP"
+}
+
+docker_state_init() {
+  for svc in "${DOCKER_SERVICES[@]}"; do
+    DOCKER_STATE["$svc"]="DSNotCreated"
+  done
+}
+
+docker_transition() {
+  local svc="$1"
+  local next="$2"
+  local current="${DOCKER_STATE[$svc]:-DSNotCreated}"
+  local allowed=""
+  case "$current" in
+    DSNotCreated) allowed="DSCreating" ;;
+    DSCreating) allowed="DSCreated DSCreateFail" ;;
+    DSCreated) allowed="DSStarting" ;;
+    DSStarting) allowed="DSRunning DSStartFail" ;;
+    DSRunning) allowed="DSHealthy DSUnhealthy DSStopping" ;;
+    DSHealthy) allowed="DSRunning" ;;
+    DSUnhealthy) allowed="DSRestarting DSStopping" ;;
+    DSRestarting) allowed="DSStarting DSRestartFail" ;;
+    DSStopping) allowed="DSStopped" ;;
+    DSStopped) allowed="DSRemoving" ;;
+  esac
+  if [[ " $allowed " != *" $next "* ]]; then
+    echo "❌ Transition Docker invalide: $svc $current -> $next" >&2
+    exit 1
+  fi
+  fsm_log "Docker::$svc $current -> $next"
+  DOCKER_STATE["$svc"]="$next"
+}
+
+die() {
+  local msg="$1"
+  echo "❌ $msg"
+  fsm_transition "FATAL_ERROR" || true
+  exit 1
+}
+
+deploy_fail() {
+  local state="$1"
+  local msg="$2"
+  if [ "${DEPLOY_STATE:-}" != "$state" ]; then
+    deploy_transition "$state" || true
+  fi
+  die "$msg"
+}
+
+on_error() {
+  local code=$?
+  case "${DEPLOY_STATE:-}" in
+    CheckingPrereq) deploy_transition "PrereqFailed" || true ;;
+    InstallingDeps) deploy_transition "DepsFailed" || true ;;
+    BuildingDockerImages) deploy_transition "BuildFailed" || true ;;
+    StartingServices) deploy_transition "ServicesFailed" || true ;;
+    VerifyingHealth) deploy_transition "HealthFailed" || true ;;
+  esac
+  fsm_transition "FATAL_ERROR" || true
+  echo "❌ Erreur inattendue (code $code)."
+  exit "$code"
+}
+
+trap 'on_error' ERR
+
+require_command() {
+  local cmd="$1"
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    die "La commande '$cmd' est requise. Installez-la puis relancez."
+  fi
+}
+
+# ====================== USER INPUT (WAIT_USER) ======================
+fsm_log "WAIT_USER: en attente d'action utilisateur"
 PI_HOST="$(prompt 'IP du Raspberry Pi')"
 PI_USER="$(prompt 'Utilisateur SSH' 'pi')"
 read -r -s -p "Mot de passe SSH: " PI_PASS
 echo ""
 read -r -s -p "Mot de passe sudo: " SUDO_PASS
 echo ""
-
 REMOTE_DIR="$(prompt 'Répertoire d’installation sur le Pi' '/opt/ids-dashboard')"
 MIRROR_INTERFACE="$(prompt 'Interface miroir' 'eth0')"
 
 if [ -z "$PI_HOST" ]; then
-  echo "IP du Raspberry Pi requise."
-  exit 1
+  die "IP du Raspberry Pi requise."
 fi
 
 export SSHPASS="$PI_PASS"
@@ -49,6 +188,56 @@ run_remote_sudo() {
     "echo '$SUDO_PASS' | sudo -S -p '' bash -lc $(printf %q "$cmd")"
 }
 
+# ====================== MAIN FSM ======================
+fsm_transition "START_COMMAND"
+fsm_transition "INITIALIZING"
+
+fsm_init_substate "LoadingConfig"
+CONFIG_PATH="webapp/backend/config.yaml"
+if [ ! -f "$CONFIG_PATH" ]; then
+  fsm_init_substate "ConfigError"
+  die "Config introuvable: $CONFIG_PATH"
+fi
+
+fsm_init_substate "ValidatingConfig"
+for cmd in sshpass tar ssh scp; do
+  require_command "$cmd"
+done
+if [ -z "$PI_HOST" ] || [ -z "$PI_USER" ]; then
+  fsm_init_substate "ConfigError"
+  die "PI_HOST ou PI_USER manquant."
+fi
+fsm_init_substate "ConfigValid"
+
+fsm_transition "COMPONENTS_STARTING"
+fsm_component_substate "StartResourceController"
+echo "🔌 Vérification de la connectivité SSH..."
+if ! run_remote "echo 'ok'" >/dev/null 2>&1; then
+  die "Impossible de se connecter au Raspberry Pi (SSH)."
+fi
+
+fsm_component_substate "StartDockerManager"
+echo "🔐 Vérification de sudo sur le Pi..."
+if ! run_remote_sudo "echo 'sudo ok'" >/dev/null 2>&1; then
+  die "Impossible d'utiliser sudo sur le Pi."
+fi
+
+fsm_component_substate "StartSuricataManager"
+echo "🧩 Préparation du dossier d'installation distant..."
+run_remote_sudo "mkdir -p '$REMOTE_DIR' && chown -R '${PI_USER}:${PI_USER}' '$REMOTE_DIR'"
+
+fsm_component_substate "AllComponentsStarted"
+
+fsm_transition "SUPERVISOR_RUNNING"
+
+# ====================== DEPLOYMENT FSM ======================
+deploy_transition "CheckingPrereq"
+echo "✅ Prérequis locaux vérifiés."
+
+deploy_transition "PrereqOK"
+deploy_transition "InstallingDeps"
+deploy_step "DeployToPi"
+
 echo "📦 Préparation du paquet..."
 ARCHIVE_PATH="$(mktemp -t ids-dashboard-XXXXXX.tar.gz)"
 chmod 600 "$ARCHIVE_PATH"
@@ -60,18 +249,24 @@ tar \
   --exclude=__pycache__ \
   -czf "$ARCHIVE_PATH" .
 
-echo "🔐 Création du répertoire distant..."
-run_remote_sudo "mkdir -p '$REMOTE_DIR' && chown -R '${PI_USER}:${PI_USER}' '$REMOTE_DIR'"
-
 echo "🚚 Transfert du dépôt vers le Pi..."
-sshpass -e scp -o StrictHostKeyChecking=accept-new "$ARCHIVE_PATH" \
-  "${PI_USER}@${PI_HOST}:/tmp/ids-dashboard.tar.gz"
+if ! sshpass -e scp -o StrictHostKeyChecking=accept-new "$ARCHIVE_PATH" \
+  "${PI_USER}@${PI_HOST}:/tmp/ids-dashboard.tar.gz"; then
+  deploy_fail "DepsFailed" "Échec du transfert vers le Pi."
+fi
 
 echo "📂 Extraction sur le Pi..."
-run_remote_sudo "rm -rf '$REMOTE_DIR'/*"
-run_remote_sudo "tar -xzf /tmp/ids-dashboard.tar.gz -C '$REMOTE_DIR'"
-run_remote_sudo "chmod +x '$REMOTE_DIR/depancecmd/'*.sh"
+if ! run_remote_sudo "rm -rf '$REMOTE_DIR'/*"; then
+  deploy_fail "DepsFailed" "Impossible de nettoyer le répertoire distant."
+fi
+if ! run_remote_sudo "tar -xzf /tmp/ids-dashboard.tar.gz -C '$REMOTE_DIR'"; then
+  deploy_fail "DepsFailed" "Échec de l'extraction sur le Pi."
+fi
+if ! run_remote_sudo "chmod +x '$REMOTE_DIR/depancecmd/'*.sh"; then
+  deploy_fail "DepsFailed" "Échec chmod sur les scripts."
+fi
 
+deploy_step "InstallDependencies"
 echo "🧩 Exécution des scripts d'installation..."
 for script in depancecmd/*.sh; do
   script_name="$(basename "$script")"
@@ -81,6 +276,7 @@ for script in depancecmd/*.sh; do
     echo "❌ Échec sur $script_name."
     echo "➡️  Conseil: éditez $REMOTE_DIR/depancecmd/$script_name pour ajuster la commande."
     echo "➡️  Exemple: ajoutez un paquet manquant via 'apt-get install -y <package>'."
+    deploy_fail "DepsFailed" "Installation interrompue sur $script_name."
   else
     echo "✅ $script_name terminé."
   fi
@@ -96,7 +292,6 @@ if ! run_remote "docker --version" >/dev/null 2>&1; then
   echo "✅ Docker installé"
 else
   echo "✅ Docker est installé: $(run_remote 'docker --version')"
-  # S'assurer que Docker est démarré
   run_remote_sudo "systemctl start docker || true"
 fi
 
@@ -105,6 +300,9 @@ if ! run_remote "docker compose version" >/dev/null 2>&1; then
   echo "⚠️  docker compose non disponible, installation..."
   run_remote_sudo "apt-get update && apt-get install -y docker-compose-plugin || apt-get install -y docker-compose"
 fi
+
+deploy_transition "DepsInstalled"
+deploy_transition "BuildingDockerImages"
 
 echo ""
 echo "🔐 Vérification des connexions AWS et OpenSearch..."
@@ -241,14 +439,28 @@ echo "🔨 Construction et démarrage des services Docker (progressif avec véri
 COMPOSE_DIR="$REMOTE_DIR/webapp/backend/docker"
 BACKEND_DIR="$REMOTE_DIR/webapp/backend"
 
+# ====================== DOCKER SERVICE FSM ======================
+docker_state_init
+
 # Créer le réseau Docker si nécessaire
 run_remote_sudo "docker network create ids-network || true"
 
-# Construire et démarrer les services dans l'ordre de dépendance
-# docker-compose gère automatiquement les dépendances, mais on démarre progressivement pour voir l'avancement
-
 echo "📦 Construction de toutes les images..."
-run_remote_sudo "cd '$COMPOSE_DIR' && docker compose build --parallel"
+for svc in "${DOCKER_SERVICES[@]}"; do
+  docker_transition "$svc" "DSCreating"
+done
+if ! run_remote_sudo "cd '$COMPOSE_DIR' && docker compose build --parallel"; then
+  for svc in "${DOCKER_SERVICES[@]}"; do
+    docker_transition "$svc" "DSCreateFail"
+  done
+  deploy_fail "BuildFailed" "Échec du build Docker."
+fi
+for svc in "${DOCKER_SERVICES[@]}"; do
+  docker_transition "$svc" "DSCreated"
+done
+
+deploy_transition "ImagesBuilt"
+deploy_transition "StartingServices"
 
 # Fonction pour attendre qu'un service soit prêt
 wait_for_service() {
@@ -273,39 +485,75 @@ wait_for_service() {
 
 # Démarrer les services dans l'ordre de dépendance avec vérifications
 echo "🚀 [1/8] Démarrage de Redis (service de base)..."
+docker_transition "redis" "DSStarting"
 run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d redis"
-wait_for_service "redis" 15
+docker_transition "redis" "DSRunning"
+if wait_for_service "redis" 15; then
+  docker_transition "redis" "DSHealthy"
+else
+  docker_transition "redis" "DSUnhealthy"
+fi
 
 echo "🚀 [2/8] Démarrage de Node Exporter..."
+docker_transition "node_exporter" "DSStarting"
 run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d node_exporter"
-wait_for_service "node_exporter" 10
+docker_transition "node_exporter" "DSRunning"
+if wait_for_service "node_exporter" 10; then
+  docker_transition "node_exporter" "DSHealthy"
+else
+  docker_transition "node_exporter" "DSUnhealthy"
+fi
 
 echo "🚀 [3/8] Démarrage de cAdvisor..."
+docker_transition "cadvisor" "DSStarting"
 run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d cadvisor"
-wait_for_service "cadvisor" 15
+docker_transition "cadvisor" "DSRunning"
+if wait_for_service "cadvisor" 15; then
+  docker_transition "cadvisor" "DSHealthy"
+else
+  docker_transition "cadvisor" "DSUnhealthy"
+fi
 
 echo "🚀 [4/8] Démarrage de Vector (dépend de Redis)..."
 # Vérifier que Redis répond avant de démarrer Vector
 if run_remote "cd '$COMPOSE_DIR' && docker compose exec -T redis redis-cli ping 2>/dev/null | grep -q PONG"; then
   echo "  ✅ Redis répond, démarrage de Vector..."
+  docker_transition "vector" "DSStarting"
   run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d vector"
-  wait_for_service "vector" 20
+  docker_transition "vector" "DSRunning"
+  if wait_for_service "vector" 20; then
+    docker_transition "vector" "DSHealthy"
+  else
+    docker_transition "vector" "DSUnhealthy"
+  fi
 else
   echo "  ⚠️  Redis ne répond pas encore, démarrage de Vector quand même..."
+  docker_transition "vector" "DSStarting"
   run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d vector"
+  docker_transition "vector" "DSRunning"
   sleep 5
+  docker_transition "vector" "DSUnhealthy"
 fi
 
 echo "🚀 [5/8] Démarrage de Prometheus (dépend de node_exporter et cadvisor)..."
 # Vérifier que les dépendances sont prêtes
 if run_remote "cd '$COMPOSE_DIR' && docker compose ps node_exporter cadvisor | grep -q 'Up'"; then
   echo "  ✅ Dépendances prêtes, démarrage de Prometheus..."
+  docker_transition "prometheus" "DSStarting"
   run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d prometheus"
-  wait_for_service "prometheus" 30
+  docker_transition "prometheus" "DSRunning"
+  if wait_for_service "prometheus" 30; then
+    docker_transition "prometheus" "DSHealthy"
+  else
+    docker_transition "prometheus" "DSUnhealthy"
+  fi
 else
   echo "  ⚠️  Dépendances non prêtes, démarrage de Prometheus quand même..."
+  docker_transition "prometheus" "DSStarting"
   run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d prometheus"
+  docker_transition "prometheus" "DSRunning"
   sleep 5
+  docker_transition "prometheus" "DSUnhealthy"
 fi
 
 echo "🚀 [6/8] Démarrage de Grafana (dépend de Prometheus)..."
@@ -313,21 +561,82 @@ echo "🚀 [6/8] Démarrage de Grafana (dépend de Prometheus)..."
 if run_remote "curl -sf http://localhost:9090/-/healthy >/dev/null 2>&1" || \
    run_remote "cd '$COMPOSE_DIR' && docker compose exec -T prometheus wget -qO- http://localhost:9090/-/healthy 2>/dev/null | grep -q 'Prometheus'"; then
   echo "  ✅ Prometheus répond, démarrage de Grafana..."
+  docker_transition "grafana" "DSStarting"
   run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d grafana"
-  wait_for_service "grafana" 30
+  docker_transition "grafana" "DSRunning"
+  if wait_for_service "grafana" 30; then
+    docker_transition "grafana" "DSHealthy"
+  else
+    docker_transition "grafana" "DSUnhealthy"
+  fi
 else
   echo "  ⚠️  Prometheus ne répond pas encore, démarrage de Grafana quand même..."
+  docker_transition "grafana" "DSStarting"
   run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d grafana"
+  docker_transition "grafana" "DSRunning"
   sleep 5
+  docker_transition "grafana" "DSUnhealthy"
 fi
 
 echo "🚀 [7/8] Démarrage du runtime IDS..."
+docker_transition "ids-runtime" "DSStarting"
 run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d ids-runtime"
-wait_for_service "ids-runtime" 20
+docker_transition "ids-runtime" "DSRunning"
+if wait_for_service "ids-runtime" 20; then
+  docker_transition "ids-runtime" "DSHealthy"
+else
+  docker_transition "ids-runtime" "DSUnhealthy"
+fi
 
 echo "🚀 [8/8] Démarrage de l'API FastAPI..."
+docker_transition "ids-api" "DSStarting"
 run_remote_sudo "cd '$COMPOSE_DIR' && docker compose up -d ids-api"
-wait_for_service "ids-api" 20
+docker_transition "ids-api" "DSRunning"
+if wait_for_service "ids-api" 20; then
+  docker_transition "ids-api" "DSHealthy"
+else
+  docker_transition "ids-api" "DSUnhealthy"
+fi
+
+deploy_transition "ServicesStarted"
+deploy_transition "VerifyingHealth"
+
+health_check() {
+  local api_url="http://localhost:8080/api/health"
+  run_remote "python3 - << 'PYEOF'
+import sys
+from urllib.request import urlopen
+try:
+    with urlopen('$api_url', timeout=5) as resp:
+        if resp.status == 200:
+            sys.exit(0)
+except Exception:
+    sys.exit(1)
+sys.exit(1)
+PYEOF"
+}
+
+MAX_HEALTH_RETRIES=2
+attempt=0
+while [ $attempt -le $MAX_HEALTH_RETRIES ]; do
+  if health_check; then
+    deploy_transition "HealthOK"
+    deploy_transition "Deployed"
+    break
+  fi
+  if [ $attempt -eq $MAX_HEALTH_RETRIES ]; then
+    deploy_transition "HealthFailed"
+    deploy_fail "HealthFailed" "Health check FastAPI échoué."
+  fi
+  deploy_transition "HealthFailed"
+  deploy_transition "Retrying"
+  deploy_transition "StartingServices"
+  attempt=$((attempt + 1))
+  echo "🔁 Tentative de redémarrage des services (essai ${attempt}/${MAX_HEALTH_RETRIES})..."
+  run_remote_sudo "cd '$COMPOSE_DIR' && docker compose restart ids-api ids-runtime"
+  deploy_transition "ServicesStarted"
+  deploy_transition "VerifyingHealth"
+done
 
 echo ""
 echo "📊 Vérification des services Docker..."
