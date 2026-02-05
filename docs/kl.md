@@ -205,7 +205,6 @@ stateDiagram
   SupervisorRunning --> DockerServices:Supervise Docker
   SupervisorRunning --> Stopping:Stop requested
   [*] --> Stopped:Hard exit
-  Pipeline --> s1
   WaitUser:Awaiting user action
   Stopped:System stopped
   note right of WaitUser 

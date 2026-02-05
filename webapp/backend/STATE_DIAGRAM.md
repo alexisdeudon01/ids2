@@ -1,6 +1,8 @@
-# FSM IDS2 (alignée avec `docs/kl.md`)
+# FSM IDS2 (alignee avec `docs/kl.md`)
 
-Ce document est aligné avec `docs/kl.md` et `fsm.md` (source de vérité).
+Ce document est aligne avec `docs/kl.md` et `fsm.md` (details d'etat).
+
+## Diagramme principal
 
 ```mermaid
 stateDiagram
@@ -210,7 +212,6 @@ stateDiagram
   SupervisorRunning --> DockerServices:Supervise Docker
   SupervisorRunning --> Stopping:Stop requested
   [*] --> Stopped:Hard exit
-  Pipeline --> s1
   WaitUser:Awaiting user action
   Stopped:System stopped
   note right of WaitUser 
@@ -230,3 +231,21 @@ stateDiagram
   class CompError,PipeKO,PrereqFailed,DepsFailed,BuildFailed,ServicesFailed,HealthFailed,Retrying,DSCreateFail,DSStartFail,DSRestartFail fatal
   class Stopped,CompStopping,DSStopping stopping
 ```
+
+## Meta-FSM (transitions inter-machines)
+
+```mermaid
+stateDiagram
+  direction TB
+  [*] --> SupervisorFSM: user start
+  SupervisorFSM --> ComponentsFSM: start components
+  ComponentsFSM --> SupervisorFSM: health status
+  SupervisorFSM --> PipelineFSM: collect status
+  PipelineFSM --> SupervisorFSM: status report
+  SupervisorFSM --> DeploymentFSM: deploy run
+  DeploymentFSM --> DockerFSM: start services
+  DockerFSM --> DeploymentFSM: service health
+  DeploymentFSM --> SupervisorFSM: deploy health
+  SupervisorFSM --> [*]: stop
+```
+

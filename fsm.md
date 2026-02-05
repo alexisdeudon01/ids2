@@ -1,3 +1,8 @@
+# FSM (implementation actuelle)
+
+## Diagramme global
+
+```mermaid
 stateDiagram
   direction TB
   classDef user fill:#e3f0fc,stroke:#2986cc,stroke-width:2px;
@@ -205,7 +210,6 @@ stateDiagram
   SupervisorRunning --> DockerServices:Supervise Docker
   SupervisorRunning --> Stopping:Stop requested
   [*] --> Stopped:Hard exit
-  Pipeline --> s1
   WaitUser:Awaiting user action
   Stopped:System stopped
   note right of WaitUser 
@@ -224,3 +228,77 @@ stateDiagram
   class DockerServices,DSNotCreated,DSCreating,DSCreated,DSStarting,DSRunning,DSHealthy,DSStopped,DSRemoving docker
   class CompError,PipeKO,PrereqFailed,DepsFailed,BuildFailed,ServicesFailed,HealthFailed,Retrying,DSCreateFail,DSStartFail,DSRestartFail fatal
   class Stopped,CompStopping,DSStopping stopping
+```
+
+## Details par FSM
+
+### Superviseur (AgentSupervisor / setup.sh)
+- **Etats**: WaitUser, StartCommand, Initializing, ComponentsStarting, SupervisorRunning, Stopping, Stopped.
+- **Declencheurs**: demarrer() lance StartCommand puis Initializing; arreter() lance Stopping puis Stopped; erreurs d'init ou composants basculent vers Stopped.
+- **Implantations**: `webapp/backend/src/ids/app/supervisor.py` (runtime agent) et `setup.sh` (deploiement Raspberry Pi).
+
+### Initializing (sous-FSM)
+- **But**: charger et valider la configuration avant le demarrage.
+- **Transitions**: LoadingConfig -> ValidatingConfig -> ConfigValid ou ConfigError.
+- **Implantations**: `AgentSupervisor.demarrer()` et `setup.sh` (verif config, prerequis, SSH).
+
+### ComponentsStarting (sous-FSM)
+- **But**: demarrer ResourceController, DockerManager, SuricataManager.
+- **Transitions**: StartResourceController -> StartDockerManager -> StartSuricataManager -> AllComponentsStarted.
+- **Implantations**: `AgentSupervisor.demarrer()` et `setup.sh` (connexion SSH, sudo, preparation dossier).
+
+### SupervisorRunning (sous-FSM)
+- **Etats**: SupervisorMonitoring, HealthOK, SupervisorDegraded, SupervisorRecovering.
+- **Transitions**: HealthOK est transitoire puis retour a SupervisorMonitoring; en cas d'echec la recuperation tente un redemarrage et peut finir en Stopped.
+- **Implantations**: `_monitor_loop()` et `_attempt_recovery()` dans `supervisor.py`, et health checks dans `setup.sh`.
+
+### Stopping (sous-FSM)
+- **Etats**: StopSuricata, StopDocker, StopResourceController, AllStopped.
+- **Implantations**: `AgentSupervisor.arreter()` et `fsm_stop` dans `setup.sh`.
+
+### Components (FSM composant)
+- **Etats**: CompStopped, CompStarting, CompRunning, CompMonitoring, CompHealthy, CompUnhealthy, CompRecovering, CompDegraded, CompError, CompStopping.
+- **Transitions cles**: demarrer() met CompStarting puis CompRunning; verifier_sante() met CompMonitoring puis CompHealthy/CompUnhealthy; marquer_recuperation() gere Recovering -> Healthy/Degraded/Error; arreter() met CompStopping puis CompStopped.
+- **Implantation**: `webapp/backend/src/ids/composants/base.py`.
+
+### Pipeline (FSM d'etat global)
+- **Etats**: PipeUnknown, PipeCollecting, PipeProcessing, PipeOK, PipeDegraded, PipeKO, PipeRecovering.
+- **Transitions**: collecter() suit Unknown -> Collecting -> Processing -> OK/Degraded/KO; une sortie de KO passe par Recovering avant OK/Degraded/KO.
+- **Implantation**: `webapp/backend/src/ids/app/pipeline_status.py`.
+
+### Deployment (FSM de deploiement)
+- **Etats**: NotStarted, CheckingPrereq, PrereqOK, InstallingDeps, DepsInstalled, BuildingDockerImages, ImagesBuilt, StartingServices, ServicesStarted, VerifyingHealth, HealthOK, Deployed, HealthFailed, Retrying.
+- **Etape Raspberry Pi**: CheckingPrereq et InstallingDeps executent les actions SSH/sudo et preparation du systeme distant.
+- **Implantation**: `setup.sh` (fonctions `deploy_transition`, `deploy_fail`, boucle de retry).
+
+### DockerServices (FSM services Docker)
+- **Etats**: DSNotCreated, DSCreating, DSCreated, DSStarting, DSRunning, DSHealthy, DSUnhealthy, DSRestarting, DSStopping, DSStopped, DSRemoving et etats d'echec.
+- **Implantation**: `setup.sh` (fonction `docker_transition` et demarrages `docker compose`).
+
+## Meta-FSM (transitions inter-machines)
+
+```mermaid
+stateDiagram
+  direction TB
+  [*] --> SupervisorFSM: user start
+  SupervisorFSM --> ComponentsFSM: start components
+  ComponentsFSM --> SupervisorFSM: health status
+  SupervisorFSM --> PipelineFSM: collect status
+  PipelineFSM --> SupervisorFSM: status report
+  SupervisorFSM --> DeploymentFSM: deploy run
+  DeploymentFSM --> DockerFSM: start services
+  DockerFSM --> DeploymentFSM: service health
+  DeploymentFSM --> SupervisorFSM: deploy health
+  SupervisorFSM --> [*]: stop
+```
+
+- **Lien principal**: l'etat SupervisorRunning declenche Components, Pipeline, Deployment et DockerServices.
+- **Sante**: les checks composants et Docker/Deployment alimentent SupervisorDegraded ou HealthOK.
+- **Observabilite**: Pipeline n'impose pas de transition directe, il expose l'etat global.
+
+## Verification de coherence
+
+- **Superviseur**: transitions principales et sous-etats alignes entre `supervisor.py` et `setup.sh`.
+- **Components**: les transitions CompRecovering/CompDegraded/CompError sont pilotees par `marquer_recuperation()`.
+- **Pipeline**: la transition Recovering peut revenir vers PipeOK, PipeDegraded ou PipeKO selon l'etat collecte.
+- **Deployment + Docker**: transitions de retries et d'echec suivent `deploy_transition` et `docker_transition`.

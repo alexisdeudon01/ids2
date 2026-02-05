@@ -128,6 +128,7 @@ class AgentSupervisor:
                 self._set_supervisor_substate(SupervisorRunningSubState.SUPERVISOR_DEGRADED)
                 recovered = await self._attempt_recovery()
                 if not recovered:
+                    self._set_supervisor_substate(SupervisorRunningSubState.SUPERVISOR_RECOVERING)
                     logger.error("Recuperation impossible. Arret du superviseur.")
                     self._set_state(SupervisorState.STOPPED)
                     self._shutdown_event.set()

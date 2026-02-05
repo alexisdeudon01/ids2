@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ids2-backend2:latest
+    container_name: ids2-backend2
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./db:/app/db
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - ids-network
+
+networks:
+  ids-network:
+    driver: bridge

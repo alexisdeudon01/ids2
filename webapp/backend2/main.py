@@ -2,8 +2,14 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
 from api.system_health import router as system_router
 from api.db_health import router as db_router
+from api.alerts import router as alerts_router
+from api.network import router as network_router
+from api.pipeline import router as pipeline_router
 
 
 def create_app() -> FastAPI:
@@ -26,6 +32,21 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(system_router)
     app.include_router(db_router)
+    app.include_router(alerts_router)
+    app.include_router(network_router)
+    app.include_router(pipeline_router)
+    
+    # Serve frontend if built
+    frontend_dist = Path(__file__).parent / "frontend" / "dist"
+    if frontend_dist.exists():
+        app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+        
+        @app.get("/")
+        async def serve_frontend():
+            index_file = frontend_dist / "index.html"
+            if index_file.exists():
+                return index_file.read_text()
+            return "Frontend not built"
     
     return app
 
