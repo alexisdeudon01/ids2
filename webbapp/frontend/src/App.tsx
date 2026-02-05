@@ -27,7 +27,7 @@ export default function App() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-slate-400">IDS2 WebApp2</p>
+            <p className="text-sm text-slate-400">IDS2 Webbapp</p>
             <h1 className="text-3xl font-semibold">Real-time Security Console</h1>
           </div>
           <nav className="flex flex-wrap gap-2">

@@ -1,35 +1,31 @@
-# WebApp2 - IDS Dashboard + Orchestrateur Pi2/AWS
+# Webbapp - IDS Dashboard + Orchestrateur Pi2/AWS
 
 ## 📋 Overview
 
-WebApp2 contient :
+Webbapp contient :
 - Une API FastAPI (dashboard IDS) + frontend optionnel.
 - Un orchestrateur Tkinter qui déploie AWS (ELK), installe la sonde Suricata sur Pi2,
-  déploie WebApp2 et sauvegarde la configuration dans la base SQLite.
+  déploie Webbapp et sauvegarde la configuration dans la base SQLite.
 - Un service systemd pour streamer les logs Suricata vers Elasticsearch.
 
 ## 🚀 Démarrage rapide (GUI)
 
 ```bash
-cd webapp2
-./install_prereqs.sh
-python3 orchestrator_gui.py
+cd /home/tor/Downloads/ids2
+./start.sh
 ```
 
 Le GUI demande immédiatement les credentials, puis déclenche le déploiement.
 AWS credentials doivent être disponibles (ex: `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`).
 Sur Linux, installez Tk si besoin: `sudo apt install -y python3-tk`.
+Le démarrage utilise l'environnement Python système (pas de venv).
 
 ## 🧩 Structure
 
 ```
-webapp2/
-├── install_prereqs.sh       # Install prerequisites (FastAPI, Tk, etc.)
+webbapp/
 ├── orchestrator_gui.py      # GUI Tkinter (progress + logs)
-├── orchestrator.py          # Orchestration AWS + stream Suricata
-├── install_pi_probe.sh      # Installation Sonde Pi2
 ├── main.py                  # FastAPI app
-├── start.sh                 # Démarrage local / service
 ├── requirements.txt         # Dépendances
 ├── db/
 │   ├── database.py          # SQLite wrapper + config
@@ -43,14 +39,14 @@ webapp2/
 
 1. **Déploiement AWS ELK** (EC2 + Kibana + Elasticsearch)
 2. **Installation Sonde Pi2** (Suricata + config réseau)
-3. **Déploiement WebApp2** (copie + service systemd)
+3. **Déploiement Webbapp** (copie + service systemd)
 4. **Streamer Suricata** (service `ids.service`)
 5. **Sauvegarde config** (table `deployment_config`)
 
 ## 🧹 Reset complet
 
 Le GUI propose un **reset complet** qui supprime :
-- Services systemd (`webapp2`, `ids`, `suricata`)
+- Services systemd (`webbapp`, `ids`, `suricata`)
 - Répertoire d’installation (`/opt/ids-dashboard` par défaut)
 - Paquets liés (suricata, docker, etc.)
 - Règles UFW
@@ -91,3 +87,7 @@ Chaque route frontend dispose d'un fichier dédié dans `frontend/src/routes`.
 ## 🐳 Docker
 
 Docker a été retiré pour simplifier le déploiement local et sur Pi2.
+
+## 🧭 Diagrammes
+
+Les diagrammes de machine à états et de classes sont disponibles dans `DIAGRAMS.md`.

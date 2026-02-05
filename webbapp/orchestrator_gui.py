@@ -497,8 +497,8 @@ class OrchestratorGUI(tk.Tk):
                 advance("Installation sonde Pi2")
                 self._install_probe(ssh, config)
 
-                advance("Déploiement WebApp2")
-                self._deploy_webapp2(ssh, config)
+                advance("Déploiement Webbapp")
+                self._deploy_webbapp(ssh, config)
 
                 advance("Streamer Suricata")
                 self._install_streamer_service(ssh, config, elk_ip)
@@ -585,7 +585,7 @@ class OrchestratorGUI(tk.Tk):
         ssh.run("systemctl enable --now suricata", sudo=True)
         self.log("✅ Sonde prête.")
 
-    def _deploy_webapp2(self, ssh: SSHSession, config: DeployConfig) -> None:
+    def _deploy_webbapp(self, ssh: SSHSession, config: DeployConfig) -> None:
         local_dir = Path(__file__).parent
         ssh.run(f"mkdir -p '{config.remote_dir}'", sudo=True)
         ssh.run(f"chown -R {config.pi_user}:{config.pi_user} '{config.remote_dir}'", sudo=True)
