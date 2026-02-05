@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -337,7 +338,7 @@ def main() -> None:
     # Configuration loguru
     logger.remove()  # Retire le handler par défaut
     logger.add(
-        lambda msg: print(msg, end=""),
+        sys.stderr,
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
         level="DEBUG" if args.verbose else "INFO",
         colorize=True,

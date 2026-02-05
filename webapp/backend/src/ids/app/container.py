@@ -2,18 +2,12 @@
 Injection de dependances - conteneur DI avec punq.
 """
 
-import logging
 from collections.abc import Callable
 from functools import lru_cache
+import logging
 from pathlib import Path as _Path
 from typing import Any, TypeVar
 
-try:
-    import punq
-except ImportError as exc:  # pragma: no cover - runtime safeguard
-    raise ImportError("punq n'est pas installe. Installez-le avec: pip install punq") from exc
-
-# Import directly from modules to avoid circular import
 from ..composants.connectivity import ConnectivityTester as ConnectivityChecker
 from ..composants.docker_manager import DockerManager
 from ..composants.metrics_server import MetricsCollector
@@ -35,6 +29,14 @@ from .pipeline_status import (
     PipelineStatusService,
     StaticStatusProvider,
 )
+
+try:
+    import punq
+except ImportError as exc:  # pragma: no cover - runtime safeguard
+    raise ImportError("punq n'est pas installe. Installez-le avec: pip install punq") from exc
+
+# Import directly from modules to avoid circular import
+
 
 T = TypeVar("T")
 logger = logging.getLogger(__name__)
@@ -59,7 +61,15 @@ class ConteneurDI:
 
     def enregistrer_services(self, config_source: dict[str, Any] | str | _Path) -> None:
         self._logger.info("Enregistrement des services...")
+        
+        config_mgr = self._setup_config(config_source)
+        self._register_core_services(config_mgr)
+        self._register_infrastructure_services(config_mgr)
+        self._register_pipeline_services()
+        
+        self._logger.info("Services enregistres avec succes")
 
+    def _setup_config(self, config_source: dict[str, Any] | str | _Path) -> ConfigManager:
         if isinstance(config_source, (str, _Path)):
             config_mgr = ConfigManager(str(config_source))
             config_dict = config_mgr.get_all()
@@ -70,54 +80,53 @@ class ConteneurDI:
             raise TypeError("config_source doit etre un dict ou un chemin")
 
         config = ConfigurationIDS(
-            **{
-                key: value
-                for key, value in config_dict.items()
-                if key in ConfigurationIDS.__dataclass_fields__
-            }
+            **{k: v for k, v in config_dict.items() if k in ConfigurationIDS.__dataclass_fields__}
         )
         self.enregistrer_singleton(ConfigurationIDS, config)
         self.enregistrer_singleton(GestionnaireConfig, config_mgr)
+        return config_mgr
 
-        suricata_mgr = SuricataManager(config_mgr)
-        docker_mgr = DockerManager(config_mgr)
-        vector_mgr = VectorManager(config_mgr)
-        metrics_collector = MetricsCollector(config_mgr)
-        resource_ctrl = ResourceController(config_mgr)
-        connectivity = ConnectivityChecker(config_mgr)
+    def _register_core_services(self, config_mgr: ConfigManager) -> None:
+        services = {
+            ResourceController: ResourceController(config_mgr),
+            DockerManager: DockerManager(config_mgr),
+            VectorManager: VectorManager(config_mgr),
+            MetricsCollector: MetricsCollector(config_mgr),
+            ConnectivityChecker: ConnectivityChecker(config_mgr),
+            SuricataManager: SuricataManager(config_mgr),
+        }
+        
+        for service_type, instance in services.items():
+            self.enregistrer_singleton(service_type, instance)
+        
+        self.enregistrer_singleton(AlerteSource, services[SuricataManager])
+        self.enregistrer_singleton(MetriquesProvider, services[MetricsCollector])
 
-        self.enregistrer_singleton(ResourceController, resource_ctrl)
-        self.enregistrer_singleton(DockerManager, docker_mgr)
-        self.enregistrer_singleton(VectorManager, vector_mgr)
-        self.enregistrer_singleton(MetricsCollector, metrics_collector)
-        self.enregistrer_singleton(ConnectivityChecker, connectivity)
-        self.enregistrer_singleton(SuricataManager, suricata_mgr)
-        self.enregistrer_singleton(AlerteSource, suricata_mgr)
-        self.enregistrer_singleton(MetriquesProvider, metrics_collector)
-
+    def _register_infrastructure_services(self, config_mgr: ConfigManager) -> None:
         self.enregistrer_singleton(AWSOpenSearchManager, AWSOpenSearchManager(config_mgr))
         self.enregistrer_singleton(RedisClient, RedisClient(config_mgr))
         self.enregistrer_singleton(PersistanceAlertes, InMemoryAlertStore())
 
+    def _register_pipeline_services(self) -> None:
+        resource_ctrl = self.resoudre(ResourceController)
+        suricata_mgr = self.resoudre(SuricataManager)
+        vector_mgr = self.resoudre(VectorManager)
+        
         providers = [
             StaticStatusProvider("ids2-network"),
             ComposantStatusProvider("ids2-agent", resource_ctrl),
             ComposantStatusProvider("suricata", suricata_mgr),
             ComposantStatusProvider("vector", vector_mgr),
-            StaticStatusProvider("redis"),
-            StaticStatusProvider("prometheus"),
-            StaticStatusProvider("grafana"),
-            StaticStatusProvider("fastapi"),
-            StaticStatusProvider("cadvisor"),
-            StaticStatusProvider("node_exporter"),
-            StaticStatusProvider("opensearch"),
+            *[StaticStatusProvider(name) for name in [
+                "redis", "prometheus", "grafana", "fastapi", 
+                "cadvisor", "node_exporter", "opensearch"
+            ]]
         ]
+        
         pipeline_status = PipelineStatusAggregator(providers)
         pipeline_service = PipelineStatusService(pipeline_status)
         self.enregistrer_singleton(PipelineStatusAggregator, pipeline_status)
         self.enregistrer_singleton(PipelineStatusService, pipeline_service)
-
-        self._logger.info("Services enregistres avec succes")
 
     def resoudre(self, service_type: type[T]) -> T:
         if service_type in self._instances:

@@ -9,14 +9,13 @@ Ce module fournit une classe singleton DockerOrchestrator qui permet de :
 """
 
 import json
-import logging
 import subprocess
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 from threading import Lock
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class DockerOrchestrator:

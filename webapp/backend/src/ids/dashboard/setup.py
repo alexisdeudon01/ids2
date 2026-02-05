@@ -13,11 +13,11 @@ Handles automatic setup of:
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
 from pathlib import Path
 from typing import Any
 
+from loguru import logger
 from sqlalchemy.orm import Session
 
 from ids.storage import crud, models
@@ -26,8 +26,6 @@ from ids.infrastructure import (
     docker_orchestrator,
     secret_manager,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class TailnetSetup:

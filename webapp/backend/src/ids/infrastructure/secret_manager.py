@@ -8,13 +8,12 @@ Ce module fournit une classe singleton SecretManager qui permet de :
 - Fournir une interface unique pour accéder aux secrets dans tout le projet
 """
 
-import logging
 import os
 from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, Optional
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class SecretManager:
