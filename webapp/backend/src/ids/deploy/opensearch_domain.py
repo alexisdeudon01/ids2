@@ -10,15 +10,22 @@ import time
 from pathlib import Path
 from typing import Any
 
-import boto3
-from botocore.exceptions import ClientError, UnknownServiceError
+try:
+    import boto3
+    from botocore.exceptions import ClientError, UnknownServiceError
+except ImportError as e:  # pragma: no cover - optional dependency
+    boto3 = None
+    ClientError = Exception
+    UnknownServiceError = Exception
+    if __name__ == "__main__":
+        print(f"⚠️  Warning: Could not import boto3/botocore: {e}")
 
 try:
     from tqdm import tqdm
-except Exception:  # pragma: no cover - optional dependency
+except ImportError:  # pragma: no cover - optional dependency
     tqdm = None
 
-from ..config.loader import ConfigManager
+from ..config import ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +48,9 @@ DEFAULT_ENCRYPTION_AT_REST = {"Enabled": True}
 
 
 def _build_session(config: ConfigManager) -> boto3.Session:
+    if boto3 is None:
+        raise ImportError("boto3 is required for OpenSearch domain operations")
+    
     use_instance_profile = bool(config.obtenir("aws.credentials.use_instance_profile"))
     access_key = config.obtenir("aws.access_key_id")
     secret_key = config.obtenir("aws.secret_access_key")
@@ -70,7 +80,7 @@ def _get_account_id(session: boto3.Session) -> str | None:
         sts = session.client("sts")
         return sts.get_caller_identity().get("Account")
     except Exception as exc:
-        logger.warning("Unable to resolve AWS account id: %s", exc)
+        logger.warning("Unable to resolve AWS account id: %s", str(exc))
         return None
 
 
@@ -173,7 +183,7 @@ def _wait_for_endpoint(client, domain_name: str, timeout: int, poll: int) -> str
                 break
             status = _describe_domain(client, domain_name)
             endpoint = _resolve_endpoint(status or {})
-            if endpoint and not status.get("Processing", True):
+            if endpoint and status and not status.get("Processing", True):
                 if progress is not None:
                     progress.set_postfix_str("ready")
                     remaining = max(0.0, timeout - progress.n)
@@ -214,7 +224,7 @@ def _update_config_endpoint(config_path: Path, endpoint: str) -> None:
     content = config_path.read_text(encoding="utf-8")
     pattern = re.compile(r"^(\s*opensearch_endpoint:\s*)([^#]*)(.*)$", re.MULTILINE)
     if pattern.search(content):
-        content = pattern.sub(rf'\1"{endpoint}"\3', content, count=1)
+        content = pattern.sub(r'\1"' + endpoint + r'"\3', content, count=1)
     else:
         lines = content.splitlines()
         for idx, line in enumerate(lines):
