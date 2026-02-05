@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import time
 import urllib.request
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
 
-import boto3  # type: ignore[import-untyped]
 import requests
+import boto3
 
-if TYPE_CHECKING:
-    from elasticsearch import Elasticsearch
+
+
 
 
 class AWSDeployer:

@@ -4,10 +4,10 @@
 import sys
 from pathlib import Path
 
-# Add webbapp to path
-sys.path.insert(0, str(Path(__file__).parent / "webbapp"))
-
-from ids.deploy.gui import main
+webbapp_path = str(Path(__file__).parent / "webbapp")
+if webbapp_path not in sys.path:
+    sys.path.insert(0, webbapp_path)
 
 if __name__ == "__main__":
+    from ids.deploy.gui import main
     main()
