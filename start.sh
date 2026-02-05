@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_DIR="$ROOT_DIR/webbapp"
+VENV_DIR="$ROOT_DIR/.venv"
 
 require_cmd() {
   local cmd="$1"
@@ -31,23 +31,22 @@ PY
   fi
 }
 
-install_python_deps() {
+setup_venv() {
   require_cmd python3
-  if ! python3 -m pip --version >/dev/null 2>&1; then
-    python3 -m ensurepip --upgrade
+  
+  if [ ! -d "$VENV_DIR" ]; then
+    echo "🔧 Création de l'environnement virtuel .venv..."
+    python3 -m venv "$VENV_DIR"
   fi
-
-  local pip_args=()
-  if python3 -m pip install --help 2>/dev/null | grep -q "break-system-packages"; then
-    pip_args+=("--break-system-packages")
-  fi
-
-  echo "📥 Installation des prérequis Python..."
-  python3 -m pip install -q --upgrade pip
-  python3 -m pip install -q "${pip_args[@]}" -r "$APP_DIR/requirements.txt"
+  
+  source "$VENV_DIR/bin/activate"
+  
+  echo "📥 Installation des dépendances..."
+  pip install -q --upgrade pip
+  pip install -q -r "$ROOT_DIR/requirements-deploy.txt"
 }
 
 ensure_tk
-install_python_deps
+setup_venv
 
 exec python3 "$ROOT_DIR/orchestrator.py"

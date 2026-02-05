@@ -2,6 +2,7 @@
 
 import importlib
 import json
+import os
 import sys
 import types
 import unittest
@@ -64,3 +65,21 @@ class TestSSHClient(unittest.TestCase):
         with mock.patch.object(module.SSHClient, "_exec", return_value=(1, "", "")):
             with self.assertRaises(RuntimeError):
                 ssh.run("false", sudo=False, check=True)
+
+    def test_connect_with_key_path(self):
+        module, fake_client = self._load_module()
+        fake_sftp = mock.MagicMock()
+        fake_client.open_sftp.return_value = fake_sftp
+
+        key_path = "~/.ssh/pi_key"
+        module.SSHClient("host", "user", "", "sudo", lambda msg: None, ssh_key_path=key_path)
+
+        fake_client.connect.assert_called_once_with(
+            hostname="host",
+            username="user",
+            password=None,
+            key_filename=os.path.expanduser(key_path),
+            allow_agent=True,
+            look_for_keys=True,
+            timeout=20,
+        )

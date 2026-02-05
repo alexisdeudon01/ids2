@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import queue
 import threading
@@ -25,51 +26,74 @@ class OrchestratorGUI(tk.Tk):
         self.log_queue: queue.Queue[tuple[str, str]] = queue.Queue()
         self.worker: threading.Thread | None = None
         self.orchestrator = DeploymentOrchestrator(self.log)
+        self.config_defaults = self._load_config_defaults()
         
         self._build_ui()
         self.after(200, self._process_log_queue)
 
     def _build_ui(self) -> None:
         self.columnconfigure(0, weight=1)
-        main = ttk.Frame(self, padding=12)
-        main.grid(row=0, column=0, sticky="nsew")
-        main.columnconfigure(0, weight=1)
+        main_frame = ttk.Frame(self, padding=12)
+        main_frame.grid(row=0, column=0, sticky="nsew")
+        main_frame.columnconfigure(0, weight=1)
 
         # Credentials
-        creds = ttk.LabelFrame(main, text="Configuration", padding=10)
+        creds = ttk.LabelFrame(main_frame, text="Configuration", padding=10)
         creds.grid(row=0, column=0, sticky="ew")
         for idx in range(2):
             creds.columnconfigure(idx, weight=1)
 
-        self.aws_region = self._add_entry(creds, "AWS Region", 0, "u-west-1")
+        self.aws_region = self._add_entry(creds, "AWS Region", 0, self._config_default("aws_region", "u-west-1"))
         self.aws_access_key_id = self._add_entry(
-            creds, "AWS Access Key ID (optional)", 1, os.getenv("AWS_ACCESS_KEY_ID", "")
+            creds,
+            "AWS Access Key ID (optional)",
+            1,
+            self._config_default("aws_access_key_id", os.getenv("AWS_ACCESS_KEY_ID", "")),
         )
         self.aws_secret_access_key = self._add_entry(
-            creds, "AWS Secret Access Key (optional)", 2, os.getenv("AWS_SECRET_ACCESS_KEY", ""), show=True
+            creds,
+            "AWS Secret Access Key (optional)",
+            2,
+            self._config_default("aws_secret_access_key", os.getenv("AWS_SECRET_ACCESS_KEY", "")),
+            show=True,
         )
-        self.elastic_password = self._add_entry(creds, "Elastic Password (required)", 3, "", show=True)
-        self.pi_host = self._add_entry(creds, "Pi Host/IP", 4, "esink")
-        self.pi_user = self._add_entry(creds, "Pi User", 5, "pi")
-        self.pi_password = self._add_entry(creds, "Pi Password", 6, "pi", show=True)
+        self.elastic_password = self._add_entry(
+            creds,
+            "Elastic Password (required)",
+            3,
+            self._config_default("elastic_password", ""),
+            show=True,
+        )
+        self.pi_host = self._add_entry(creds, "Pi Hostname", 4, self._config_default("pi_host", "sinik"))
+        self.pi_ip = self._add_entry(creds, "Pi IP (optional)", 5, self._config_default("pi_ip", "192.168.178.66"))
+        self.pi_user = self._add_entry(creds, "Pi User", 6, self._config_default("pi_user", "pi"))
+        self.pi_password = self._add_entry(creds, "Pi Password", 7, self._config_default("pi_password", "pi"), show=True)
         self.ssh_key_path = self._add_entry(
-            creds, "SSH Key Path (optional)", 7, self._default_ssh_key_path()
+            creds,
+            "SSH Key Path (optional)",
+            8,
+            self._config_default("ssh_key_path", self._default_ssh_key_path()),
         )
-        self.sudo_password = self._add_entry(creds, "Sudo Password", 8, "pi", show=True)
-        self.remote_dir = self._add_entry(creds, "Remote Directory", 9, "/opt/ids2")
-        self.mirror_interface = self._add_entry(creds, "Mirror Interface (network port for traffic capture)", 10, "eth0")
+        self.sudo_password = self._add_entry(creds, "Sudo Password", 9, self._config_default("sudo_password", "pi"), show=True)
+        self.remote_dir = self._add_entry(creds, "Remote Directory", 10, self._config_default("remote_dir", "/opt/ids2"))
+        self.mirror_interface = self._add_entry(
+            creds,
+            "Mirror Interface (network port for traffic capture)",
+            11,
+            self._config_default("mirror_interface", "eth0"),
+        )
 
         self.reset_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=11, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=12, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         self.install_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=12, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=13, column=0, columnspan=2, sticky="w")
 
         self.remove_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=13, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=14, column=0, columnspan=2, sticky="w")
 
         # Actions
-        action_frame = ttk.Frame(main)
+        action_frame = ttk.Frame(main_frame)
         action_frame.grid(row=1, column=0, sticky="ew", pady=10)
         action_frame.columnconfigure(4, weight=1)
 
@@ -89,15 +113,15 @@ class OrchestratorGUI(tk.Tk):
         self.progress_label.grid(row=0, column=4, sticky="e")
 
         # Progress
-        self.progress = ttk.Progressbar(main, mode="determinate")
+        self.progress = ttk.Progressbar(main_frame, mode="determinate")
         self.progress.grid(row=2, column=0, sticky="ew", pady=(0, 10))
 
         # Logs
-        log_frame = ttk.LabelFrame(main, text="Logs", padding=10)
+        log_frame = ttk.LabelFrame(main_frame, text="Logs", padding=10)
         log_frame.grid(row=3, column=0, sticky="nsew")
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
-        main.rowconfigure(3, weight=1)
+        main_frame.rowconfigure(3, weight=1)
 
         self.log_text = tk.Text(log_frame, height=20, wrap="word")
         self.log_text.grid(row=0, column=0, sticky="nsew")
@@ -131,13 +155,15 @@ class OrchestratorGUI(tk.Tk):
         self.after(200, self._process_log_queue)
 
     def _collect_config(self, reset_override: bool | None = None) -> DeployConfig:
+        pi_host = self.pi_host.get().strip() or self.pi_ip.get().strip() or "sinik"
         return DeployConfig(
             elastic_password=self.elastic_password.get().strip(),
             aws_region=self.aws_region.get().strip() or "u-west-1",
             aws_access_key_id=self.aws_access_key_id.get().strip(),
             aws_secret_access_key=self.aws_secret_access_key.get().strip(),
             ssh_key_path=self.ssh_key_path.get().strip(),
-            pi_host=self.pi_host.get().strip() or "esink",
+            pi_host=pi_host,
+            pi_ip=self.pi_ip.get().strip() or "192.168.178.66",
             pi_user=self.pi_user.get().strip() or "pi",
             pi_password=self.pi_password.get().strip() or "pi",
             sudo_password=self.sudo_password.get().strip() or "pi",
@@ -150,6 +176,7 @@ class OrchestratorGUI(tk.Tk):
 
     def _default_ssh_key_path(self) -> str:
         candidates = [
+            Path("/home/tor/.ssh/pi_key"),
             Path("~/.ssh/id_ed25519").expanduser(),
             Path("~/.ssh/id_rsa").expanduser(),
         ]
@@ -157,6 +184,19 @@ class OrchestratorGUI(tk.Tk):
             if candidate.is_file():
                 return str(candidate)
         return ""
+
+    def _load_config_defaults(self) -> dict[str, str]:
+        config_path = Path(__file__).resolve().parents[3] / "config.json"
+        if not config_path.is_file():
+            return {}
+        try:
+            return json.loads(config_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {}
+
+    def _config_default(self, key: str, fallback: str) -> str:
+        value = self.config_defaults.get(key, "")
+        return value if value else fallback
 
     def start_deploy(self) -> None:
         if self.worker and self.worker.is_alive():

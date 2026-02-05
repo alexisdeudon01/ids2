@@ -12,13 +12,16 @@
 
 ### Default Values
 - **AWS Region**: `u-west-1`
-- **Pi Host**: `esink`
+- **Pi Hostname**: `sinik`
+- **Pi IP**: `192.168.178.66`
 - **Pi User**: `pi`
 - **Pi Password**: `pi`
 - **Sudo Password**: `pi`
 - **Remote Directory**: `/opt/ids2`
 - **Mirror Interface**: `eth0` (network interface for port mirroring)
-- **SSH Key Path**: *(optional)* (private key path for SSH auth)
+- **SSH Key Path**: `/home/tor/.ssh/pi_key` (private key path for SSH auth)
+
+Vous pouvez surcharger ces valeurs via `config.json` à la racine.
 
 ### Required
 - **Elastic Password**: Must be provided (no default)

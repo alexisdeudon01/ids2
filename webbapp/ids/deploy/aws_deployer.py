@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import time
 import urllib.request
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
-import boto3
+import boto3  # type: ignore[import-untyped]
 import requests
-from elasticsearch import Elasticsearch
+
+if TYPE_CHECKING:
+    from elasticsearch import Elasticsearch
 
 
 class AWSDeployer:
@@ -73,6 +75,7 @@ class AWSDeployer:
         self._log("📊 Configuring Elasticsearch mappings & retention...")
         time.sleep(180)
         
+        from elasticsearch import Elasticsearch
         es = Elasticsearch(f"http://{ip}:9200", basic_auth=("elastic", self.elastic_password))
         
         es.ilm.put_lifecycle(

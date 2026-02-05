@@ -37,19 +37,22 @@ python3 run_tests.py
 ./start.sh
 ```
 
+Les valeurs par défaut peuvent être personnalisées dans `config.json` à la racine.
+
 ## 📋 Configuration par Défaut
 
 | Paramètre | Valeur | Description |
 |-----------|--------|-------------|
 | **AWS Region** | `u-west-1` | Région AWS pour ELK |
-| **Pi Host** | `esink` | Adresse IP / nom d'hôte du Raspberry Pi |
+| **Pi Hostname** | `sinik` | Nom d'hôte du Raspberry Pi |
+| **Pi IP** | `192.168.178.66` | Adresse IP du Raspberry Pi |
 | **Pi User** | `pi` | Utilisateur SSH |
 | **Pi Password** | `pi` | Mot de passe SSH |
 | **Sudo Password** | `pi` | Mot de passe sudo |
 | **Remote Dir** | `/opt/ids2` | Répertoire d'installation |
 | **Mirror Interface** | `eth0` | Interface réseau pour capture |
 | **Elastic Password** | *(requis)* | Mot de passe Elasticsearch |
-| **SSH Key Path** | *(optionnel)* | Chemin clé privée si SSH sans mot de passe |
+| **SSH Key Path** | `/home/tor/.ssh/pi_key` | Chemin clé privée si SSH sans mot de passe |
 
 Les credentials AWS peuvent être fournis via variables d'environnement :
 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.

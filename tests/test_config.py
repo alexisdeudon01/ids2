@@ -19,14 +19,15 @@ class TestDeployConfig(unittest.TestCase):
         config = DeployConfig(elastic_password="test123")
         
         self.assertEqual(config.aws_region, "u-west-1")
-        self.assertEqual(config.pi_host, "esink")
+        self.assertEqual(config.pi_host, "sinik")
+        self.assertEqual(config.pi_ip, "192.168.178.66")
         self.assertEqual(config.pi_user, "pi")
         self.assertEqual(config.pi_password, "pi")
         self.assertEqual(config.sudo_password, "pi")
         self.assertEqual(config.remote_dir, "/opt/ids2")
         self.assertEqual(config.mirror_interface, "eth0")
         self.assertEqual(config.elastic_password, "test123")
-        self.assertEqual(config.ssh_key_path, "")
+        self.assertEqual(config.ssh_key_path, "/home/tor/.ssh/pi_key")
 
     def test_custom_values(self):
         """Test that custom values override defaults."""

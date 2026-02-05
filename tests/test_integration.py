@@ -60,7 +60,7 @@ class TestDeploymentIntegration(unittest.TestCase):
         from ids.deploy import DeployConfig as LazyConfig
         
         config = LazyConfig(elastic_password="test")
-        self.assertEqual(config.pi_host, "esink")
+        self.assertEqual(config.pi_host, "sinik")
 
 
 if __name__ == "__main__":

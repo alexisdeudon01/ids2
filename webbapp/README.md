@@ -21,6 +21,7 @@ Le GUI demande immédiatement les credentials, puis déclenche le déploiement.
 AWS credentials doivent être disponibles (ex: `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`).
 Sur Linux, installez Tk si besoin: `sudo apt install -y python3-tk`.
 Le démarrage utilise l'environnement Python système (pas de venv).
+Les valeurs par défaut peuvent être définies dans `config.json` (racine du projet).
 
 ## 🧩 Structure
 

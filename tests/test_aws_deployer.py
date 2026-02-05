@@ -41,7 +41,7 @@ class TestAWSDeployer(unittest.TestCase):
         module, fake_boto3, _, fake_session = self._load_module()
 
         module.AWSDeployer(
-            "eu-west-1",
+            "u-west-1",
             "pwd",
             lambda msg: None,
             aws_access_key_id="AKIA_TEST",
@@ -51,7 +51,7 @@ class TestAWSDeployer(unittest.TestCase):
         fake_boto3.Session.assert_called_once_with(
             aws_access_key_id="AKIA_TEST",
             aws_secret_access_key="SECRET_TEST",
-            region_name="eu-west-1",
+            region_name="u-west-1",
         )
         fake_session.resource.assert_called_once_with("ec2")
         fake_boto3.resource.assert_not_called()
@@ -59,9 +59,9 @@ class TestAWSDeployer(unittest.TestCase):
     def test_uses_resource_without_credentials(self):
         module, fake_boto3, _, _ = self._load_module()
 
-        module.AWSDeployer("eu-west-1", "pwd", lambda msg: None)
+        module.AWSDeployer("u-west-1", "pwd", lambda msg: None)
 
-        fake_boto3.resource.assert_called_once_with("ec2", region_name="eu-west-1")
+        fake_boto3.resource.assert_called_once_with("ec2", region_name="u-west-1")
         fake_boto3.Session.assert_not_called()
 
     def test_list_instances_summary(self):
@@ -74,7 +74,7 @@ class TestAWSDeployer(unittest.TestCase):
         fake_instance.private_ip_address = "10.0.0.1"
         fake_resource.instances.all.return_value = [fake_instance]
 
-        deployer = module.AWSDeployer("eu-west-1", "pwd", lambda msg: None)
+        deployer = module.AWSDeployer("u-west-1", "pwd", lambda msg: None)
         instances = deployer.list_instances()
 
         self.assertEqual(
