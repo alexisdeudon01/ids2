@@ -1,0 +1,181 @@
+services:
+  ids-base:
+    build:
+      context: ..
+      dockerfile: docker/base/Dockerfile
+    image: ids2-python-base:latest
+    command: ["echo", "Base image built"]
+
+  ids-runtime:
+    build:
+      context: ..
+      dockerfile: docker/runtime/Dockerfile
+    image: ids2-runtime:latest
+    depends_on:
+      - ids-base
+    volumes:
+      - /var/log/ids:/var/log/ids
+      - /var/lib/ids:/var/lib/ids
+    environment:
+      - PYTHONPATH=/app/src
+    restart: unless-stopped
+    networks:
+      - ids-network
+
+  ids-api:
+    build:
+      context: ..
+      dockerfile: docker/fastapi/Dockerfile
+    image: ids2-fastapi:latest
+    depends_on:
+      - ids-base
+      - ids-runtime
+    ports:
+      - "${API_PORT:-8080}:8080"
+    environment:
+      - PYTHONPATH=/app/src
+    deploy:
+      resources:
+        limits:
+          cpus: "${FASTAPI_CPU:-0.5}"
+          memory: "${FASTAPI_RAM:-256}M"
+    restart: unless-stopped
+    networks:
+      - ids-network
+
+  vector:
+    build:
+      context: .
+      dockerfile: vector/Dockerfile
+    image: ids2-vector:latest
+    volumes:
+      - /mnt/ram_logs:/mnt/ram_logs
+      - /var/lib/vector/buffer:/var/lib/vector/buffer
+      - /var/lib/vector/redis_buffer:/var/lib/vector/redis_buffer
+      - /var/lib/vector/opensearch_buffer:/var/lib/vector/opensearch_buffer
+      - ../vector/vector.toml:/etc/vector/vector.toml:ro
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-eu-central-1}
+      - OPENSEARCH_ENDPOINT=${OPENSEARCH_ENDPOINT:-}
+      - VECTOR_SELF_THROTTLING_LEVEL=${VECTOR_THROTTLING:-0}
+    deploy:
+      resources:
+        limits:
+          cpus: "${VECTOR_CPU:-1.0}"
+          memory: "${VECTOR_RAM:-1024}M"
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - ids-network
+
+  redis:
+    build:
+      context: .
+      dockerfile: redis/Dockerfile
+    image: ids2-redis:latest
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "${REDIS_CPU:-0.5}"
+          memory: "${REDIS_RAM:-512}M"
+    restart: unless-stopped
+    networks:
+      - ids-network
+
+  prometheus:
+    build:
+      context: .
+      dockerfile: prometheus/Dockerfile
+    image: ids2-prometheus:latest
+    volumes:
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    deploy:
+      resources:
+        limits:
+          cpus: "${PROMETHEUS_CPU:-0.2}"
+          memory: "${PROMETHEUS_RAM:-256}M"
+    depends_on:
+      - node_exporter
+      - cadvisor
+    restart: unless-stopped
+    networks:
+      - ids-network
+
+  grafana:
+    build:
+      context: .
+      dockerfile: grafana/Dockerfile
+    image: ids2-grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    deploy:
+      resources:
+        limits:
+          cpus: "${GRAFANA_CPU:-0.2}"
+          memory: "${GRAFANA_RAM:-256}M"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - ids-network
+
+  cadvisor:
+    build:
+      context: .
+      dockerfile: cadvisor/Dockerfile
+    image: ids2-cadvisor:latest
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "${CADVISOR_PORT:-8081}:8080"
+    privileged: true
+    deploy:
+      resources:
+        limits:
+          cpus: "${CADVISOR_CPU:-0.1}"
+          memory: "${CADVISOR_RAM:-64}M"
+    restart: unless-stopped
+    networks:
+      - ids-network
+
+  node_exporter:
+    build:
+      context: .
+      dockerfile: node_exporter/Dockerfile
+    image: ids2-node-exporter:latest
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro,rslave
+    ports:
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    deploy:
+      resources:
+        limits:
+          cpus: "${NODE_EXPORTER_CPU:-0.1}"
+          memory: "${NODE_EXPORTER_RAM:-64}M"
+    restart: unless-stopped
+    networks:
+      - ids-network
+
+networks:
+  ids-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+  prometheus_data:
+  grafana_data:

@@ -4,21 +4,28 @@ Setup and configuration module for IDS Dashboard.
 Handles automatic setup of:
 - Tailscale tailnet configuration
 - OpenSearch/Elasticsearch domain creation
+- Database initialization
+- Secret management integration
+- Dependency management integration
+- Docker orchestrator integration
 """
 
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
 from pathlib import Path
 from typing import Any
 
+from loguru import logger
 from sqlalchemy.orm import Session
 
-from dbmanager.storage import crud, models
-
-logger = logging.getLogger(__name__)
+from ids.storage import crud, models
+from ids.infrastructure import (
+    dependency_manager,
+    docker_orchestrator,
+    secret_manager,
+)
 
 
 class TailnetSetup:
@@ -295,7 +302,8 @@ class OpenSearchSetup:
                     "status": status,
                 }
 
-            return {
+            # Result is not a dict - this is reachable
+            return {  # type: ignore[unreachable]
                 "success": False,
                 "error": "Unexpected response format",
             }
@@ -313,23 +321,120 @@ async def setup_infrastructure(
     tailscale_api_key: str | None = None,
     opensearch_domain: str | None = None,
     config_path: str | Path | None = None,
+    init_database: bool = True,
+    load_secrets: bool = True,
+    install_dependencies: bool = False,
+    start_docker_services: bool = False,
 ) -> dict[str, Any]:
     """
-    Setup complete infrastructure (Tailnet + OpenSearch).
+    Setup complete infrastructure (Tailnet + OpenSearch + Database + Secrets + Dependencies + Docker).
 
     Args:
         tailnet: Tailnet name
         tailscale_api_key: Tailscale API key
         opensearch_domain: OpenSearch domain name
         config_path: Path to config.yaml
+        init_database: Initialize database if not already done
+        load_secrets: Load secrets from environment or file
+        install_dependencies: Install Python dependencies
+        start_docker_services: Start Docker services
 
     Returns:
         Dictionary with setup results
     """
     results: dict[str, Any] = {
+        "database": {},
+        "secrets": {},
+        "dependencies": {},
+        "docker": {},
         "tailnet": {},
         "opensearch": {},
     }
+
+    # Initialize database
+    if init_database:
+        try:
+            from ids.storage import database
+            database.init_db()
+            results["database"] = {"initialized": True, "status": "success"}
+            logger.info("Database initialized")
+        except Exception as e:
+            results["database"] = {"initialized": False, "error": str(e)}
+            logger.error(f"Failed to initialize database: {e}")
+
+    # Load secrets
+    if load_secrets:
+        try:
+            # Try to load from environment variables
+            loaded_env = secret_manager.load_secrets_from_env()
+            
+            # Try to load from secret.json if exists
+            secret_file = Path(config_path).parent / "secret.json" if config_path else Path("secret.json")
+            loaded_file = secret_manager.load_secrets_from_file(secret_file) if secret_file.exists() else 0
+            
+            results["secrets"] = {
+                "loaded_from_env": loaded_env,
+                "loaded_from_file": loaded_file,
+                "total_loaded": loaded_env + loaded_file,
+                "status": "success",
+            }
+            logger.info(f"Loaded {loaded_env + loaded_file} secrets")
+        except Exception as e:
+            results["secrets"] = {"error": str(e), "status": "error"}
+            logger.error(f"Failed to load secrets: {e}")
+
+    # Install dependencies
+    if install_dependencies:
+        try:
+            # Check prerequisites
+            python_prereq = dependency_manager.check_python_prerequisites()
+            docker_prereq = dependency_manager.check_docker_prerequisites()
+            
+            # Install Python requirements
+            python_installed = False
+            if python_prereq.get("python_version") and python_prereq.get("pip"):
+                python_installed = dependency_manager.install_python_requirements()
+            
+            results["dependencies"] = {
+                "python_prerequisites": python_prereq,
+                "docker_prerequisites": docker_prereq,
+                "python_requirements_installed": python_installed,
+                "status": "success" if python_installed else "partial",
+            }
+            logger.info("Dependencies installation completed")
+        except Exception as e:
+            results["dependencies"] = {"error": str(e), "status": "error"}
+            logger.error(f"Failed to install dependencies: {e}")
+
+    # Start Docker services
+    if start_docker_services:
+        try:
+            # Check Docker prerequisites
+            docker_prereq = docker_orchestrator.check_prerequisites()
+            
+            if docker_prereq.get("docker_installed") and docker_prereq.get("docker_running"):
+                # Build images if needed
+                images_built = docker_orchestrator.build_all_images()
+                
+                # Start services
+                services_started = docker_orchestrator.start_services()
+                
+                results["docker"] = {
+                    "prerequisites": docker_prereq,
+                    "images_built": images_built,
+                    "services_started": services_started,
+                    "status": "success" if services_started else "partial",
+                }
+                logger.info("Docker services started")
+            else:
+                results["docker"] = {
+                    "prerequisites": docker_prereq,
+                    "status": "error",
+                    "error": "Docker prerequisites not met",
+                }
+        except Exception as e:
+            results["docker"] = {"error": str(e), "status": "error"}
+            logger.error(f"Failed to start Docker services: {e}")
 
     # Setup Tailnet
     if tailnet and tailscale_api_key:

@@ -9,7 +9,7 @@ from datetime import datetime
 
 import httpx
 
-from ids.datastructures import MirrorStatus
+from ids.domain import MirrorStatus
 
 logger = logging.getLogger(__name__)
 

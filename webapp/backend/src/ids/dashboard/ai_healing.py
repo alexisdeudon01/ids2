@@ -10,7 +10,7 @@ import traceback
 from datetime import datetime
 from typing import Any
 
-from ids.datastructures import AIHealingResponse
+from ids.domain import AIHealingResponse
 
 logger = logging.getLogger(__name__)
 

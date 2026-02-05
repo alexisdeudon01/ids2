@@ -7,8 +7,7 @@ set -e
 
 # Chemins utiles
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-BACKEND_DIR="${REPO_ROOT}/webapp/backend"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Configuration par défaut
 PI_USER="${PI_USER:-pi}"
@@ -46,7 +45,7 @@ check_connectivity() {
 build_image() {
     echo ""
     echo "Build de l'image Docker..."
-    docker build -t "${DOCKER_IMAGE}" -f "${BACKEND_DIR}/Dockerfile" "${BACKEND_DIR}"
+    docker build -t "${DOCKER_IMAGE}" -f Dockerfile .
     echo "✓ Image Docker buildée: ${DOCKER_IMAGE}"
 }
 
@@ -79,7 +78,7 @@ generate_env_file() {
         return
     fi
 
-    python3 - <<'PY' "$BACKEND_DIR/config.yaml" "$BACKEND_DIR/secret.json" "$REPO_ROOT/docker/.env"
+    python3 - <<'PY' "$ROOT_DIR/config.yaml" "$ROOT_DIR/secret.json" "$ROOT_DIR/docker/.env"
 import json
 import os
 import sys
@@ -151,32 +150,32 @@ sync_files() {
     echo "Synchronisation des fichiers vers le Pi..."
     
     # Créer le répertoire sur le Pi
-    ssh "${PI_USER}@${PI_HOST}" "mkdir -p ${PI_DIR}/{docker,service,webapp/backend,webapp/db/config}"
+    ssh "${PI_USER}@${PI_HOST}" "mkdir -p ${PI_DIR}/{src,deploy,docker,suricata,vector,tests}"
     
     # Synchroniser les fichiers nécessaires
     rsync -avz --exclude='__pycache__' --exclude='*.pyc' \
-        "${BACKEND_DIR}/src/" "${PI_USER}@${PI_HOST}:${PI_DIR}/webapp/backend/src/"
+        src/ "${PI_USER}@${PI_HOST}:${PI_DIR}/src/"
     
     rsync -avz \
-        "${BACKEND_DIR}/deploy/" "${PI_USER}@${PI_HOST}:${PI_DIR}/webapp/backend/deploy/"
+        deploy/ "${PI_USER}@${PI_HOST}:${PI_DIR}/deploy/"
     
     rsync -avz \
-        "${REPO_ROOT}/docker/" "${PI_USER}@${PI_HOST}:${PI_DIR}/docker/"
+        docker/ "${PI_USER}@${PI_HOST}:${PI_DIR}/docker/"
     
     rsync -avz \
-        "${REPO_ROOT}/service/" "${PI_USER}@${PI_HOST}:${PI_DIR}/service/"
-
+        suricata/ "${PI_USER}@${PI_HOST}:${PI_DIR}/suricata/"
+    
     rsync -avz \
-        "${REPO_ROOT}/webapp/db/config/" "${PI_USER}@${PI_HOST}:${PI_DIR}/webapp/db/config/"
+        vector/ "${PI_USER}@${PI_HOST}:${PI_DIR}/vector/"
     
     # Copier les fichiers de configuration
-    scp "${BACKEND_DIR}/config.yaml" "${PI_USER}@${PI_HOST}:${PI_DIR}/webapp/backend/"
-    if [ -f "${BACKEND_DIR}/secret.json" ]; then
-        scp "${BACKEND_DIR}/secret.json" "${PI_USER}@${PI_HOST}:${PI_DIR}/webapp/backend/"
+    scp config.yaml "${PI_USER}@${PI_HOST}:${PI_DIR}/"
+    if [ -f secret.json ]; then
+        scp secret.json "${PI_USER}@${PI_HOST}:${PI_DIR}/"
     fi
-    scp "${BACKEND_DIR}/secret.json.example" "${PI_USER}@${PI_HOST}:${PI_DIR}/webapp/backend/" 2>/dev/null || true
-    scp "${BACKEND_DIR}/requirements.txt" "${PI_USER}@${PI_HOST}:${PI_DIR}/webapp/backend/"
-    scp "${BACKEND_DIR}/pyproject.toml" "${PI_USER}@${PI_HOST}:${PI_DIR}/webapp/backend/" 2>/dev/null || true
+    scp secret.json.example "${PI_USER}@${PI_HOST}:${PI_DIR}/" 2>/dev/null || true
+    scp requirements.txt "${PI_USER}@${PI_HOST}:${PI_DIR}/"
+    scp pyproject.toml "${PI_USER}@${PI_HOST}:${PI_DIR}/" 2>/dev/null || true
     
     echo "✓ Fichiers synchronisés"
 }
@@ -187,8 +186,8 @@ enable_services() {
     echo "Activation des services systemd..."
     
     # Copier les services systemd
-    ssh "${PI_USER}@${PI_HOST}" "sudo cp ${PI_DIR}/service/ids2-agent.service /etc/systemd/system/"
-    ssh "${PI_USER}@${PI_HOST}" "sudo cp ${PI_DIR}/service/suricata.service /etc/systemd/system/"
+    ssh "${PI_USER}@${PI_HOST}" "sudo cp ${PI_DIR}/deploy/ids2-agent.service /etc/systemd/system/"
+    ssh "${PI_USER}@${PI_HOST}" "sudo cp ${PI_DIR}/deploy/suricata.service /etc/systemd/system/"
     ssh "${PI_USER}@${PI_HOST}" "sudo cp ${PI_DIR}/deploy/network_eth0_only.sh /usr/local/bin/"
     ssh "${PI_USER}@${PI_HOST}" "sudo chmod +x /usr/local/bin/network_eth0_only.sh"
     

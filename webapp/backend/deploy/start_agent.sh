@@ -6,11 +6,10 @@ echo "Démarrage du service Suricata..."
 sudo systemctl start suricata.service
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-BACKEND_DIR="${REPO_ROOT}/webapp/backend"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
-SECRET_FILE="$BACKEND_DIR/secret.json"
-CONFIG_FILE="$BACKEND_DIR/config.yaml"
+SECRET_FILE="$ROOT_DIR/secret.json"
+CONFIG_FILE="$ROOT_DIR/config.yaml"
 
 if [ -f "$SECRET_FILE" ]; then
   AWS_ACCESS_KEY_ID="$(python3 - <<'PY' "$SECRET_FILE"
@@ -66,7 +65,7 @@ fi
 echo "Démarrage de la pile Docker Compose..."
 if [ -n "$AWS_ACCESS_KEY_ID" ] || [ -n "$AWS_SECRET_ACCESS_KEY" ] || [ -n "$OPENSEARCH_ENDPOINT" ]; then
   (
-    cd "$REPO_ROOT/docker" && sudo env \
+    cd "$ROOT_DIR/docker" && sudo env \
       AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
       AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
       AWS_REGION="$AWS_REGION" \
@@ -74,7 +73,7 @@ if [ -n "$AWS_ACCESS_KEY_ID" ] || [ -n "$AWS_SECRET_ACCESS_KEY" ] || [ -n "$OPEN
       docker compose up -d
   )
 else
-  (cd "$REPO_ROOT/docker" && sudo docker compose up -d)
+  (cd "$ROOT_DIR/docker" && sudo docker compose up -d)
 fi
 
 echo "Démarrage du service ids2-agent..."

@@ -4,23 +4,30 @@ from __future__ import annotations
 
 import argparse
 import json
-import logging
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Any
 
-import boto3
-from botocore.exceptions import ClientError, UnknownServiceError
+from loguru import logger
+
+try:
+    import boto3
+    from botocore.exceptions import ClientError, UnknownServiceError
+except ImportError as e:  # pragma: no cover - optional dependency
+    boto3 = None
+    ClientError = Exception
+    UnknownServiceError = Exception
+    if __name__ == "__main__":
+        print(f"⚠️  Warning: Could not import boto3/botocore: {e}")
 
 try:
     from tqdm import tqdm
-except Exception:  # pragma: no cover - optional dependency
+except ImportError:  # pragma: no cover - optional dependency
     tqdm = None
 
-from ..config.loader import ConfigManager
-
-logger = logging.getLogger(__name__)
+from ..config import ConfigManager
 
 DEFAULT_ENGINE_VERSION = "OpenSearch_2.11"
 DEFAULT_CLUSTER_CONFIG = {
@@ -41,6 +48,9 @@ DEFAULT_ENCRYPTION_AT_REST = {"Enabled": True}
 
 
 def _build_session(config: ConfigManager) -> boto3.Session:
+    if boto3 is None:
+        raise ImportError("boto3 is required for OpenSearch domain operations")
+    
     use_instance_profile = bool(config.obtenir("aws.credentials.use_instance_profile"))
     access_key = config.obtenir("aws.access_key_id")
     secret_key = config.obtenir("aws.secret_access_key")
@@ -70,7 +80,7 @@ def _get_account_id(session: boto3.Session) -> str | None:
         sts = session.client("sts")
         return sts.get_caller_identity().get("Account")
     except Exception as exc:
-        logger.warning("Unable to resolve AWS account id: %s", exc)
+        logger.warning(f"Unable to resolve AWS account id: {exc}")
         return None
 
 
@@ -165,11 +175,15 @@ def _wait_for_endpoint(client, domain_name: str, timeout: int, poll: int) -> str
     start = time.monotonic()
     last = start
     progress = _progress_bar(timeout)
+    endpoint: str | None = None
     try:
-        while time.monotonic() < deadline:
+        while True:
+            current_time = time.monotonic()
+            if current_time >= deadline:
+                break
             status = _describe_domain(client, domain_name)
             endpoint = _resolve_endpoint(status or {})
-            if endpoint and not status.get("Processing", True):
+            if endpoint and status and not status.get("Processing", True):
                 if progress is not None:
                     progress.set_postfix_str("ready")
                     remaining = max(0.0, timeout - progress.n)
@@ -187,6 +201,7 @@ def _wait_for_endpoint(client, domain_name: str, timeout: int, poll: int) -> str
                 progress.set_postfix_str("waiting")
                 last = now
             time.sleep(poll)
+        # Timeout reached - return None if no endpoint found
         return None
     finally:
         if progress is not None:
@@ -209,7 +224,7 @@ def _update_config_endpoint(config_path: Path, endpoint: str) -> None:
     content = config_path.read_text(encoding="utf-8")
     pattern = re.compile(r"^(\s*opensearch_endpoint:\s*)([^#]*)(.*)$", re.MULTILINE)
     if pattern.search(content):
-        content = pattern.sub(rf'\1"{endpoint}"\3', content, count=1)
+        content = pattern.sub(r'\1"' + endpoint + r'"\3', content, count=1)
     else:
         lines = content.splitlines()
         for idx, line in enumerate(lines):
@@ -254,25 +269,23 @@ def creer_domaine(
     if not domain_config.get("access_policies"):
         account_id = _get_account_id(session)
         if account_id:
-            domain_config["access_policies"] = _build_access_policy(
-                region, account_id, resolved_domain
-            )
+            domain_config["access_policies"] = _build_access_policy(region, account_id, resolved_domain)
 
     payload = _build_payload(resolved_domain, domain_config)
     existing = _describe_domain(client, resolved_domain)
     response: dict[str, Any]
     if existing:
-        logger.info("OpenSearch domain already exists: %s", resolved_domain)
+        logger.info(f"OpenSearch domain already exists: {resolved_domain}")
         response = {"DomainStatus": existing}
     else:
         response = client.create_domain(**payload)
 
     endpoint = _resolve_endpoint(response.get("DomainStatus", {}))
     if wait and not endpoint:
-        endpoint = _wait_for_endpoint(client, resolved_domain, timeout=timeout, poll=poll)
+        endpoint = _wait_for_endpoint(client, resolved_domain, timeout, poll)
 
     if endpoint:
-        logger.info("OpenSearch endpoint: %s", endpoint)
+        logger.info(f"OpenSearch endpoint: {endpoint}")
         if apply_endpoint:
             _update_config_endpoint(config_file, endpoint)
     else:
@@ -322,8 +335,15 @@ def main() -> None:
     parser.add_argument("--verbose", action="store_true", help="Logs verbeux")
     args = parser.parse_args()
 
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(level=log_level, format="%(asctime)s - %(levelname)s - %(message)s")
+    # Configuration loguru
+    logger.remove()  # Retire le handler par défaut
+    logger.add(
+        sys.stderr,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+        level="DEBUG" if args.verbose else "INFO",
+        colorize=True,
+    )
+    
     response = creer_domaine(
         args.config,
         secret_path=args.secret,

@@ -22,6 +22,7 @@ redis>=4.5.0  # Redis client
 # Monitoring & Logging
 prometheus-client>=0.17.0  # Prometheus metrics
 python-json-logger>=2.0.4  # JSON logging
+loguru>=0.7.0  # Modern logging library
 
 # Tailscale Network Monitoring & Visualization
 pyvis>=0.3.2  # Interactive network visualization
@@ -53,7 +54,35 @@ httpx>=0.25.0  # Async HTTP client for switch management
 SuricataLog>=1.0.0  # Suricata EVE log parser
 suricata-update>=1.2.0  # Suricata rule updater
 
-# Testing tooling removed
+# Testing & Quality
+pytest>=7.0.0  # Test framework
+pytest-asyncio>=0.21.0  # Async test support
+pytest-cov>=4.0.0  # Code coverage
+pytest-xdist>=3.0.0  # Parallel test execution
+pytest-mock>=3.10.0  # Mock support
+pytest-timeout>=2.2.0  # Test timeouts
+mock>=5.0.0  # Mocking library
+
+# Code Quality - Linting
+flake8>=6.0.0  # Linting
+pylint>=3.0.0  # Advanced linting
+ruff>=0.1.0  # Fast linter (Rust-based)
+
+# Code Quality - Formatting
+black>=23.0.0  # Formatting
+isort>=5.12.0  # Import sorting
+
+# Code Quality - Type Checking
+mypy>=1.0.0  # Type checking
+
+# Code Quality - Security
+bandit>=1.7.0  # Security checks
+
+# Code Quality - Complexity Analysis
+radon>=6.0.0  # Cyclomatic complexity, maintainability index
+
+# Code Quality - Architecture
+import-linter>=2.0  # Import dependency rules
 
 # Type stubs
 types-requests>=2.28.0  # Type stubs for requests

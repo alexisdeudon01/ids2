@@ -9,7 +9,7 @@ fi
 
 PI_USER="${PI_USER:-pi}"
 REMOTE_DIR="${REMOTE_DIR:-/opt/ids2}"
-LOCAL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+LOCAL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 VERBOSE="${VERBOSE:-1}"
 if [[ "$VERBOSE" == "1" ]]; then
@@ -29,11 +29,11 @@ rsync "${RSYNC_OPTS[@]}" -e "ssh ${SSH_OPTS[*]}" \
 
 echo "==> Install deps (Docker/Suricata/etc.)"
 ssh -t "${SSH_OPTS[@]}" "${PI_USER}@${PI_IP}" \
-  "cd '${REMOTE_DIR}' && sudo bash webapp/backend/deploy/install.sh"
+  "cd '${REMOTE_DIR}' && sudo bash deploy/install.sh"
 
 echo "==> Generate docker/.env on Pi"
 ssh "${SSH_OPTS[@]}" "${PI_USER}@${PI_IP}" \
-  "python3 - <<'PY' '${REMOTE_DIR}/webapp/backend/config.yaml' '${REMOTE_DIR}/webapp/backend/secret.json' '${REMOTE_DIR}/docker/.env'
+  "python3 - <<'PY' '${REMOTE_DIR}/config.yaml' '${REMOTE_DIR}/secret.json' '${REMOTE_DIR}/docker/.env'
 import json, os, sys
 cfg_path, secret_path, env_path = sys.argv[1:4]
 
@@ -92,8 +92,8 @@ PY"
 
 echo "==> Install systemd services"
 ssh -t "${SSH_OPTS[@]}" "${PI_USER}@${PI_IP}" \
-  "sudo cp '${REMOTE_DIR}/service/ids2-agent.service' /etc/systemd/system/ids2-agent.service && \
-   sudo cp '${REMOTE_DIR}/service/suricata.service' /etc/systemd/system/suricata.service && \
+  "sudo cp '${REMOTE_DIR}/deploy/ids2-agent.service' /etc/systemd/system/ids2-agent.service && \
+   sudo cp '${REMOTE_DIR}/deploy/suricata.service' /etc/systemd/system/suricata.service && \
    sudo systemctl daemon-reload"
 
 echo "==> Start Docker stack"

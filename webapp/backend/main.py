@@ -5,36 +5,54 @@ import argparse
 import getpass
 import json
 import logging
+import os
 import shlex
 import shutil
 import subprocess
 import sys
 import time
+import fcntl
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SRC_ROOT = REPO_ROOT / "webapp/backend/src"
-if str(SRC_ROOT) not in sys.path:
+
+REPO_ROOT = Path(__file__).resolve().parent
+SRC_ROOT = REPO_ROOT / "src"
+if SRC_ROOT.exists() and str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
+elif not SRC_ROOT.exists():
+    print(f"⚠️  Warning: SRC_ROOT {SRC_ROOT} does not exist. Some imports may fail.")
 
 try:
     from ids.deploy import pi_uploader
-except Exception:  # pragma: no cover - optional import fallback
+except ImportError as e:  # pragma: no cover - optional import fallback
     pi_uploader = None
+    if __name__ == "__main__":
+        print(f"⚠️  Warning: Could not import ids.deploy.pi_uploader: {e}")
+
 
 try:
     from ids.deploy import opensearch_domain
-except Exception:  # pragma: no cover - optional import fallback
+except ImportError as e:  # pragma: no cover - optional import fallback
     opensearch_domain = None
+    if __name__ == "__main__":
+        print(f"⚠️  Warning: Could not import ids.deploy.opensearch_domain: {e}")
 
 try:
-    from ids.config.loader import ConfigManager
-    from ids.domain.exceptions import ErreurConfiguration
-except Exception:  # pragma: no cover - optional import fallback
+    from ids.config import ConfigManager
+except ImportError as e:  # pragma: no cover - optional import fallback
     ConfigManager = None
+    if __name__ == "__main__":
+        print(f"⚠️  Warning: Could not import ids.config: {e}")
+
+try:
+    from ids.domain.exceptions import ErreurConfiguration
+except ImportError as e:  # pragma: no cover - optional import fallback
     ErreurConfiguration = Exception
+    if __name__ == "__main__":
+        print(f"⚠️  Warning: Could not import ids.domain.exceptions: {e}")
+
 
 
 @dataclass
@@ -51,7 +69,7 @@ class SSHConfig:
     port: int = 22
     key_path: Optional[Path] = None
     sudo_password: Optional[str] = None
-    remote_dir: Path = Path("/opt/ids2")
+    remote_dir: Path = Path(os.getenv("REMOTE_DIR", "/opt/ids-dashboard"))
     verbose: bool = False
 
 
@@ -86,7 +104,7 @@ def run_local(
 ) -> subprocess.CompletedProcess:
     if verbose:
         print(f"$ {_format_command(command)}")
-    kwargs = {"check": check, "text": True, "capture_output": capture_output}
+    kwargs: Dict[str, Any] = {"text": True, "capture_output": capture_output, "check": check}
     if input_data is not None:
         kwargs["input"] = input_data
     return subprocess.run(command, **kwargs)
@@ -101,6 +119,33 @@ def run_ssh(
     sudo: bool = False,
     input_data: Optional[str] = None,
 ) -> subprocess.CompletedProcess:
+    # Test SSH connectivity before executing command
+    # Skip BatchMode if key-based auth is not configured (password auth will be used)
+    ssh_test_opts = ["-o", "ConnectTimeout=5"]
+    if config.key_path and config.key_path.exists():
+        ssh_test_opts.extend(["-o", "BatchMode=yes"])
+    
+    test_result = run_local(
+        [
+            "ssh",
+            "-p",
+            str(config.port),
+            *ssh_test_opts,
+            *_ssh_options(config),
+            f"{config.user}@{config.host}",
+            "echo 'SSH connection test'",
+        ],
+        check=False,
+        capture_output=True,
+    )
+    if test_result.returncode != 0 and check:
+        error_msg = f"Cannot connect to {config.user}@{config.host}:{config.port}."
+        if test_result.stderr:
+            error_msg += f" Error: {test_result.stderr[:200]}"
+        else:
+            error_msg += " Check connectivity and credentials."
+        raise ConnectionError(error_msg)
+    
     display_command = remote_command
     if sudo:
         remote_command = f"sh -lc {shlex.quote(remote_command)}"
@@ -154,13 +199,24 @@ def load_yaml_data(path: Path) -> Dict[str, Any]:
     if not path.exists():
         return {}
     try:
-        import yaml
-    except Exception:
+        import yaml  # type: ignore[import-untyped]
+    except ImportError as e:
+        logging.warning(f"yaml module not available: {e}")
+        return {}
+    except Exception as e:
+        logging.warning(f"Unexpected error importing yaml: {e}")
         return {}
     try:
         with path.open("r", encoding="utf-8") as handle:
             data = yaml.safe_load(handle) or {}
-    except Exception:
+    except yaml.YAMLError as e:
+        logging.error(f"YAML parsing error in {path}: {e}")
+        return {}
+    except IOError as e:
+        logging.error(f"IO error reading {path}: {e}")
+        return {}
+    except Exception as e:
+        logging.error(f"Unexpected error reading {path}: {e}")
         return {}
     return data if isinstance(data, dict) else {}
 
@@ -171,7 +227,14 @@ def load_json_data(path: Path) -> Dict[str, Any]:
     try:
         with path.open("r", encoding="utf-8") as handle:
             data = json.load(handle) or {}
-    except Exception:
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON parsing error in {path}: {e}")
+        return {}
+    except IOError as e:
+        logging.error(f"IO error reading {path}: {e}")
+        return {}
+    except Exception as e:
+        logging.error(f"Unexpected error reading {path}: {e}")
         return {}
     return data if isinstance(data, dict) else {}
 
@@ -242,12 +305,11 @@ def ensure_env_on_pi(paths: RepoPaths, ssh_config: SSHConfig) -> None:
 
 
 def sync_endpoint_files(paths: RepoPaths, ssh_config: SSHConfig) -> bool:
-    backend_dir = paths.root / "webapp" / "backend"
     required = [
         paths.root / "docker" / "docker-compose.yml",
         paths.root / "docker" / "fastapi" / "Dockerfile",
-        backend_dir / "requirements.txt",
-        backend_dir / "src",
+        paths.root / "requirements.txt",
+        paths.root / "src",
     ]
     missing = [path for path in required if not path.exists()]
     if missing:
@@ -262,11 +324,8 @@ def sync_endpoint_files(paths: RepoPaths, ssh_config: SSHConfig) -> bool:
             ssh_config.remote_dir / "docker" / "docker-compose.yml",
         ),
         (paths.root / "docker" / "fastapi", ssh_config.remote_dir / "docker" / "fastapi"),
-        (
-            backend_dir / "requirements.txt",
-            ssh_config.remote_dir / "webapp" / "backend" / "requirements.txt",
-        ),
-        (backend_dir / "src", ssh_config.remote_dir / "webapp" / "backend" / "src"),
+        (paths.root / "requirements.txt", ssh_config.remote_dir / "requirements.txt"),
+        (paths.root / "src", ssh_config.remote_dir / "src"),
     ]
     excludes = ["__pycache__", "*.pyc", ".venv", "dist"]
     for local_path, remote_path in entries:
@@ -478,6 +537,31 @@ def create_endpoint(paths: RepoPaths, ssh_config: SSHConfig) -> None:
     )
 
 
+def test_pipeline(ssh_config: SSHConfig) -> None:
+    result = run_ssh(
+        ssh_config,
+        "curl -sS http://localhost:8080/status",
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        print("Pipeline status check failed. Is the endpoint running?")
+        return
+    raw = (result.stdout or "").strip()
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        print(raw)
+        return
+
+    state = data.get("etat_pipeline", "unknown")
+    resume = data.get("resume", {}) if isinstance(data, dict) else {}
+    total = resume.get("total", "n/a")
+    healthy = resume.get("sains", "n/a")
+    errors = resume.get("erreurs", "n/a")
+    print(f"Pipeline state: {state} (healthy={healthy}/{total}, errors={errors})")
+
+
 def wait_for_http(
     ssh_config: SSHConfig,
     url: str,
@@ -572,12 +656,12 @@ def check_configuration(paths: RepoPaths, ssh_config: SSHConfig) -> None:
         print(f"- AWS credentials in secret.json: {'ok' if creds_ok else 'missing'}")
 
     required_paths = [
-        "webapp/backend/config.yaml",
-        "service/ids2-agent.service",
-        "service/suricata.service",
+        "config.yaml",
+        "deploy/ids2-agent.service",
+        "deploy/suricata.service",
         "docker/docker-compose.yml",
-        "webapp/db/config/vector.toml",
-        "webapp/db/config/suricata.yaml",
+        "vector/vector.toml",
+        "suricata/suricata.yaml",
     ]
     for rel in required_paths:
         path = paths.root / rel
@@ -586,12 +670,12 @@ def check_configuration(paths: RepoPaths, ssh_config: SSHConfig) -> None:
 
     print("Remote configuration:")
     remote_checks = [
-        "webapp/backend/config.yaml",
-        "service/ids2-agent.service",
-        "service/suricata.service",
+        "config.yaml",
+        "deploy/ids2-agent.service",
+        "deploy/suricata.service",
         "docker/docker-compose.yml",
-        "webapp/db/config/vector.toml",
-        "webapp/db/config/suricata.yaml",
+        "vector/vector.toml",
+        "suricata/suricata.yaml",
     ]
     for rel in remote_checks:
         remote_path = ssh_config.remote_dir / rel
@@ -637,8 +721,9 @@ def menu(paths: RepoPaths, ssh_config: SSHConfig) -> None:
         "2. Build docker and run",
         "3. Check all services on Pi",
         "4. Create the endpoint",
-        "5. Check all configuration",
-        "6. Create OpenSearch domain",
+        "5. Test the pipeline",
+        "6. Check all configuration",
+        "7. Create OpenSearch domain",
         "q. Quit",
     )
 
@@ -664,8 +749,10 @@ def menu(paths: RepoPaths, ssh_config: SSHConfig) -> None:
         elif choice == "4":
             run_action("Create endpoint", lambda: create_endpoint(paths, ssh_config))
         elif choice == "5":
-            run_action("Check configuration", lambda: check_configuration(paths, ssh_config))
+            run_action("Test pipeline", lambda: test_pipeline(ssh_config))
         elif choice == "6":
+            run_action("Check configuration", lambda: check_configuration(paths, ssh_config))
+        elif choice == "7":
             run_action("Create OpenSearch domain", lambda: create_opensearch_domain(paths))
         elif choice in {"q", "quit", "exit"}:
             return
@@ -680,12 +767,8 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     parser.add_argument("--pi-port", type=int, default=22, help="Pi SSH port")
     parser.add_argument("--ssh-key", default=None, help="SSH private key path")
     parser.add_argument("--remote-dir", default="/opt/ids2", help="Pi install directory")
-    parser.add_argument(
-        "--config", default="webapp/backend/config.yaml", help="Path to config.yaml"
-    )
-    parser.add_argument(
-        "--secret", default="webapp/backend/secret.json", help="Path to secret.json"
-    )
+    parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
+    parser.add_argument("--secret", default="secret.json", help="Path to secret.json")
     parser.add_argument("--sudo-password", default=None, help="Sudo password (not recommended)")
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
     return parser.parse_args(argv)
@@ -720,13 +803,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         print("Pi host is required.")
         return 1
 
+    # Validate remote directory path
+    remote_dir_path = Path(args.remote_dir)
+    if not remote_dir_path.is_absolute():
+        logging.warning(f"Remote directory '{remote_dir_path}' is not absolute. Using as-is.")
+    
     ssh_config = SSHConfig(
         host=host,
         user=user or "pi",
         port=args.pi_port,
         key_path=Path(args.ssh_key).expanduser() if args.ssh_key else None,
         sudo_password=sudo_password,
-        remote_dir=Path(args.remote_dir),
+        remote_dir=remote_dir_path,
         verbose=args.verbose,
     )
     if args.verbose:

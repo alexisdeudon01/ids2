@@ -26,6 +26,49 @@ enable_docker_service() {
   fi
 }
 
+configure_docker_dns() {
+  # If containers cannot resolve DNS (e.g. apt-get shows lots of "Ign:" and hangs),
+  # setting daemon-level DNS servers usually fixes it.
+  #
+  # We do a merge to avoid clobbering existing daemon.json settings.
+  echo "🌐 Configuring Docker daemon DNS (/etc/docker/daemon.json)..."
+  mkdir -p /etc/docker
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - <<'PY'
+import json
+from pathlib import Path
+
+path = Path("/etc/docker/daemon.json")
+data = {}
+if path.exists():
+    try:
+        data = json.loads(path.read_text(encoding="utf-8") or "{}")
+    except Exception:
+        data = {}
+if not isinstance(data, dict):
+    data = {}
+
+data.setdefault("dns", ["1.1.1.1", "8.8.8.8"])
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+print(f"Wrote {path}")
+PY
+  else
+    if [ ! -f /etc/docker/daemon.json ]; then
+      cat > /etc/docker/daemon.json <<'JSON'
+{
+  "dns": ["1.1.1.1", "8.8.8.8"]
+}
+JSON
+    fi
+  fi
+
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl restart docker >/dev/null 2>&1 || true
+  elif command -v service >/dev/null 2>&1; then
+    service docker restart >/dev/null 2>&1 || true
+  fi
+}
+
 install_docker_apt() {
   echo "📦 Installing Docker Engine via apt (non-interactive)..."
   apt-get update
@@ -64,6 +107,7 @@ install_docker_apt() {
 if command -v docker >/dev/null 2>&1; then
   echo "✅ Docker already installed: $(docker --version 2>/dev/null || echo 'unknown version')"
   enable_docker_service
+  configure_docker_dns
   ensure_user_in_docker_group "$INSTALL_USER"
   if ! docker compose version >/dev/null 2>&1; then
     echo "🧩 docker compose plugin missing; attempting to install..."
@@ -75,6 +119,7 @@ fi
 
 install_docker_apt
 enable_docker_service
+configure_docker_dns
 ensure_user_in_docker_group "$INSTALL_USER"
 
 echo "✅ Docker installation complete."

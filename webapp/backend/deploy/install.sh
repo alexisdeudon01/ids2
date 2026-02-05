@@ -41,19 +41,45 @@ echo \
 apt-get update
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# Ajouter l'utilisateur 'pi' au groupe docker
-usermod -aG docker pi
+echo "Configuration DNS du daemon Docker (pour éviter les erreurs DNS en conteneur)..."
+mkdir -p /etc/docker
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+path = Path("/etc/docker/daemon.json")
+data = {}
+if path.exists():
+    try:
+        data = json.loads(path.read_text(encoding="utf-8") or "{}")
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
+        data = {}
+if not isinstance(data, dict):
+    data = {}
+
+data.setdefault("dns", ["1.1.1.1", "8.8.8.8"])
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+print(f"Wrote {path}")
+PY
+systemctl restart docker || true
+
+# Ajouter l'utilisateur au groupe docker
+usermod -aG docker "$OWNER_USER"
 
 echo "Installation des dépendances Python (venv)..."
 if [ ! -d "$ROOT_DIR/.venv" ]; then
   python3 -m venv "$ROOT_DIR/.venv"
 fi
 "$ROOT_DIR/.venv/bin/pip" install --upgrade pip
-"$ROOT_DIR/.venv/bin/pip" install -r "$ROOT_DIR/requirements.txt"
+if [ -f "$ROOT_DIR/requirements.txt" ]; then
+  "$ROOT_DIR/.venv/bin/pip" install -r "$ROOT_DIR/requirements.txt"
+else
+  echo "Warning: requirements.txt not found"
+fi
 chown -R "$OWNER_USER":"$OWNER_USER" "$ROOT_DIR/.venv"
 
 echo "Rendre les scripts de déploiement exécutables..."
-chmod +x deploy/*.sh
+find "$ROOT_DIR/deploy" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
 
 echo "Configuration de Suricata..."
 # Créer le répertoire des règles Suricata si non existant
@@ -67,8 +93,12 @@ systemctl stop suricata || true
 
 echo "Configuration de l'interface réseau (eth0 uniquement)..."
 # Copier le script network_eth0_only.sh et le rendre exécutable
-cp deploy/network_eth0_only.sh /usr/local/bin/network_eth0_only.sh
-chmod +x /usr/local/bin/network_eth0_only.sh
+if [ -f "$ROOT_DIR/deploy/network_eth0_only.sh" ]; then
+  cp "$ROOT_DIR/deploy/network_eth0_only.sh" /usr/local/bin/network_eth0_only.sh
+  chmod +x /usr/local/bin/network_eth0_only.sh
+else
+  echo "Warning: network_eth0_only.sh not found, skipping network configuration"
+fi
 
 # Créer un service systemd pour network_eth0_only.sh
 cat <<EOF > /etc/systemd/system/network-eth0-only.service

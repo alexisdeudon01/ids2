@@ -8,7 +8,11 @@ import posixpath
 import sys
 from pathlib import Path
 
-import paramiko
+try:
+    import paramiko
+except ImportError:
+    print("❌ paramiko is required. Install with: pip install paramiko")
+    sys.exit(1)
 
 
 # `deploy.py` lives in `webapp/backend/`, so:
@@ -33,13 +37,24 @@ def prompt_value(label: str, default: str | None = None) -> str:
 
 def write_secret_file(payload: dict[str, str]) -> None:
     secret_path = REPO_ROOT / "secret.json"
+    # Create file with 600 permissions before writing
+    if not secret_path.exists():
+        secret_path.touch(mode=0o600)
+    else:
+        secret_path.chmod(0o600)
     secret_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def connect_ssh(host: str, user: str, password: str) -> paramiko.SSHClient:
     client = paramiko.SSHClient()
+    # Warning: AutoAddPolicy is convenient but insecure for production
+    # In a real scenario, use load_system_host_keys() or RejectPolicy
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(hostname=host, username=user, password=password, timeout=10)
+    try:
+        client.connect(hostname=host, username=user, password=password, timeout=10)
+    except Exception as e:
+        print(f"❌ SSH Connection failed: {e}")
+        sys.exit(1)
     return client
 
 
@@ -59,6 +74,7 @@ def run_command(client: paramiko.SSHClient, command: str, sudo_password: str | N
 def upload_repo(client: paramiko.SSHClient, local_root: Path, remote_root: str) -> None:
     ignore_dir_names = {
         "__pycache__",
+        ".pytest_cache",
         ".mypy_cache",
         ".ruff_cache",
         "node_modules",
@@ -130,7 +146,7 @@ def main() -> int:
         print("Configuration du service systemd...")
         run_command(
             client,
-            f"cp {REMOTE_DIR}/service/{SERVICE_NAME} /etc/systemd/system/{SERVICE_NAME}",
+            f"cp {REMOTE_DIR}/webapp/backend/deploy/{SERVICE_NAME} /etc/systemd/system/{SERVICE_NAME}",
             sudo_password=sudo_password,
         )
         run_command(client, "systemctl daemon-reload", sudo_password=sudo_password)

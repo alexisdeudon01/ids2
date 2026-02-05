@@ -8,11 +8,8 @@ sudo systemctl stop ids2-agent.service
 echo "Arrêt du service Suricata..."
 sudo systemctl stop suricata.service
 
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-
 echo "Arrêt de la pile Docker Compose..."
 # Naviguer vers le répertoire docker et arrêter la pile
-(cd "$REPO_ROOT/docker" && sudo docker compose down)
+(cd docker && sudo docker compose down)
 
 echo "Services arrêtés."

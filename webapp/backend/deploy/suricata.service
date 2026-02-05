@@ -1,0 +1,19 @@
+[Unit]
+Description=Suricata IDS
+After=network.target network-eth0-only.service
+Requires=network-eth0-only.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/suricata -i eth0 -c /opt/ids2/suricata/suricata.yaml
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=suricata
+# Limites de ressources selon README (70% CPU max)
+CPUQuota=280%  # 70% de 4 cœurs = 2.8 cœurs
+MemoryMax=5.6G  # 70% de 8GB = 5.6GB
+
+[Install]
+WantedBy=multi-user.target

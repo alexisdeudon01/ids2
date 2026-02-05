@@ -18,7 +18,7 @@ class ConfigurationIDS:
     repertoire_config: str = "config/"
 
     # Suricata
-    suricata_config_path: str = "webapp/db/config/suricata.yaml"
+    suricata_config_path: str = "suricata/suricata.yaml"
     suricata_rules_path: str = "suricata/rules/"
     suricata_log_path: str = "/mnt/ram_logs/eve.json"
 

@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from .ai_healing import AIHealingService
 from .elasticsearch import ElasticsearchMonitor
 from .hardware import HardwareController
-from ids.datastructures import (
+from ids.domain import (
     AIHealingResponse,
     ElasticsearchHealth,
     MirrorStatus,
@@ -35,7 +35,7 @@ from .network import NetworkMonitor
 from .setup import OpenSearchSetup, TailnetSetup, setup_infrastructure
 from .suricata import SuricataLogMonitor
 from .tailscale import TailscaleMonitor
-from dbmanager.storage import crud, get_session, init_db, models, schemas
+from ids.storage import crud, get_session, init_db, models, schemas
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 

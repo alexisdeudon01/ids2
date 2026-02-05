@@ -5,14 +5,11 @@ OpenSearch client helper.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import boto3
-import httpx
-from opensearchpy import OpenSearch, RequestsHttpConnection
-from requests_aws4auth import AWS4Auth
+from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
 
 from ..app.decorateurs import log_appel, metriques, retry
 
@@ -20,40 +17,6 @@ if TYPE_CHECKING:
     from ..interfaces import GestionnaireConfig
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class OpenSearchIndexDefinition:
-    """JSON payload definition for OpenSearch index creation."""
-
-    settings: dict[str, Any] = field(default_factory=dict)
-    mappings: dict[str, Any] = field(default_factory=dict)
-    aliases: dict[str, Any] = field(default_factory=dict)
-
-    def to_json(self) -> dict[str, Any]:
-        payload: dict[str, Any] = {}
-        if self.settings:
-            payload["settings"] = self.settings
-        if self.mappings:
-            payload["mappings"] = self.mappings
-        if self.aliases:
-            payload["aliases"] = self.aliases
-        return payload
-
-
-@dataclass(frozen=True)
-class OpenSearchQuery:
-    """JSON payload for OpenSearch search requests."""
-
-    query: dict[str, Any]
-    size: int = 10
-    sort: list[dict[str, Any]] = field(default_factory=list)
-
-    def to_json(self) -> dict[str, Any]:
-        payload: dict[str, Any] = {"query": self.query, "size": self.size}
-        if self.sort:
-            payload["sort"] = self.sort
-        return payload
 
 
 class OpenSearchClient:
@@ -114,14 +77,7 @@ class OpenSearchClient:
             return None
 
         service = "aoss" if ".aoss.amazonaws.com" in host else "es"
-        frozen = credentials.get_frozen_credentials()
-        return AWS4Auth(
-            frozen.access_key,
-            frozen.secret_key,
-            region,
-            service,
-            session_token=frozen.token,
-        )
+        return AWSV4SignerAuth(credentials, region, service)
 
     def _parse_endpoint(self, endpoint: str) -> tuple[str, int, bool]:
         normalized = endpoint
@@ -180,33 +136,5 @@ class OpenSearchClient:
             logger.warning("Ping OpenSearch echoue: %s", exc)
             return False
 
-    def create_index(self, index: str, definition: OpenSearchIndexDefinition) -> bool:
-        """Create an index using an explicit JSON structure."""
-        client = self.client
-        if not client:
-            return False
-        client.indices.create(index=index, body=definition.to_json())
-        return True
 
-    def search(self, index: str, query: OpenSearchQuery) -> dict[str, Any]:
-        """Run a search query and return raw response."""
-        client = self.client
-        if not client:
-            return {}
-        return client.search(index=index, body=query.to_json())
-
-    def httpx_ping(self, timeout: float = 3.0) -> bool:
-        """Ping OpenSearch via httpx for basic connectivity checks."""
-        endpoint = self._resolve_endpoint()
-        if not endpoint:
-            return False
-        try:
-            response = httpx.get(endpoint, timeout=timeout)
-            response.raise_for_status()
-            return True
-        except httpx.HTTPError as exc:
-            logger.warning("Ping OpenSearch via httpx echoue: %s", exc)
-            return False
-
-
-__all__ = ["OpenSearchClient", "OpenSearchIndexDefinition", "OpenSearchQuery"]
+__all__ = ["OpenSearchClient"]

@@ -54,17 +54,19 @@ RUN apt install -y redis-server && \
 
 # --- Configuration de l'environnement Python ---
 WORKDIR /app
-COPY webapp/backend/requirements.txt ./requirements.txt
+COPY requirements.txt .
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir -r requirements.txt
 
 # Copier le code de l'agent Python et les configurations
-COPY webapp/backend/src/ ./src/
-COPY webapp/backend/config.yaml ./config.yaml
-RUN mkdir -p suricata vector docker/
-COPY webapp/db/config/suricata.yaml ./suricata/suricata.yaml
-COPY webapp/db/config/vector.toml ./vector/vector.toml
-COPY docker/prometheus.yml ./docker/
+COPY src/ ./src/
+# Copy config.yaml if it exists, otherwise create a default one
+COPY config.yaml* ./
+RUN if [ ! -f config.yaml ]; then echo "Warning: config.yaml not found, using defaults"; fi
+COPY suricata/ ./suricata/
+COPY vector/ ./vector/
+RUN mkdir -p docker/ 
+COPY docker/prometheus.yml ./docker/ 
 
 # Rendre les scripts exécutables (si nécessaire, pour les scripts shell)
 # chmod +x deploy/*.sh # Les scripts de déploiement ne seront pas utilisés de la même manière
@@ -79,4 +81,6 @@ EXPOSE 9100
 # Commande par défaut pour exécuter l'agent Python
 # L'agent Python sera le point d'entrée principal et orchestrera Suricata, Vector et Redis.
 # Note: Suricata doit être exécuté en systemd sur le host, pas dans Docker
+# Verify module exists before running
+RUN python3 -c "import ids.app.supervisor" || (echo "Error: ids.app.supervisor module not found" && exit 1)
 CMD ["python3", "-m", "ids.app.supervisor"]
