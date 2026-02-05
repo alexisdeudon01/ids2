@@ -15,6 +15,8 @@ cd /home/tor/Downloads/ids2
 ./start.sh
 ```
 
+`start.sh` est l’unique script d’entrée et lance l’UI d’installation.
+
 Le GUI demande immédiatement les credentials, puis déclenche le déploiement.
 AWS credentials doivent être disponibles (ex: `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`).
 Sur Linux, installez Tk si besoin: `sudo apt install -y python3-tk`.
@@ -47,9 +49,11 @@ webbapp/
 
 Le GUI propose un **reset complet** qui supprime :
 - Services systemd (`webbapp`, `ids`, `suricata`)
-- Répertoire d’installation (`/opt/ids-dashboard` par défaut)
+- Répertoire d’installation (`/opt/webbapp` par défaut)
 - Paquets liés (suricata, docker, etc.)
 - Règles UFW
+
+Le GUI propose aussi des actions dédiées **Installer Docker** et **Supprimer Docker**.
 
 ## 🗄️ Base de données
 
