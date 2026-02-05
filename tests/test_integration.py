@@ -40,6 +40,7 @@ class TestDeploymentIntegration(unittest.TestCase):
             aws_access_key_id="access",
             aws_secret_access_key="secret",
             ssh_key_path="/home/test/.ssh/id_rsa",
+            aws_ami_id="ami-abc",
         )
         
         self.assertEqual(config.elastic_password, "my_password")
@@ -54,6 +55,7 @@ class TestDeploymentIntegration(unittest.TestCase):
         self.assertEqual(config.aws_access_key_id, "access")
         self.assertEqual(config.aws_secret_access_key, "secret")
         self.assertEqual(config.ssh_key_path, "/home/test/.ssh/id_rsa")
+        self.assertEqual(config.aws_ami_id, "ami-abc")
 
     def test_lazy_import_config(self):
         """Test that config can be imported via lazy loading."""

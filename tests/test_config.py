@@ -28,6 +28,7 @@ class TestDeployConfig(unittest.TestCase):
         self.assertEqual(config.mirror_interface, "eth0")
         self.assertEqual(config.elastic_password, "test123")
         self.assertEqual(config.ssh_key_path, "/home/tor/.ssh/pi_key")
+        self.assertEqual(config.aws_ami_id, "")
 
     def test_custom_values(self):
         """Test that custom values override defaults."""
@@ -38,6 +39,7 @@ class TestDeployConfig(unittest.TestCase):
             pi_user="admin",
             remote_dir="/custom/path",
             ssh_key_path="/home/test/.ssh/id_ed25519",
+            aws_ami_id="ami-123",
         )
         
         self.assertEqual(config.aws_region, "us-east-1")
@@ -46,6 +48,7 @@ class TestDeployConfig(unittest.TestCase):
         self.assertEqual(config.remote_dir, "/custom/path")
         self.assertEqual(config.elastic_password, "custom_pwd")
         self.assertEqual(config.ssh_key_path, "/home/test/.ssh/id_ed25519")
+        self.assertEqual(config.aws_ami_id, "ami-123")
 
     def test_boolean_flags(self):
         """Test boolean flags default to False."""

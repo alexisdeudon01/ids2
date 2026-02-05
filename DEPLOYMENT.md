@@ -20,6 +20,7 @@
 - **Remote Directory**: `/opt/ids2`
 - **Mirror Interface**: `eth0` (network interface for port mirroring)
 - **SSH Key Path**: `/home/tor/.ssh/pi_key` (private key path for SSH auth)
+- **AWS AMI ID**: *(optional)* (override AMI, else auto from SSM)
 
 Vous pouvez surcharger ces valeurs via `config.json` à la racine.
 

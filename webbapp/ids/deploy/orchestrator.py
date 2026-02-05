@@ -59,6 +59,7 @@ class DeploymentOrchestrator:
                 self._log,
                 aws_access_key_id=config.aws_access_key_id,
                 aws_secret_access_key=config.aws_secret_access_key,
+                ami_id=config.aws_ami_id,
             )
             elk_ip = aws.deploy_elk_stack()
 

@@ -23,10 +23,12 @@ class AWSDeployer:
         log_callback: Callable[[str], None],
         aws_access_key_id: str | None = None,
         aws_secret_access_key: str | None = None,
+        ami_id: str | None = None,
     ) -> None:
         self.region = region
         self.elastic_password = elastic_password
         self._log = log_callback
+        self.ami_id = (ami_id or "").strip()
 
         access_key = aws_access_key_id or None
         secret_key = aws_secret_access_key or None
@@ -37,8 +39,10 @@ class AWSDeployer:
                 region_name=region,
             )
             self.ec2 = session.resource("ec2")
+            self.ssm = session.client("ssm")
         else:
             self.ec2 = boto3.resource("ec2", region_name=region)
+            self.ssm = boto3.client("ssm", region_name=region)
 
     def deploy_elk_stack(self) -> str:
         """Deploy ELK stack on EC2, returns public IP."""
@@ -56,8 +60,9 @@ class AWSDeployer:
         compose = self._build_docker_compose()
         user_data = self._build_user_data(compose)
 
+        ami_id = self._resolve_ami_id()
         instances = self.ec2.create_instances(
-            ImageId="ami-00c71bd4d220aa22a",
+            ImageId=ami_id,
             InstanceType="t3.medium",
             MinCount=1,
             MaxCount=1,
@@ -135,6 +140,29 @@ class AWSDeployer:
                 }
             )
         return instances
+
+    def _resolve_ami_id(self) -> str:
+        if self.ami_id:
+            return self.ami_id
+
+        candidates = [
+            "/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp3/ami-id",
+            "/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id",
+        ]
+        for param in candidates:
+            try:
+                response = self.ssm.get_parameter(Name=param)
+                value = response.get("Parameter", {}).get("Value")
+                if value:
+                    self._log(f"✅ AMI resolved from SSM: {value}")
+                    return value
+            except Exception:
+                continue
+
+        raise RuntimeError(
+            "AMI introuvable pour cette région. "
+            "Renseignez aws_ami_id dans config.json ou dans l'UI."
+        )
 
     def _build_docker_compose(self) -> str:
         return (

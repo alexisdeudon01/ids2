@@ -12,6 +12,7 @@ class DeployConfig:
     aws_region: str = "eu-west-1"
     aws_access_key_id: str = field(default_factory=lambda: os.getenv("AWS_ACCESS_KEY_ID", ""))
     aws_secret_access_key: str = field(default_factory=lambda: os.getenv("AWS_SECRET_ACCESS_KEY", ""))
+    aws_ami_id: str = field(default_factory=lambda: os.getenv("IDS_AWS_AMI_ID", ""))
     ssh_key_path: str = field(default_factory=lambda: os.getenv("IDS_SSH_KEY_PATH", "/home/tor/.ssh/pi_key"))
     pi_host: str = "sinik"
     pi_ip: str = "192.168.178.66"

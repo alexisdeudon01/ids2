@@ -17,9 +17,11 @@ class TestAWSDeployer(unittest.TestCase):
         fake_resource = mock.MagicMock()
         fake_session = mock.MagicMock()
         fake_session.resource.return_value = fake_resource
+        fake_session.client.return_value = mock.MagicMock()
         fake_boto3 = types.SimpleNamespace(
             Session=mock.MagicMock(return_value=fake_session),
             resource=mock.MagicMock(return_value=fake_resource),
+            client=mock.MagicMock(return_value=mock.MagicMock()),
         )
         fake_requests = mock.MagicMock()
         fake_elasticsearch = types.SimpleNamespace(Elasticsearch=mock.MagicMock())
@@ -46,6 +48,7 @@ class TestAWSDeployer(unittest.TestCase):
             lambda msg: None,
             aws_access_key_id="AKIA_TEST",
             aws_secret_access_key="SECRET_TEST",
+            ami_id="ami-123",
         )
 
         fake_boto3.Session.assert_called_once_with(
@@ -59,7 +62,7 @@ class TestAWSDeployer(unittest.TestCase):
     def test_uses_resource_without_credentials(self):
         module, fake_boto3, _, _ = self._load_module()
 
-        module.AWSDeployer("eu-west-1", "pwd", lambda msg: None)
+        module.AWSDeployer("eu-west-1", "pwd", lambda msg: None, ami_id="ami-123")
 
         fake_boto3.resource.assert_called_once_with("ec2", region_name="eu-west-1")
         fake_boto3.Session.assert_not_called()
@@ -74,7 +77,7 @@ class TestAWSDeployer(unittest.TestCase):
         fake_instance.private_ip_address = "10.0.0.1"
         fake_resource.instances.all.return_value = [fake_instance]
 
-        deployer = module.AWSDeployer("eu-west-1", "pwd", lambda msg: None)
+        deployer = module.AWSDeployer("eu-west-1", "pwd", lambda msg: None, ami_id="ami-123")
         instances = deployer.list_instances()
 
         self.assertEqual(

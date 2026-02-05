@@ -57,40 +57,48 @@ class OrchestratorGUI(tk.Tk):
             self._config_default("aws_secret_access_key", os.getenv("AWS_SECRET_ACCESS_KEY", "")),
             show=True,
         )
+        self.aws_ami_id = self._add_entry(
+            creds,
+            "AWS AMI ID (optional)",
+            3,
+            self._config_default("aws_ami_id", ""),
+        )
         self.elastic_password = self._add_entry(
             creds,
             "Elastic Password (required)",
-            3,
+            4,
             self._config_default("elastic_password", ""),
             show=True,
         )
-        self.pi_host = self._add_entry(creds, "Pi Hostname", 4, self._config_default("pi_host", "sinik"))
-        self.pi_ip = self._add_entry(creds, "Pi IP (optional)", 5, self._config_default("pi_ip", "192.168.178.66"))
-        self.pi_user = self._add_entry(creds, "Pi User", 6, self._config_default("pi_user", "pi"))
-        self.pi_password = self._add_entry(creds, "Pi Password", 7, self._config_default("pi_password", "pi"), show=True)
+        self.pi_host = self._add_entry(creds, "Pi Hostname", 5, self._config_default("pi_host", "sinik"))
+        self.pi_ip = self._add_entry(creds, "Pi IP (optional)", 6, self._config_default("pi_ip", "192.168.178.66"))
+        self.pi_user = self._add_entry(creds, "Pi User", 7, self._config_default("pi_user", "pi"))
+        self.pi_password = self._add_entry(creds, "Pi Password", 8, self._config_default("pi_password", "pi"), show=True)
         self.ssh_key_path = self._add_entry(
             creds,
             "SSH Key Path (optional)",
-            8,
+            9,
             self._config_default("ssh_key_path", self._default_ssh_key_path()),
         )
-        self.sudo_password = self._add_entry(creds, "Sudo Password", 9, self._config_default("sudo_password", "pi"), show=True)
-        self.remote_dir = self._add_entry(creds, "Remote Directory", 10, self._config_default("remote_dir", "/opt/ids2"))
+        self.sudo_password = self._add_entry(
+            creds, "Sudo Password", 10, self._config_default("sudo_password", "pi"), show=True
+        )
+        self.remote_dir = self._add_entry(creds, "Remote Directory", 11, self._config_default("remote_dir", "/opt/ids2"))
         self.mirror_interface = self._add_entry(
             creds,
             "Mirror Interface (network port for traffic capture)",
-            11,
+            12,
             self._config_default("mirror_interface", "eth0"),
         )
 
         self.reset_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=12, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=13, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         self.install_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=13, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=14, column=0, columnspan=2, sticky="w")
 
         self.remove_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=14, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=15, column=0, columnspan=2, sticky="w")
 
         # Actions
         action_frame = ttk.Frame(main_frame)
@@ -161,6 +169,7 @@ class OrchestratorGUI(tk.Tk):
             aws_region=self.aws_region.get().strip() or "eu-west-1",
             aws_access_key_id=self.aws_access_key_id.get().strip(),
             aws_secret_access_key=self.aws_secret_access_key.get().strip(),
+            aws_ami_id=self.aws_ami_id.get().strip(),
             ssh_key_path=self.ssh_key_path.get().strip(),
             pi_host=pi_host,
             pi_ip=self.pi_ip.get().strip() or "192.168.178.66",

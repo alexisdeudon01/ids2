@@ -31,7 +31,7 @@ ids2/
 
 | Paramètre | Valeur | Description |
 |-----------|--------|-------------|
-| `aws_region` | `u-west-1` | Région AWS pour ELK |
+| `aws_region` | `eu-west-1` | Région AWS pour ELK |
 | `pi_host` | `sinik` | Hostname du Raspberry Pi |
 | `pi_ip` | `192.168.178.66` | IP du Raspberry Pi |
 | `pi_user` | `pi` | Utilisateur SSH |

@@ -76,7 +76,7 @@ ids2/
 ```python
 DeployConfig(
     elastic_password="<REQUIRED>",
-    aws_region="u-west-1",
+    aws_region="eu-west-1",
     pi_host="sinik",
     pi_ip="192.168.178.66",
     pi_user="pi",
