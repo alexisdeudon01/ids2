@@ -11,13 +11,14 @@
 ## Configuration
 
 ### Default Values
-- **AWS Region**: `eu-west-1`
-- **Pi Host**: `es-sink`
+- **AWS Region**: `u-west-1`
+- **Pi Host**: `esink`
 - **Pi User**: `pi`
 - **Pi Password**: `pi`
 - **Sudo Password**: `pi`
 - **Remote Directory**: `/opt/ids2`
 - **Mirror Interface**: `eth0` (network interface for port mirroring)
+- **SSH Key Path**: *(optional)* (private key path for SSH auth)
 
 ### Required
 - **Elastic Password**: Must be provided (no default)

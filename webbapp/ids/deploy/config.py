@@ -9,10 +9,11 @@ class DeployConfig:
     """Configuration for IDS deployment."""
     
     elastic_password: str
-    aws_region: str = "eu-west-1"
+    aws_region: str = "u-west-1"
     aws_access_key_id: str = field(default_factory=lambda: os.getenv("AWS_ACCESS_KEY_ID", ""))
     aws_secret_access_key: str = field(default_factory=lambda: os.getenv("AWS_SECRET_ACCESS_KEY", ""))
-    pi_host: str = "es-sink"
+    ssh_key_path: str = field(default_factory=lambda: os.getenv("IDS_SSH_KEY_PATH", ""))
+    pi_host: str = "esink"
     pi_user: str = "pi"
     pi_password: str = "pi"
     sudo_password: str = "pi"

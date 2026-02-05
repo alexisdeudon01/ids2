@@ -6,6 +6,7 @@ import os
 import queue
 import threading
 import tkinter as tk
+from pathlib import Path
 from tkinter import messagebox, ttk
 
 from .config import DeployConfig
@@ -40,7 +41,7 @@ class OrchestratorGUI(tk.Tk):
         for idx in range(2):
             creds.columnconfigure(idx, weight=1)
 
-        self.aws_region = self._add_entry(creds, "AWS Region", 0, "eu-west-1")
+        self.aws_region = self._add_entry(creds, "AWS Region", 0, "u-west-1")
         self.aws_access_key_id = self._add_entry(
             creds, "AWS Access Key ID (optional)", 1, os.getenv("AWS_ACCESS_KEY_ID", "")
         )
@@ -48,21 +49,24 @@ class OrchestratorGUI(tk.Tk):
             creds, "AWS Secret Access Key (optional)", 2, os.getenv("AWS_SECRET_ACCESS_KEY", ""), show=True
         )
         self.elastic_password = self._add_entry(creds, "Elastic Password (required)", 3, "", show=True)
-        self.pi_host = self._add_entry(creds, "Pi Host/IP", 4, "es-sink")
+        self.pi_host = self._add_entry(creds, "Pi Host/IP", 4, "esink")
         self.pi_user = self._add_entry(creds, "Pi User", 5, "pi")
         self.pi_password = self._add_entry(creds, "Pi Password", 6, "pi", show=True)
-        self.sudo_password = self._add_entry(creds, "Sudo Password", 7, "pi", show=True)
-        self.remote_dir = self._add_entry(creds, "Remote Directory", 8, "/opt/ids2")
-        self.mirror_interface = self._add_entry(creds, "Mirror Interface (network port for traffic capture)", 9, "eth0")
+        self.ssh_key_path = self._add_entry(
+            creds, "SSH Key Path (optional)", 7, self._default_ssh_key_path()
+        )
+        self.sudo_password = self._add_entry(creds, "Sudo Password", 8, "pi", show=True)
+        self.remote_dir = self._add_entry(creds, "Remote Directory", 9, "/opt/ids2")
+        self.mirror_interface = self._add_entry(creds, "Mirror Interface (network port for traffic capture)", 10, "eth0")
 
         self.reset_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=10, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=11, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         self.install_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=11, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=12, column=0, columnspan=2, sticky="w")
 
         self.remove_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=12, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=13, column=0, columnspan=2, sticky="w")
 
         # Actions
         action_frame = ttk.Frame(main)
@@ -129,10 +133,11 @@ class OrchestratorGUI(tk.Tk):
     def _collect_config(self, reset_override: bool | None = None) -> DeployConfig:
         return DeployConfig(
             elastic_password=self.elastic_password.get().strip(),
-            aws_region=self.aws_region.get().strip() or "eu-west-1",
+            aws_region=self.aws_region.get().strip() or "u-west-1",
             aws_access_key_id=self.aws_access_key_id.get().strip(),
             aws_secret_access_key=self.aws_secret_access_key.get().strip(),
-            pi_host=self.pi_host.get().strip() or "es-sink",
+            ssh_key_path=self.ssh_key_path.get().strip(),
+            pi_host=self.pi_host.get().strip() or "esink",
             pi_user=self.pi_user.get().strip() or "pi",
             pi_password=self.pi_password.get().strip() or "pi",
             sudo_password=self.sudo_password.get().strip() or "pi",
@@ -142,6 +147,16 @@ class OrchestratorGUI(tk.Tk):
             install_docker=self.install_docker_var.get(),
             remove_docker=self.remove_docker_var.get(),
         )
+
+    def _default_ssh_key_path(self) -> str:
+        candidates = [
+            Path("~/.ssh/id_ed25519").expanduser(),
+            Path("~/.ssh/id_rsa").expanduser(),
+        ]
+        for candidate in candidates:
+            if candidate.is_file():
+                return str(candidate)
+        return ""
 
     def start_deploy(self) -> None:
         if self.worker and self.worker.is_alive():

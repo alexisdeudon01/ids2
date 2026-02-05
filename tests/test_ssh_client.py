@@ -35,7 +35,13 @@ class TestSSHClient(unittest.TestCase):
         ssh = module.SSHClient("host", "user", "pass", "sudo", lambda msg: None)
 
         fake_client.connect.assert_called_once_with(
-            hostname="host", username="user", password="pass", timeout=20
+            hostname="host",
+            username="user",
+            password="pass",
+            key_filename=None,
+            allow_agent=True,
+            look_for_keys=True,
+            timeout=20,
         )
         fake_client.open_sftp.assert_called_once()
 

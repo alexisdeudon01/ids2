@@ -54,6 +54,8 @@ Le GUI propose un **reset complet** qui supprime :
 - Paquets liés (suricata, docker, etc.)
 - Règles UFW
 
+Si la Pi refuse l'authentification par mot de passe, renseignez **SSH Key Path**.
+
 Le GUI propose aussi des actions dédiées **Installer Docker** et **Supprimer Docker**.
 
 ## 🗄️ Base de données

@@ -16,7 +16,15 @@ import paramiko
 class SSHClient:
     """SSH client with SFTP support."""
     
-    def __init__(self, host: str, user: str, password: str, sudo_password: str, log_callback: Callable[[str], None]) -> None:
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        password: str,
+        sudo_password: str,
+        log_callback: Callable[[str], None],
+        ssh_key_path: str = "",
+    ) -> None:
         self.host = host
         self.user = user
         self.password = password
@@ -24,7 +32,16 @@ class SSHClient:
         self._log = log_callback
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.client.connect(hostname=host, username=user, password=password, timeout=20)
+        key_filename = os.path.expanduser(ssh_key_path) if ssh_key_path else None
+        self.client.connect(
+            hostname=host,
+            username=user,
+            password=password or None,
+            key_filename=key_filename,
+            allow_agent=True,
+            look_for_keys=True,
+            timeout=20,
+        )
         self.sftp = self.client.open_sftp()
 
     def close(self) -> None:

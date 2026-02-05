@@ -39,6 +39,7 @@ class TestDeploymentIntegration(unittest.TestCase):
             remove_docker=False,
             aws_access_key_id="access",
             aws_secret_access_key="secret",
+            ssh_key_path="/home/test/.ssh/id_rsa",
         )
         
         self.assertEqual(config.elastic_password, "my_password")
@@ -52,13 +53,14 @@ class TestDeploymentIntegration(unittest.TestCase):
         self.assertFalse(config.remove_docker)
         self.assertEqual(config.aws_access_key_id, "access")
         self.assertEqual(config.aws_secret_access_key, "secret")
+        self.assertEqual(config.ssh_key_path, "/home/test/.ssh/id_rsa")
 
     def test_lazy_import_config(self):
         """Test that config can be imported via lazy loading."""
         from ids.deploy import DeployConfig as LazyConfig
         
         config = LazyConfig(elastic_password="test")
-        self.assertEqual(config.pi_host, "es-sink")
+        self.assertEqual(config.pi_host, "esink")
 
 
 if __name__ == "__main__":

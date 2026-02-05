@@ -28,7 +28,14 @@ class DeploymentOrchestrator:
             step += 1
             progress_callback(step / total_steps * 100, label)
 
-        with SSHClient(config.pi_host, config.pi_user, config.pi_password, config.sudo_password, self._log) as ssh:
+        with SSHClient(
+            config.pi_host,
+            config.pi_user,
+            config.pi_password,
+            config.sudo_password,
+            self._log,
+            ssh_key_path=config.ssh_key_path,
+        ) as ssh:
             pi = PiDeployer(ssh, config)
             
             advance("Connecting to Pi")
@@ -75,7 +82,14 @@ class DeploymentOrchestrator:
     def reset_only(self, config: DeployConfig, progress_callback: Callable[[float, str], None]) -> None:
         """Reset Pi only."""
         progress_callback(5, "Connecting to Pi")
-        with SSHClient(config.pi_host, config.pi_user, config.pi_password, config.sudo_password, self._log) as ssh:
+        with SSHClient(
+            config.pi_host,
+            config.pi_user,
+            config.pi_password,
+            config.sudo_password,
+            self._log,
+            ssh_key_path=config.ssh_key_path,
+        ) as ssh:
             pi = PiDeployer(ssh, config)
             pi.reset()
         progress_callback(100, "Reset complete")
@@ -83,7 +97,14 @@ class DeploymentOrchestrator:
     def install_docker_only(self, config: DeployConfig, progress_callback: Callable[[float, str], None]) -> None:
         """Install Docker only."""
         progress_callback(10, "Connecting to Pi")
-        with SSHClient(config.pi_host, config.pi_user, config.pi_password, config.sudo_password, self._log) as ssh:
+        with SSHClient(
+            config.pi_host,
+            config.pi_user,
+            config.pi_password,
+            config.sudo_password,
+            self._log,
+            ssh_key_path=config.ssh_key_path,
+        ) as ssh:
             pi = PiDeployer(ssh, config)
             pi.install_docker()
         progress_callback(100, "Docker installed")
@@ -91,7 +112,14 @@ class DeploymentOrchestrator:
     def remove_docker_only(self, config: DeployConfig, progress_callback: Callable[[float, str], None]) -> None:
         """Remove Docker only."""
         progress_callback(10, "Connecting to Pi")
-        with SSHClient(config.pi_host, config.pi_user, config.pi_password, config.sudo_password, self._log) as ssh:
+        with SSHClient(
+            config.pi_host,
+            config.pi_user,
+            config.pi_password,
+            config.sudo_password,
+            self._log,
+            ssh_key_path=config.ssh_key_path,
+        ) as ssh:
             pi = PiDeployer(ssh, config)
             pi.remove_docker()
         progress_callback(100, "Docker removed")
