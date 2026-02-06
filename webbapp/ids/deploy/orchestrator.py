@@ -55,6 +55,7 @@ class DeploymentOrchestrator:
             except Exception:
                 pass
 
+        monitor_stop: threading.Event | None = None
         try:
             with SSHClient(
                 config.pi_host,
@@ -100,12 +101,23 @@ class DeploymentOrchestrator:
                     security_group_id=config.aws_security_group_id,
                     iam_instance_profile=config.aws_iam_instance_profile,
                     aws_private_key_path=config.aws_private_key_path,
+                    aws_public_key_path=config.aws_public_key_path,
                     root_volume_gb=config.aws_root_volume_gb,
                     root_volume_type=config.aws_root_volume_type,
                     associate_public_ip=config.aws_associate_public_ip,
                 )
                 instance = aws.ensure_instance()
                 aws.log_ssh_access(instance, config.aws_private_key_path)
+
+                if aws.sync_instance_public_key(getattr(instance, "id", "")):
+                    self._log("✅ EC2 public key synced to instance.")
+                else:
+                    self._log("⚠️ EC2 public key not synced to instance.")
+                pi.install_ec2_key(
+                    config.aws_private_key_path,
+                    config.aws_public_key_path,
+                    config.pi_ec2_key_path,
+                )
 
                 if self._decision_callback:
                     try:
@@ -143,6 +155,12 @@ class DeploymentOrchestrator:
                 if not aws.verify_services(elk_ip):
                     raise RuntimeError("ELK services not healthy (Elasticsearch/Kibana).")
 
+                monitor_stop = self._start_connectivity_monitor(
+                    pi_host=config.pi_host,
+                    pi_ip=config.pi_ip,
+                    ec2_ip=elk_ip,
+                )
+
                 self._log("📊 Configuring Elasticsearch...")
                 advance("Configuring Elasticsearch")
                 aws.configure_elasticsearch(elk_ip)
@@ -177,6 +195,8 @@ class DeploymentOrchestrator:
                 progress_bar.close()
             except Exception:
                 pass
+            if monitor_stop:
+                monitor_stop.set()
 
     def reset_only(self, config: DeployConfig, progress_callback: Callable[[float, str], None]) -> None:
         """Reset Pi only."""
@@ -222,3 +242,31 @@ class DeploymentOrchestrator:
             pi = PiDeployer(ssh, config)
             pi.remove_docker()
         progress_callback(100, "Docker removed")
+
+    def _start_connectivity_monitor(self, pi_host: str, pi_ip: str, ec2_ip: str) -> threading.Event:
+        stop_event = threading.Event()
+        pi_target = pi_host or pi_ip
+
+        def _loop() -> None:
+            while not stop_event.is_set():
+                pi_ok = self._check_tcp(pi_target, 22)
+                ec2_ok = self._check_tcp(ec2_ip, 22)
+                self._log(
+                    f"🔁 SSH check (Pi: {pi_target}) "
+                    f"{'✅' if pi_ok else '❌'} | "
+                    f"(EC2: {ec2_ip}) {'✅' if ec2_ok else '❌'}"
+                )
+                stop_event.wait(10)
+
+        thread = threading.Thread(target=_loop, daemon=True)
+        thread.start()
+        return stop_event
+
+    def _check_tcp(self, host: str, port: int) -> bool:
+        if not host:
+            return False
+        try:
+            with socket.create_connection((host, port), timeout=3):
+                return True
+        except OSError:
+            return False

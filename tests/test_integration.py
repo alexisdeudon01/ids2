@@ -48,9 +48,11 @@ class TestDeploymentIntegration(unittest.TestCase):
             aws_security_group_id="sg-123",
             aws_iam_instance_profile="Profile",
             aws_private_key_path="/home/test/.ssh/aws.pem",
+            aws_public_key_path="/home/test/.ssh/aws.pub",
             aws_root_volume_gb=40,
             aws_root_volume_type="gp2",
             aws_associate_public_ip=False,
+            pi_ec2_key_path="/home/pi/.ssh/custom_ec2_key",
         )
         
         self.assertEqual(config.elastic_password, "my_password")
@@ -73,9 +75,11 @@ class TestDeploymentIntegration(unittest.TestCase):
         self.assertEqual(config.aws_security_group_id, "sg-123")
         self.assertEqual(config.aws_iam_instance_profile, "Profile")
         self.assertEqual(config.aws_private_key_path, "/home/test/.ssh/aws.pem")
+        self.assertEqual(config.aws_public_key_path, "/home/test/.ssh/aws.pub")
         self.assertEqual(config.aws_root_volume_gb, 40)
         self.assertEqual(config.aws_root_volume_type, "gp2")
         self.assertFalse(config.aws_associate_public_ip)
+        self.assertEqual(config.pi_ec2_key_path, "/home/pi/.ssh/custom_ec2_key")
 
     def test_lazy_import_config(self):
         """Test that config can be imported via lazy loading."""

@@ -25,6 +25,11 @@ class TestAWSDeployer(unittest.TestCase):
         )
         fake_requests = mock.MagicMock()
         fake_elasticsearch = types.SimpleNamespace(Elasticsearch=mock.MagicMock())
+        fake_paramiko = types.SimpleNamespace(
+            RSAKey=mock.MagicMock(),
+            ECDSAKey=mock.MagicMock(),
+            Ed25519Key=mock.MagicMock(),
+        )
 
         with mock.patch.dict(
             sys.modules,
@@ -32,6 +37,7 @@ class TestAWSDeployer(unittest.TestCase):
                 "boto3": fake_boto3,
                 "requests": fake_requests,
                 "elasticsearch": fake_elasticsearch,
+                "paramiko": fake_paramiko,
             },
         ):
             sys.modules.pop("ids.deploy.aws_deployer", None)
