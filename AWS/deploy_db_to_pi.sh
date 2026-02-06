@@ -34,6 +34,14 @@ PI_PASSWORD=$(jq -r '.pi_password // "pi"' "$CONFIG_FILE")
 REMOTE_DIR=$(jq -r '.remote_dir // "/opt/ids2"' "$CONFIG_FILE")
 SSH_KEY=$(jq -r '.ssh_key_path // "/home/tor/.ssh/pi_key"' "$CONFIG_FILE")
 
+# Extract AWS data first
+log "Extracting AWS data and generating SQL seeds..."
+if [[ -f "$SCRIPT_DIR/extract_aws_data.sh" ]]; then
+    bash "$SCRIPT_DIR/extract_aws_data.sh" || warn "Failed to extract AWS data, continuing anyway"
+else
+    warn "extract_aws_data.sh not found, skipping AWS data extraction"
+fi
+
 # Vérifier clé SSH
 if [[ ! -f "$SSH_KEY" ]]; then
     error "SSH key not found: $SSH_KEY"
@@ -78,6 +86,17 @@ scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
     "$SCRIPT_DIR/mysql/init.sql" \
     "${PI_USER}@${PI_TARGET}:${REMOTE_DIR}/mysql/"
 success "init.sql copied"
+
+# Copier les fichiers SQL de données
+if ls "$SCRIPT_DIR/datas"/*.sql >/dev/null 2>&1; then
+    log "Copying SQL data files..."
+    scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
+        "$SCRIPT_DIR/datas"/*.sql \
+        "${PI_USER}@${PI_TARGET}:${REMOTE_DIR}/mysql/" 2>/dev/null || warn "No SQL data files to copy"
+    success "SQL data files copied"
+else
+    warn "No SQL data files found in $SCRIPT_DIR/datas/"
+fi
 
 # Créer docker-compose.yml pour MySQL sur Pi
 log "Creating docker-compose.yml for MySQL..."

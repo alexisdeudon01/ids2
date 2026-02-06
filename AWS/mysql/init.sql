@@ -82,3 +82,17 @@ CREATE TABLE IF NOT EXISTS ec2_instances (
     INDEX idx_state (state),
     INDEX idx_updated (updated_at)
 );
+
+-- Table pour Elasticsearch & Kibana credentials
+CREATE TABLE IF NOT EXISTS elk_credentials (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    service_name VARCHAR(50) NOT NULL,
+    username VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    url VARCHAR(500),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_service_user (service_name, username),
+    INDEX idx_service (service_name)
+);

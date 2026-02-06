@@ -12,6 +12,7 @@
   "aws_root_volume_gb": 30,
   "aws_root_volume_type": "gp3",
   "aws_associate_public_ip": true,
+  "elastic_password": "admin",
   "pi_host": "sinik",
   "pi_ip": "192.168.178.66",
   "pi_user": "pi",
