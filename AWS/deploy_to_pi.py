@@ -1,51 +1,36 @@
 #!/usr/bin/env python3
 """Deploy AWS Dockerfile to Raspberry Pi."""
 
-import logging
 import sys
 from pathlib import Path
-from app.ssh_manager import SSHManager
-from app.pi_deployment import PiDeploymentService
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+sys.path.insert(0, str(Path(__file__).parent.parent / "webbapp"))
 
-logger = logging.getLogger(__name__)
+from ids.deploy.config import DeployConfig
+from ids.deploy.ssh_client import SSHClient
 
 
 def main():
-    """Main deployment function."""
-    # Configuration
-    PI_HOST = "192.168.1.100"  # Change to your Pi IP
-    PI_USER = "pi"
-    PI_KEY = str(Path.home() / ".ssh" / "id_rsa")
-    
-    # Dockerfile path
-    dockerfile_path = Path(__file__).parent / "Dockerfile"
-    
-    if not dockerfile_path.exists():
-        logger.error(f"Dockerfile not found: {dockerfile_path}")
+    """Deploy Dockerfile to Pi."""
+    dockerfile = Path(__file__).parent / "Dockerfile"
+    if not dockerfile.exists():
+        print(f"❌ Dockerfile not found: {dockerfile}")
         sys.exit(1)
     
-    logger.info("Starting deployment to Raspberry Pi...")
+    config = DeployConfig(elastic_password="changeme")
     
-    # Create SSH manager
-    ssh = SSHManager(PI_HOST, PI_USER, PI_KEY)
-    
-    # Create deployment service
-    deployer = PiDeploymentService(ssh)
-    
-    # Deploy Dockerfile
-    success = deployer.deploy_dockerfile(str(dockerfile_path))
-    
-    if success:
-        logger.info("Deployment completed successfully!")
-        sys.exit(0)
-    else:
-        logger.error("Deployment failed!")
-        sys.exit(1)
+    with SSHClient(
+        host=config.pi_ip,
+        user=config.pi_user,
+        password=config.pi_password,
+        sudo_password=config.sudo_password,
+        log_callback=print,
+        ssh_key_path=config.ssh_key_path,
+    ) as ssh:
+        remote_path = f"{config.remote_dir}/Dockerfile"
+        ssh.run(f"mkdir -p '{config.remote_dir}'", sudo=True)
+        ssh.sftp.put(str(dockerfile), remote_path)
+        print(f"✅ Deployed: {remote_path}")
 
 
 if __name__ == "__main__":

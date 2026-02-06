@@ -9,63 +9,39 @@ sys.path.insert(0, str(Path(__file__).parent / "webbapp"))
 from ids.deploy import AWSDeployer, DeployConfig
 
 def main():
-    print("🔄 Redémarrage de l'instance ELK...")
-    
-    # Configuration
     elastic_password = input("Mot de passe Elasticsearch: ").strip()
     if not elastic_password:
         print("❌ Mot de passe requis")
         return
     
-    config = DeployConfig(
-        elastic_password=elastic_password,
-        aws_region="eu-west-1",
-    )
-    
-    def log(msg: str):
-        print(msg)
-    
+    config = DeployConfig(elastic_password=elastic_password)
     deployer = AWSDeployer(
         region=config.aws_region,
-        elastic_password=config.elastic_password,
-        log_callback=log,
+        elastic_password=elastic_password,
+        log_callback=print,
         aws_access_key_id=config.aws_access_key_id or None,
         aws_secret_access_key=config.aws_secret_access_key or None,
     )
     
-    # Trouver et terminer l'instance actuelle
-    print("\n🔍 Recherche de l'instance actuelle...")
     instances = deployer._find_existing_instances()
-    
     if instances:
-        print(f"✅ Trouvé {len(instances)} instance(s)")
+        print(f"🧹 Terminaison de {len(instances)} instance(s)...")
         for inst in instances:
-            print(f"   🧹 Terminaison de {inst.id}...")
             inst.terminate()
-        
-        print("⏳ Attente de la terminaison...")
         for inst in instances:
             inst.wait_until_terminated()
-        print("✅ Instance(s) terminée(s)")
-    else:
-        print("ℹ️ Aucune instance existante")
     
-    # Créer nouvelle instance
-    print("\n🚀 Création d'une nouvelle instance...")
+    print("🚀 Création d'une nouvelle instance...")
     elk_ip = deployer.deploy_elk_stack()
     
-    print(f"\n✅ Instance redémarrée avec succès!")
+    print(f"\n✅ Instance redémarrée!")
     print(f"📊 Elasticsearch: http://{elk_ip}:9200")
     print(f"🌐 Kibana: http://{elk_ip}:5601")
-    print(f"👤 Username: elastic")
-    print(f"🔑 Password: {elastic_password}")
+    print(f"👤 elastic / {elastic_password}")
     
-    # Configurer Elasticsearch
-    print("\n⏳ Configuration d'Elasticsearch (cela peut prendre quelques minutes)...")
+    print("\n⏳ Configuration d'Elasticsearch...")
     deployer.configure_elasticsearch(elk_ip)
-    
-    print("\n✅ Configuration terminée!")
-    print(f"\n🎯 Accédez à Kibana: http://{elk_ip}:5601")
+    print(f"✅ Accédez à Kibana: http://{elk_ip}:5601")
 
 if __name__ == "__main__":
     main()
