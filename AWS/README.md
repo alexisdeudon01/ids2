@@ -1,109 +1,145 @@
-# AWS Module - Refactored
+# AWS Deployment - IDS2
 
-## 📋 Overview
-
-Refactored AWS module with SSH deployment and MySQL service.
-
-## 🏗️ Architecture
+## Structure
 
 ```
 AWS/
-├── app/
-│   ├── ssh_manager.py       # SSH connection & file transfer
-│   ├── pi_deployment.py     # Pi deployment service
-│   └── mysql_service.py     # MySQL wrapper
-├── deploy_to_pi.py          # Deployment script
-├── example_usage.py         # Usage examples
-└── requirements.txt         # Dependencies
+├── datas/              # Données persistantes (*.db, volumes MySQL)
+│   └── .gitkeep
+├── mysql/              # MySQL Database (déployé sur Raspberry Pi)
+│   ├── Dockerfile
+│   └── init.sql
+├── app/                # Application backend
+│   ├── Dockerfile
+│   └── ...
+├── deploy_db_to_pi.sh  # Script de déploiement MySQL sur Pi via SSH
+└── README.md
 ```
 
-## 🚀 Features
+## Déploiement de la base de données sur Raspberry Pi
 
-### 1. SSH Manager
-- ✅ Verbose logging
-- ✅ File upload (single/directory)
-- ✅ Remote command execution
-- ✅ Context manager support
+La base de données MySQL est déployée **sur le Raspberry Pi**, pas sur l'instance EC2.
 
-### 2. Pi Deployment Service
-- ✅ Deploy Dockerfile to Pi
-- ✅ Build Docker image remotely
-- ✅ Upload directories
-- ✅ Verbose deployment logs
+### Prérequis
 
-### 3. MySQL Service
-- ✅ Query execution
-- ✅ Update/Insert operations
-- ✅ Context manager support
-- ✅ Error handling
+- Raspberry Pi accessible via SSH
+- Docker et docker-compose installés sur le Pi
+- Clé SSH configurée dans `config.json`
 
-## 📦 Installation
+### Déploiement automatique
 
 ```bash
-cd AWS
-pip install -r requirements.txt
+cd /home/tor/Downloads/ids2/AWS
+./deploy_db_to_pi.sh
 ```
 
-## 🔧 Usage
+Le script va :
+1. ✅ Charger la configuration depuis `config.json`
+2. ✅ Tester la connexion SSH au Pi
+3. ✅ Copier les fichiers MySQL (Dockerfile, init.sql)
+4. ✅ Créer docker-compose.yml sur le Pi
+5. ✅ Installer Docker/docker-compose si nécessaire
+6. ✅ Build et démarrer le container MySQL
+7. ✅ Vérifier que la DB est prête
+8. ✅ Afficher les infos de connexion
 
-### Deploy to Pi
-
-```python
-from app.ssh_manager import SSHManager
-from app.pi_deployment import PiDeploymentService
-
-ssh = SSHManager("192.168.1.100", "pi", "/path/to/key")
-deployer = PiDeploymentService(ssh)
-
-# Deploy Dockerfile
-deployer.deploy_dockerfile("./Dockerfile", "/opt/ids2")
-```
-
-### MySQL Queries
-
-```python
-from app.mysql_service import MySQLService
-
-with MySQLService("localhost", "user", "pass", "db") as db:
-    # SELECT
-    results = db.execute_query("SELECT * FROM alerts")
-    
-    # INSERT
-    db.execute_update(
-        "INSERT INTO alerts (severity) VALUES (%s)", 
-        (1,)
-    )
-```
-
-## 🎯 Deployment Script
+### Déploiement manuel
 
 ```bash
-# Edit configuration in deploy_to_pi.py
-python deploy_to_pi.py
+# 1. Connexion SSH au Pi
+ssh -i /home/tor/.ssh/pi_key pi@192.168.178.66
+
+# 2. Créer répertoire
+sudo mkdir -p /opt/ids2/mysql
+cd /opt/ids2
+
+# 3. Copier fichiers depuis local
+# (depuis votre PC)
+scp -i /home/tor/.ssh/pi_key AWS/mysql/* pi@192.168.178.66:/opt/ids2/mysql/
+
+# 4. Build et démarrer
+cd /opt/ids2
+sudo docker-compose -f docker-compose-mysql.yml up -d
+
+# 5. Vérifier
+sudo docker ps
+sudo docker logs ids2-mysql
 ```
 
-## 📊 Verbose Logging
+## Connexion à la base de données
 
-All operations log verbosely:
-```
-2024-01-01 12:00:00 - INFO - Connecting to pi@192.168.1.100:22...
-2024-01-01 12:00:01 - INFO - SSH connection established
-2024-01-01 12:00:01 - INFO - Executing: mkdir -p /opt/ids2
-2024-01-01 12:00:02 - INFO - Uploading Dockerfile -> /opt/ids2/Dockerfile
-2024-01-01 12:00:03 - INFO - Building Docker image...
+### Depuis le Raspberry Pi
+
+```bash
+sudo docker exec -it ids2-mysql mysql -uids_user -padmin ids_db
 ```
 
-## 🔐 Configuration
+### Depuis votre PC (si port 3306 accessible)
 
-Edit these variables:
-- `PI_HOST` - Raspberry Pi IP
-- `PI_USER` - SSH user
-- `PI_KEY` - SSH key path
-- MySQL credentials
+```bash
+mysql -h 192.168.178.66 -P 3306 -uids_user -padmin ids_db
+```
 
-## ✅ Benefits
+### Credentials
 
-- **Verbose Logging** - Track every operation
-- **Context Managers** - Auto cleanup
-- **Error Handling** - Proper exception management
-- **Reusable** - Modular services
+- **Database**: `ids_db`
+- **User**: `ids_user`
+- **Password**: `admin`
+- **Root password**: `admin`
+
+## Tables créées
+
+### Tables AWS Audit
+- `AWS_ACCOUNT` - Comptes AWS
+- `IAM_USER` - Utilisateurs IAM
+- `API_KEY` - Clés API AWS
+- `RESOURCE` - Ressources AWS
+
+### Tables IDS
+- `alerts` - Alertes de sécurité Suricata
+- `system_metrics` - Métriques système (CPU, RAM, etc.)
+- `deployment_config` - Configurations de déploiement
+- `ec2_instances` - Tracking instances EC2
+
+## Maintenance
+
+### Voir les logs
+
+```bash
+ssh -i /home/tor/.ssh/pi_key pi@192.168.178.66 'sudo docker logs ids2-mysql'
+```
+
+### Arrêter/Redémarrer
+
+```bash
+ssh -i /home/tor/.ssh/pi_key pi@192.168.178.66 'cd /opt/ids2 && sudo docker-compose -f docker-compose-mysql.yml stop'
+ssh -i /home/tor/.ssh/pi_key pi@192.168.178.66 'cd /opt/ids2 && sudo docker-compose -f docker-compose-mysql.yml start'
+```
+
+### Backup
+
+```bash
+ssh -i /home/tor/.ssh/pi_key pi@192.168.178.66 \
+  'sudo docker exec ids2-mysql mysqldump -uroot -padmin ids_db > /opt/ids2/backup.sql'
+```
+
+### Restore
+
+```bash
+ssh -i /home/tor/.ssh/pi_key pi@192.168.178.66 \
+  'sudo docker exec -i ids2-mysql mysql -uroot -padmin ids_db < /opt/ids2/backup.sql'
+```
+
+## Données persistantes
+
+Les données MySQL sont stockées dans `/opt/ids2/mysql/data` sur le Pi.
+
+Pour sauvegarder :
+```bash
+ssh -i /home/tor/.ssh/pi_key pi@192.168.178.66 \
+  'sudo tar czf /tmp/mysql-backup.tar.gz /opt/ids2/mysql/data'
+  
+scp -i /home/tor/.ssh/pi_key \
+  pi@192.168.178.66:/tmp/mysql-backup.tar.gz \
+  ./mysql-backup-$(date +%Y%m%d).tar.gz
+```

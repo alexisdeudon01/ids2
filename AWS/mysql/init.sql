@@ -29,3 +29,56 @@ CREATE TABLE IF NOT EXISTS RESOURCE (
     region_code VARCHAR(50),
     meta_data JSON
 );
+
+-- Tables IDS (déployées sur Raspberry Pi)
+CREATE TABLE IF NOT EXISTS alerts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    timestamp DATETIME NOT NULL,
+    severity INT NOT NULL,
+    signature TEXT NOT NULL,
+    src_ip VARCHAR(45),
+    dest_ip VARCHAR(45),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_timestamp (timestamp)
+);
+
+CREATE TABLE IF NOT EXISTS system_metrics (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    timestamp DATETIME NOT NULL,
+    cpu_percent DECIMAL(5,2),
+    memory_percent DECIMAL(5,2),
+    disk_percent DECIMAL(5,2),
+    temperature DECIMAL(5,2),
+    INDEX idx_timestamp (timestamp)
+);
+
+CREATE TABLE IF NOT EXISTS deployment_config (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    aws_region VARCHAR(50),
+    elk_ip VARCHAR(45),
+    elastic_password VARCHAR(255),
+    pi_host VARCHAR(255),
+    pi_user VARCHAR(50),
+    pi_password VARCHAR(255),
+    sudo_password VARCHAR(255),
+    remote_dir VARCHAR(500),
+    mirror_interface VARCHAR(50),
+    ssh_key_path VARCHAR(500),
+    INDEX idx_created (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS ec2_instances (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    instance_id VARCHAR(50) UNIQUE NOT NULL,
+    region VARCHAR(50) NOT NULL,
+    instance_type VARCHAR(50),
+    public_ip VARCHAR(45),
+    private_ip VARCHAR(45),
+    state VARCHAR(20),
+    elk_deployed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_state (state),
+    INDEX idx_updated (updated_at)
+);
