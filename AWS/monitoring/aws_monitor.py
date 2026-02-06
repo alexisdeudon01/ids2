@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Monitor AWS EC2 instances."""
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "webbapp"))
-
-from ids.deploy.config import DeployConfig
-from ids.deploy.aws_deployer import AWSDeployer
+import os
 import socket
+
+try:
+    import boto3
+except ImportError:
+    print("❌ boto3 not installed")
+    exit(1)
 
 def check_ssh(host: str, timeout: int = 3) -> bool:
     """Check SSH connectivity."""
@@ -21,19 +21,17 @@ def check_ssh(host: str, timeout: int = 3) -> bool:
         return False
 
 def main():
-    config = DeployConfig(elastic_password="changeme")
+    region = os.getenv("AWS_REGION", "eu-west-1")
     
-    print(f"☁️  AWS Monitor - Region: {config.aws_region}\n")
+    print(f"☁️  AWS Monitor - Region: {region}\n")
     
-    deployer = AWSDeployer(
-        region=config.aws_region,
-        elastic_password=config.elastic_password,
-        log_callback=lambda x: None,
-        aws_access_key_id=config.aws_access_key_id or None,
-        aws_secret_access_key=config.aws_secret_access_key or None,
-    )
+    ec2 = boto3.resource("ec2", region_name=region)
     
-    instances = deployer._find_existing_instances()
+    instances = []
+    for inst in ec2.instances.all():
+        tags = {tag["Key"]: tag["Value"] for tag in (inst.tags or [])}
+        if tags.get("Project") == "ids2":
+            instances.append(inst)
     
     print(f"Found {len(instances)} IDS2 instance(s):\n")
     

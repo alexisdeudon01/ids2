@@ -1,5 +1,4 @@
 -- Deployment Configuration
-USE ids_db;
 
 INSERT INTO deployment_config (
     aws_region, elk_ip, elastic_password, pi_host, pi_user, 

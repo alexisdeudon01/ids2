@@ -25,11 +25,9 @@ services:
       context: ..
       dockerfile: AWS/monitoring/Dockerfile
     container_name: ids2-aws-monitor
-    volumes:
-      - ./monitoring:/app/monitoring:ro
-      - ../webbapp:/app/webbapp:ro
     environment:
       - PYTHONUNBUFFERED=1
+      - AWS_REGION=eu-west-1
     command: >
       sh -c "
       while true; do
@@ -50,11 +48,9 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-    volumes:
-      - ./monitoring:/app/monitoring:ro
-      - ../webbapp:/app/webbapp:ro
     environment:
       - PYTHONUNBUFFERED=1
+      - AWS_REGION=eu-west-1
     command: >
       sh -c "
       while true; do

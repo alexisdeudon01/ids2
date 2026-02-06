@@ -1,5 +1,4 @@
 -- API Keys
-USE ids_db;
 
 INSERT INTO API_KEY (access_key_id, secret_access_key, user_arn, status, age_days, needs_rotation, last_test_date) VALUES
 ('AKIATCKATQFAEIIQBTXP', 'HIDDEN', 'arn:aws:iam::211125764416:user/alexis', 'Active', 0, 0, NOW())

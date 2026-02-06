@@ -1,5 +1,4 @@
 -- Elasticsearch & Kibana Credentials
-USE ids_db;
 
 -- Table pour stocker les credentials ELK
 CREATE TABLE IF NOT EXISTS elk_credentials (
