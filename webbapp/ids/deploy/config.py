@@ -19,6 +19,7 @@ class DeployConfig:
     aws_vpc_id: str = ""
     aws_security_group_id: str = ""
     aws_iam_instance_profile: str = ""
+    aws_private_key_path: str = ""
     aws_root_volume_gb: int = 30
     aws_root_volume_type: str = "gp3"
     aws_associate_public_ip: bool = True

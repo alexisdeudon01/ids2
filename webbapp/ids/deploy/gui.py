@@ -76,40 +76,46 @@ class OrchestratorGUI(tk.Tk):
             5,
             self._config_default("aws_key_name", ""),
         )
+        self.aws_private_key_path = self._add_entry(
+            creds,
+            "AWS Private Key Path (optional)",
+            6,
+            self._config_default("aws_private_key_path", ""),
+        )
         self.aws_subnet_id = self._add_entry(
             creds,
             "AWS Subnet ID (optional)",
-            6,
+            7,
             self._config_default("aws_subnet_id", ""),
         )
         self.aws_vpc_id = self._add_entry(
             creds,
             "AWS VPC ID (optional)",
-            7,
+            8,
             self._config_default("aws_vpc_id", ""),
         )
         self.aws_security_group_id = self._add_entry(
             creds,
             "AWS Security Group ID (optional)",
-            8,
+            9,
             self._config_default("aws_security_group_id", ""),
         )
         self.aws_iam_instance_profile = self._add_entry(
             creds,
             "AWS IAM Instance Profile (optional)",
-            9,
+            10,
             self._config_default("aws_iam_instance_profile", ""),
         )
         self.aws_root_volume_gb = self._add_entry(
             creds,
             "AWS Root Volume (GB)",
-            10,
+            11,
             self._config_default("aws_root_volume_gb", "30"),
         )
         self.aws_root_volume_type = self._add_entry(
             creds,
             "AWS Root Volume Type",
-            11,
+            12,
             self._config_default("aws_root_volume_type", "gp3"),
         )
         self.aws_public_ip_var = tk.BooleanVar(
@@ -117,48 +123,48 @@ class OrchestratorGUI(tk.Tk):
         )
         ttk.Checkbutton(
             creds, text="AWS Associate Public IP", variable=self.aws_public_ip_var
-        ).grid(row=12, column=0, columnspan=2, sticky="w", pady=4)
+        ).grid(row=13, column=0, columnspan=2, sticky="w", pady=4)
 
         self.elastic_password = self._add_entry(
             creds,
             "Elastic Password (required)",
-            13,
+            14,
             self._config_default("elastic_password", ""),
             show=True,
         )
-        self.pi_host = self._add_entry(creds, "Pi Hostname", 14, self._config_default("pi_host", "sinik"))
-        self.pi_ip = self._add_entry(creds, "Pi IP (optional)", 15, self._config_default("pi_ip", "192.168.178.66"))
-        self.pi_user = self._add_entry(creds, "Pi User", 16, self._config_default("pi_user", "pi"))
-        self.pi_password = self._add_entry(creds, "Pi Password", 17, self._config_default("pi_password", "pi"), show=True)
+        self.pi_host = self._add_entry(creds, "Pi Hostname", 15, self._config_default("pi_host", "sinik"))
+        self.pi_ip = self._add_entry(creds, "Pi IP (optional)", 16, self._config_default("pi_ip", "192.168.178.66"))
+        self.pi_user = self._add_entry(creds, "Pi User", 17, self._config_default("pi_user", "pi"))
+        self.pi_password = self._add_entry(creds, "Pi Password", 18, self._config_default("pi_password", "pi"), show=True)
         self.ssh_key_path = self._add_entry(
             creds,
             "SSH Key Path (optional)",
-            18,
+            19,
             self._config_default("ssh_key_path", self._default_ssh_key_path()),
         )
         self.sudo_password = self._add_entry(
-            creds, "Sudo Password", 19, self._config_default("sudo_password", "pi"), show=True
+            creds, "Sudo Password", 20, self._config_default("sudo_password", "pi"), show=True
         )
-        self.remote_dir = self._add_entry(creds, "Remote Directory", 20, self._config_default("remote_dir", "/opt/ids2"))
+        self.remote_dir = self._add_entry(creds, "Remote Directory", 21, self._config_default("remote_dir", "/opt/ids2"))
         self.mirror_interface = self._add_entry(
             creds,
             "Mirror Interface (network port for traffic capture)",
-            21,
+            22,
             self._config_default("mirror_interface", "eth0"),
         )
 
         self.instances_count_var = tk.StringVar(value="0")
-        ttk.Label(creds, text="ELK Instances (all regions)").grid(row=22, column=0, sticky="w", pady=4)
-        ttk.Label(creds, textvariable=self.instances_count_var).grid(row=22, column=1, sticky="w", pady=4)
+        ttk.Label(creds, text="ELK Instances (all regions)").grid(row=23, column=0, sticky="w", pady=4)
+        ttk.Label(creds, textvariable=self.instances_count_var).grid(row=23, column=1, sticky="w", pady=4)
 
         self.reset_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=23, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=24, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         self.install_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=24, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=25, column=0, columnspan=2, sticky="w")
 
         self.remove_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=25, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=26, column=0, columnspan=2, sticky="w")
 
         # Actions
         action_frame = ttk.Frame(main_frame)
@@ -241,6 +247,7 @@ class OrchestratorGUI(tk.Tk):
             aws_vpc_id=self.aws_vpc_id.get().strip(),
             aws_security_group_id=self.aws_security_group_id.get().strip(),
             aws_iam_instance_profile=self.aws_iam_instance_profile.get().strip(),
+            aws_private_key_path=self.aws_private_key_path.get().strip(),
             aws_root_volume_gb=int(self.aws_root_volume_gb.get().strip() or "30"),
             aws_root_volume_type=self.aws_root_volume_type.get().strip() or "gp3",
             aws_associate_public_ip=bool(self.aws_public_ip_var.get()),

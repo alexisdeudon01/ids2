@@ -54,6 +54,7 @@ Les valeurs par défaut peuvent être personnalisées dans `config.json` à la r
 | **Elastic Password** | *(requis)* | Mot de passe Elasticsearch |
 | **SSH Key Path** | `/home/tor/.ssh/pi_key` | Chemin clé privée si SSH sans mot de passe |
 | **AWS AMI ID** | *(optionnel)* | AMI à utiliser (sinon auto via SSM) |
+| **AWS Instance Fields** | *(optionnel)* | Voir `config.json` (type, keypair, subnet, VPC, volume, IAM profile) |
 
 Les credentials AWS peuvent être fournis via variables d'environnement :
 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.

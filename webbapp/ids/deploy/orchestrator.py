@@ -96,11 +96,13 @@ class DeploymentOrchestrator:
                     vpc_id=config.aws_vpc_id,
                     security_group_id=config.aws_security_group_id,
                     iam_instance_profile=config.aws_iam_instance_profile,
+                    aws_private_key_path=config.aws_private_key_path,
                     root_volume_gb=config.aws_root_volume_gb,
                     root_volume_type=config.aws_root_volume_type,
                     associate_public_ip=config.aws_associate_public_ip,
                 )
                 instance = aws.ensure_instance()
+                aws.log_ssh_access(instance, config.aws_private_key_path)
 
                 if self._decision_callback:
                     try:

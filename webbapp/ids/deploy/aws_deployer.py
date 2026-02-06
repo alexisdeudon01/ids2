@@ -49,6 +49,7 @@ class AWSDeployer:
         vpc_id: str | None = None,
         security_group_id: str | None = None,
         iam_instance_profile: str | None = None,
+        aws_private_key_path: str | None = None,
         root_volume_gb: int | None = None,
         root_volume_type: str | None = None,
         associate_public_ip: bool | None = None,
@@ -63,6 +64,7 @@ class AWSDeployer:
         self.vpc_id = (vpc_id or "").strip()
         self.security_group_id = (security_group_id or "").strip()
         self.iam_instance_profile = (iam_instance_profile or "").strip()
+        self.aws_private_key_path = (aws_private_key_path or "").strip()
         self.root_volume_gb = int(root_volume_gb or 30)
         self.root_volume_type = (root_volume_type or "gp3").strip()
         self.associate_public_ip = True if associate_public_ip is None else bool(associate_public_ip)
@@ -226,6 +228,10 @@ class AWSDeployer:
         self._log(f"   - IAM Profile: {self.iam_instance_profile or 'none'}")
         self._log(f"   - RootVolume: {self.root_volume_gb} GB {self.root_volume_type}")
         self._log(f"   - Public IP: {'yes' if self.associate_public_ip else 'no'}")
+        if self.security_group_id:
+            self._log("   - NOTE: Custom security group provided; ensure ports 22/9200/5601 are open.")
+        if not self.key_name:
+            self._log("   - NOTE: No AWS key pair set; SSH access to instance will not work.")
 
     def configure_elasticsearch(self, ip: str) -> None:
         """Configure Elasticsearch mappings and retention."""
