@@ -25,6 +25,7 @@ data/
 credentialsAWS.json
 secret.json
 scripts/actions_secrets.map
+.env
 
 # Frontend
 frontend/node_modules/
