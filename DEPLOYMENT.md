@@ -22,6 +22,7 @@
 - **SSH Key Path**: `/home/tor/.ssh/pi_key` (private key path for SSH auth)
 - **AWS AMI ID**: *(optional)* (override AMI, else auto from SSM)
 - **AWS Instance Fields**: *(optional)* (type, keypair, subnet, VPC, volume, IAM profile in `config.json`)
+- **AWS Key Paths**: *(optional)* (`aws_private_key_path`, `aws_public_key_path` for EC2)
 
 Vous pouvez surcharger ces valeurs via `config.json` à la racine.
 
