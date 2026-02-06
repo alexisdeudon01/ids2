@@ -237,7 +237,6 @@ class OrchestratorGUI(tk.Tk):
         log_scrollbar = ttk.Scrollbar(log_frame, command=self.log_text.yview)
         log_scrollbar.grid(row=0, column=1, sticky="ns")
         self.log_text.configure(yscrollcommand=log_scrollbar.set)
-        self.log_text.config(yscrollcommand=scrollbar.set)
 
     def _add_entry(self, parent: ttk.LabelFrame, label: str, row: int, default: str, show: bool = False) -> ttk.Entry:
         ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=4, padx=(0, 8))
