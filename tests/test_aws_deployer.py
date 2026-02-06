@@ -57,15 +57,15 @@ class TestAWSDeployer(unittest.TestCase):
             region_name="eu-west-1",
         )
         fake_session.resource.assert_called_once_with("ec2")
-        fake_boto3.resource.assert_not_called()
+        fake_session.client.assert_any_call("ssm")
+        fake_session.client.assert_any_call("ec2")
 
     def test_uses_resource_without_credentials(self):
         module, fake_boto3, _, _ = self._load_module()
 
         module.AWSDeployer("eu-west-1", "pwd", lambda msg: None, ami_id="ami-123")
 
-        fake_boto3.resource.assert_called_once_with("ec2", region_name="eu-west-1")
-        fake_boto3.Session.assert_not_called()
+        fake_boto3.Session.assert_called_once_with(region_name="eu-west-1")
 
     def test_list_instances_summary(self):
         module, _, fake_resource, _ = self._load_module()
@@ -91,3 +91,10 @@ class TestAWSDeployer(unittest.TestCase):
                 }
             ],
         )
+
+    def test_estimate_costs(self):
+        module, _, _, _ = self._load_module()
+        deployer = module.AWSDeployer("eu-west-1", "pwd", lambda msg: None, ami_id="ami-123")
+        costs = deployer.estimate_costs("t3.medium", "eu-west-1")
+        self.assertGreater(costs["ec2_hourly_usd"], 0)
+        self.assertGreater(costs["total_monthly_usd"], 0)

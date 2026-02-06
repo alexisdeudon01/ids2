@@ -74,13 +74,22 @@ class PiDeployer:
 
     def deploy_webapp(self) -> None:
         """Deploy webapp to Pi."""
-        self.ssh._log("📦 Deploying webapp...")
+        self.upload_webapp_files()
+        self.install_webapp_deps()
+        self.configure_webapp_service()
+        self.ssh._log("✅ Webapp deployed")
+
+    def upload_webapp_files(self) -> None:
+        """Upload webapp files to the Pi."""
+        self.ssh._log("📤 Uploading webapp files...")
         local_dir = Path(__file__).parent.parent.parent.parent.parent
-        
         self.ssh.run(f"mkdir -p '{self.config.remote_dir}'", sudo=True)
         self.ssh.run(f"chown -R {self.config.pi_user}:{self.config.pi_user} '{self.config.remote_dir}'", sudo=True)
         self.ssh.upload_directory(local_dir, self.config.remote_dir)
-        
+
+    def install_webapp_deps(self) -> None:
+        """Install webapp Python dependencies on the Pi."""
+        self.ssh._log("🐍 Installing webapp dependencies...")
         self.ssh.run("apt update && apt install -y python3-pip", sudo=True)
         self.ssh.run(
             f"cd '{self.config.remote_dir}' && "
@@ -88,11 +97,13 @@ class PiDeployer:
             sudo=True,
         )
 
+    def configure_webapp_service(self) -> None:
+        """Configure and start the webapp service."""
+        self.ssh._log("🧩 Configuring webapp service...")
         service = self._build_webapp_service()
         self.ssh.write_file("/etc/systemd/system/webbapp.service", service, sudo=True)
         self.ssh.run("systemctl daemon-reload", sudo=True)
         self.ssh.run("systemctl enable --now webbapp", sudo=True)
-        self.ssh._log("✅ Webapp deployed")
 
     def install_streamer(self, elk_ip: str, elastic_password: str) -> None:
         """Install Suricata log streamer."""

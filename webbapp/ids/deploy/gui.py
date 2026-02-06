@@ -11,7 +11,8 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 
 from .config import DeployConfig
-from .orchestrator import DeploymentOrchestrator
+from .aws_deployer import AWSDeployer
+from .orchestrator import DeploymentHalted, DeploymentOrchestrator
 
 
 class OrchestratorGUI(tk.Tk):
@@ -25,7 +26,7 @@ class OrchestratorGUI(tk.Tk):
         
         self.log_queue: queue.Queue[tuple[str, str]] = queue.Queue()
         self.worker: threading.Thread | None = None
-        self.orchestrator = DeploymentOrchestrator(self.log)
+        self.orchestrator = DeploymentOrchestrator(self.log, self._prompt_cost_action)
         self.config_defaults = self._load_config_defaults()
         
         self._build_ui()
@@ -91,14 +92,18 @@ class OrchestratorGUI(tk.Tk):
             self._config_default("mirror_interface", "eth0"),
         )
 
+        self.instances_count_var = tk.StringVar(value="0")
+        ttk.Label(creds, text="ELK Instances (all regions)").grid(row=13, column=0, sticky="w", pady=4)
+        ttk.Label(creds, textvariable=self.instances_count_var).grid(row=13, column=1, sticky="w", pady=4)
+
         self.reset_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=13, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=14, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         self.install_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=14, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=15, column=0, columnspan=2, sticky="w")
 
         self.remove_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=15, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=16, column=0, columnspan=2, sticky="w")
 
         # Actions
         action_frame = ttk.Frame(main_frame)
@@ -214,6 +219,8 @@ class OrchestratorGUI(tk.Tk):
         if not config.elastic_password:
             messagebox.showerror("Error", "Elastic Password is required")
             return
+        if not self._preflight_check_instances(config):
+            return
         self._start_worker(lambda: self._run_deploy(config))
 
     def start_reset_only(self) -> None:
@@ -251,6 +258,9 @@ class OrchestratorGUI(tk.Tk):
             elk_ip = self.orchestrator.full_deploy(config, self.set_progress)
             self.set_progress(100, "Deployment complete")
             self.log(f"✅ Kibana Dashboard: http://{elk_ip}:5601")
+        except DeploymentHalted as exc:
+            self.log(f"ℹ️ Deployment stopped: {exc}")
+            self.set_progress(0, "Stopped")
         except Exception as exc:
             self.log(f"❌ Deployment error: {exc}")
             self.set_progress(0, "Error")
@@ -283,6 +293,99 @@ class OrchestratorGUI(tk.Tk):
             self.set_progress(0, "Error")
         finally:
             self._finish_worker()
+
+    def _preflight_check_instances(self, config: DeployConfig) -> bool:
+        """Ensure we have at most one ELK instance across regions."""
+        try:
+            aws = AWSDeployer(
+                config.aws_region,
+                config.elastic_password,
+                self.log,
+                aws_access_key_id=config.aws_access_key_id,
+                aws_secret_access_key=config.aws_secret_access_key,
+                ami_id=config.aws_ami_id,
+            )
+            instances = aws.list_tagged_instances_all_regions()
+            self.instances_count_var.set(str(len(instances)))
+            if len(instances) <= 1:
+                return True
+
+            details = "\n".join(
+                f"- {item.get('region')} {item.get('id')} ({item.get('state')})"
+                for item in instances
+            )
+            confirm = messagebox.askyesno(
+                "Instances multiples",
+                f"{len(instances)} instances ELK trouvées:\n{details}\n\n"
+                "Supprimer toutes les instances en trop ?",
+            )
+            if confirm:
+                keep = aws.select_instance_to_keep(instances)
+                keep_id = keep.get("id") if keep else None
+                aws.terminate_instances_across_regions(instances, keep_id=keep_id)
+                instances = aws.list_tagged_instances_all_regions()
+                self.instances_count_var.set(str(len(instances)))
+            return True
+        except Exception as exc:
+            self.log(f"⚠️ Instance check failed: {exc}")
+            return True
+
+    def _prompt_cost_action(self, cost_info: dict) -> str:
+        """Ask user what to do with current AWS cost."""
+        result = {"action": "continue"}
+        event = threading.Event()
+
+        def _show():
+            dialog = tk.Toplevel(self)
+            dialog.title("AWS Cost Confirmation")
+            dialog.geometry("520x260")
+            dialog.resizable(False, False)
+            dialog.grab_set()
+
+            instance_id = cost_info.get("instance_id", "")
+            instance_type = cost_info.get("instance_type", "")
+            region = cost_info.get("region", "")
+            ec2_hour = cost_info.get("ec2_hourly_usd", 0)
+            ec2_month = cost_info.get("ec2_monthly_usd", 0)
+            elastic_hour = cost_info.get("elastic_hourly_usd", 0)
+            elastic_month = cost_info.get("elastic_monthly_usd", 0)
+            total_hour = cost_info.get("total_hourly_usd", 0)
+            total_month = cost_info.get("total_monthly_usd", 0)
+
+            info = (
+                f"Instance: {instance_id} ({instance_type})\n"
+                f"Region: {region}\n\n"
+                f"EC2: ${ec2_hour:.4f}/h (~${ec2_month:.2f}/mois)\n"
+                f"Elastic (Docker): ${elastic_hour:.4f}/h (~${elastic_month:.2f}/mois)\n"
+                f"Total: ${total_hour:.4f}/h (~${total_month:.2f}/mois)"
+            )
+
+            ttk.Label(dialog, text="Coût estimé (On-Demand)", font=("Arial", 12, "bold")).pack(pady=(10, 4))
+            ttk.Label(dialog, text=info, justify="left").pack(padx=12, pady=6)
+
+            btn_frame = ttk.Frame(dialog)
+            btn_frame.pack(pady=12)
+
+            def _set_action(value: str) -> None:
+                result["action"] = value
+                dialog.destroy()
+                event.set()
+
+            ttk.Button(btn_frame, text="Continue", command=lambda: _set_action("continue")).grid(row=0, column=0, padx=6)
+            ttk.Button(
+                btn_frame,
+                text="Stop & Delete Elastic",
+                command=lambda: _set_action("stop_elastic"),
+            ).grid(row=0, column=1, padx=6)
+            ttk.Button(
+                btn_frame,
+                text="Stop & Delete Instance",
+                command=lambda: _set_action("stop_instance"),
+            ).grid(row=0, column=2, padx=6)
+
+        self.after(0, _show)
+        event.wait()
+        return result["action"]
 
 
 def main():

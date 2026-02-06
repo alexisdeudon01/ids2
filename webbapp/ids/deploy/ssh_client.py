@@ -13,6 +13,14 @@ from typing import Callable
 import paramiko
 
 
+def _tqdm(iterable, **kwargs):
+    try:
+        from tqdm import tqdm  # type: ignore
+        return tqdm(iterable, **kwargs)
+    except Exception:
+        return iterable
+
+
 class SSHClient:
     """SSH client with SFTP support."""
     
@@ -91,16 +99,20 @@ class SSHClient:
     def upload_directory(self, local_dir: Path, remote_dir: str) -> None:
         ignore_dirs = {".venv", "__pycache__", "node_modules", ".git"}
         ignore_files = {"ids.db"}
-        
+
+        upload_items: list[tuple[Path, str]] = []
         for root, dirs, files in os.walk(local_dir):
             dirs[:] = [d for d in dirs if d not in ignore_dirs]
             rel_path = Path(root).relative_to(local_dir)
             remote_path = posixpath.join(remote_dir, str(rel_path))
             self.run(f"mkdir -p '{remote_path}'", sudo=False)
-            
+
             for name in files:
                 if name in ignore_files:
                     continue
                 local_file = Path(root) / name
                 remote_file = posixpath.join(remote_path, name)
-                self.sftp.put(str(local_file), remote_file)
+                upload_items.append((local_file, remote_file))
+
+        for local_file, remote_file in _tqdm(upload_items, desc="Uploading webapp files", unit="file"):
+            self.sftp.put(str(local_file), remote_file)
