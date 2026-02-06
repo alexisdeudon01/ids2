@@ -52,8 +52,7 @@ class AWSDeployer:
         vpc_id: str | None = None,
         security_group_id: str | None = None,
         iam_instance_profile: str | None = None,
-        aws_private_key_path: str | None = None,
-        aws_public_key_path: str | None = None,
+        ssh_key_path: str | None = None,
         root_volume_gb: int | None = None,
         root_volume_type: str | None = None,
         associate_public_ip: bool | None = None,
@@ -68,8 +67,7 @@ class AWSDeployer:
         self.vpc_id = (vpc_id or "").strip()
         self.security_group_id = (security_group_id or "").strip()
         self.iam_instance_profile = (iam_instance_profile or "").strip()
-        self.aws_private_key_path = (aws_private_key_path or "").strip()
-        self.aws_public_key_path = (aws_public_key_path or "").strip()
+        self.ssh_key_path = (ssh_key_path or "").strip()
         self.root_volume_gb = int(root_volume_gb or 30)
         self.root_volume_type = (root_volume_type or "gp3").strip()
         self.associate_public_ip = True if associate_public_ip is None else bool(associate_public_ip)
@@ -229,7 +227,7 @@ class AWSDeployer:
         self._log(f"   - AMI: {ami_id}")
         self._log(f"   - InstanceType: {self.instance_type}")
         self._log(f"   - KeyName: {self.key_name or 'none'}")
-        self._log(f"   - LocalKeyPath: {self.aws_private_key_path or 'none'}")
+        self._log(f"   - LocalKeyPath: {self.ssh_key_path or 'none'}")
         self._log(f"   - SubnetId: {self.subnet_id or 'default'}")
         self._log(f"   - VpcId: {self.vpc_id or 'default'}")
         self._log(f"   - SecurityGroupId: {sg_id}")
@@ -373,41 +371,28 @@ class AWSDeployer:
             return
 
         key_exists = self.keypair_exists(self.key_name)
-        private_path = Path(self.aws_private_key_path).expanduser() if self.aws_private_key_path else None
-        public_path = Path(self.aws_public_key_path).expanduser() if self.aws_public_key_path else None
+        private_path, public_path = self._local_key_paths()
 
-        if private_path and private_path.exists():
-            if public_path and not public_path.exists():
-                pub = self._derive_public_key(private_path)
-                if pub:
-                    public_path.write_text(pub + "\n", encoding="utf-8")
-                    self._log(f"✅ Derived public key: {public_path}")
-            if not key_exists and public_path and public_path.exists():
-                self._log("🔐 Importing key pair to AWS...")
-                self._ec2_client.import_key_pair(
-                    KeyName=self.key_name,
-                    PublicKeyMaterial=public_path.read_bytes(),
-                )
+        if not private_path or not private_path.exists():
+            self._log("⚠️ Local SSH key is missing; cannot create/import AWS key pair.")
+            raise RuntimeError("Local SSH key missing. Create it in the GUI first.")
+
+        if public_path and not public_path.exists():
+            pub = self._derive_public_key(private_path)
+            if pub:
+                public_path.write_text(pub + "\n", encoding="utf-8")
+                self._log(f"✅ Derived public key: {public_path}")
+
+        if not key_exists and public_path and public_path.exists():
+            self._log("🔐 Importing key pair to AWS...")
+            self._ec2_client.import_key_pair(
+                KeyName=self.key_name,
+                PublicKeyMaterial=public_path.read_bytes(),
+            )
             return
 
         if key_exists:
-            self._log("⚠️ AWS key pair exists but local private key is missing.")
-            return
-
-        self._log("🔐 Creating new AWS key pair...")
-        response = self._ec2_client.create_key_pair(KeyName=self.key_name)
-        key_material = response.get("KeyMaterial", "")
-        if private_path:
-            private_path.parent.mkdir(parents=True, exist_ok=True)
-            private_path.write_text(key_material, encoding="utf-8")
-            private_path.chmod(0o600)
-            self._log(f"✅ Saved private key: {private_path}")
-
-        if public_path:
-            pub = self._derive_public_key(private_path) if private_path else ""
-            if pub:
-                public_path.write_text(pub + "\n", encoding="utf-8")
-                self._log(f"✅ Saved public key: {public_path}")
+            self._log("✅ AWS key pair already exists.")
 
     def _derive_public_key(self, private_path: Path) -> str:
         for key_cls in (paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key):
@@ -418,9 +403,17 @@ class AWSDeployer:
                 continue
         return ""
 
-    def log_ssh_access(self, instance, key_path: str) -> None:
+    def _local_key_paths(self) -> tuple[Path | None, Path | None]:
+        if not self.ssh_key_path:
+            return None, None
+        private_path = Path(self.ssh_key_path).expanduser()
+        public_path = Path(str(private_path) + ".pub")
+        return private_path, public_path
+
+    def log_ssh_access(self, instance, key_path: str | None = None) -> None:
         public_ip = getattr(instance, "public_ip_address", None)
         key_name = getattr(instance, "key_name", None)
+        key_path = key_path or self.ssh_key_path
         self._log(f"🔐 SSH KeyPair: {key_name or 'none'}")
         self._log(f"🌐 Instance Public IP: {public_ip or 'none'}")
         if key_path:
@@ -443,25 +436,76 @@ class AWSDeployer:
         except Exception as exc:
             self._log(f"⚠️ SSH port test failed: {exc}")
 
-    def sync_instance_public_key(self, instance_id: str) -> bool:
-        public_path = Path(self.aws_public_key_path).expanduser() if self.aws_public_key_path else None
+    def sync_instance_ssh_keys(self, instance_id: str) -> bool:
+        private_path, public_path = self._local_key_paths()
+        if not private_path or not private_path.is_file():
+            self._log("⚠️ Local SSH private key not found; cannot sync to instance.")
+            return False
         if not public_path or not public_path.is_file():
-            self._log("⚠️ AWS public key file not found; cannot sync to instance.")
+            self._log("⚠️ Local SSH public key not found; cannot sync to instance.")
             return False
 
+        private_key = private_path.read_text(encoding="utf-8").strip()
         public_key = public_path.read_text(encoding="utf-8").strip()
-        if not public_key:
-            self._log("⚠️ AWS public key file is empty.")
+        if not private_key or not public_key:
+            self._log("⚠️ Local SSH key files are empty.")
             return False
 
+        key_name = private_path.name
+        remote_key = f"/home/ubuntu/.ssh/{key_name}"
         commands = [
             "mkdir -p /home/ubuntu/.ssh",
-            f"grep -qxF {json.dumps(public_key)} /home/ubuntu/.ssh/authorized_keys || echo {json.dumps(public_key)} >> /home/ubuntu/.ssh/authorized_keys",
+            (
+                f"if [ ! -f {remote_key} ]; then "
+                f"cat <<'EOF' > {remote_key}\n{private_key}\nEOF\n"
+                f"chmod 600 {remote_key}; fi"
+            ),
+            (
+                f"if [ ! -f {remote_key}.pub ]; then "
+                f"cat <<'EOF' > {remote_key}.pub\n{public_key}\nEOF\n"
+                f"chmod 644 {remote_key}.pub; fi"
+            ),
+            f"grep -qxF {json.dumps(public_key)} /home/ubuntu/.ssh/authorized_keys || "
+            f"echo {json.dumps(public_key)} >> /home/ubuntu/.ssh/authorized_keys",
             "chmod 700 /home/ubuntu/.ssh",
             "chmod 600 /home/ubuntu/.ssh/authorized_keys",
             "chown -R ubuntu:ubuntu /home/ubuntu/.ssh",
         ]
         return self._send_ssm_commands(instance_id, commands, log_output=True)
+
+    def test_ssh_connection(
+        self, host: str, key_path: str | None = None, user: str = "ubuntu", timeout: int = 10
+    ) -> tuple[bool, str]:
+        key_path = key_path or self.ssh_key_path
+        if not host:
+            return False, "missing host"
+        if not key_path or not Path(key_path).expanduser().is_file():
+            return False, "missing local SSH key"
+
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            client.connect(
+                hostname=host,
+                username=user,
+                key_filename=str(Path(key_path).expanduser()),
+                allow_agent=True,
+                look_for_keys=True,
+                timeout=timeout,
+            )
+            _, stdout, stderr = client.exec_command("echo ok")
+            out = stdout.read().decode().strip()
+            err = stderr.read().decode().strip()
+            if err:
+                return False, err
+            return True, out or "ok"
+        except Exception as exc:
+            return False, str(exc)
+        finally:
+            try:
+                client.close()
+            except Exception:
+                pass
 
     def _test_tcp_port(self, host: str, port: int, timeout: int = 3) -> bool:
         import socket

@@ -6,6 +6,7 @@ import io
 import json
 import os
 import posixpath
+import shlex
 import uuid
 from pathlib import Path
 from typing import Callable
@@ -41,10 +42,13 @@ class SSHClient:
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         key_filename = os.path.expanduser(ssh_key_path) if ssh_key_path else None
+        if key_filename and not Path(key_filename).is_file():
+            key_filename = None
+        password_value = password or None
         self.client.connect(
             hostname=host,
             username=user,
-            password=password or None,
+            password=password_value,
             key_filename=key_filename,
             allow_agent=True,
             look_for_keys=True,
@@ -89,6 +93,12 @@ class SSHClient:
         exit_status, _, _ = self._exec(wrapped)
         if check and exit_status != 0:
             raise RuntimeError(f"Remote command failed ({exit_status}): {command}")
+
+    def exists(self, remote_path: str) -> bool:
+        command = f"test -f {shlex.quote(remote_path)}"
+        wrapped = f"bash -lc {json.dumps(command)}"
+        exit_status, _, _ = self._exec(wrapped)
+        return exit_status == 0
 
     def write_file(self, remote_path: str, content: str, sudo: bool = False) -> None:
         tmp_path = f"/tmp/{uuid.uuid4().hex}.tmp"

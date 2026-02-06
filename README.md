@@ -52,10 +52,9 @@ Les valeurs par défaut peuvent être personnalisées dans `config.json` à la r
 | **Remote Dir** | `/opt/ids2` | Répertoire d'installation |
 | **Mirror Interface** | `eth0` | Interface réseau pour capture |
 | **Elastic Password** | *(requis)* | Mot de passe Elasticsearch |
-| **SSH Key Path** | `/home/tor/.ssh/pi_key` | Chemin clé privée si SSH sans mot de passe |
+| **SSH Key Path** | `/home/tor/.ssh/pi_key` | Clé SSH partagée (PC/Pi/EC2) |
 | **AWS AMI ID** | *(optionnel)* | AMI à utiliser (sinon auto via SSM) |
 | **AWS Instance Fields** | *(optionnel)* | Voir `config.json` (type, keypair, subnet, VPC, volume, IAM profile) |
-| **AWS Key Paths** | *(optionnel)* | `aws_private_key_path` / `aws_public_key_path` (EC2) |
 
 Les credentials AWS peuvent être fournis via variables d'environnement :
 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.

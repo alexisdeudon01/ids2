@@ -105,27 +105,49 @@ class PiDeployer:
         self.ssh.run("systemctl daemon-reload", sudo=True)
         self.ssh.run("systemctl enable --now webbapp", sudo=True)
 
-    def install_ec2_key(self, private_key_path: str, public_key_path: str, remote_path: str) -> None:
-        """Upload EC2 keypair to Pi for SSH to instance."""
-        self.ssh._log("🔑 Installing EC2 SSH key on Pi...")
-        private_path = Path(private_key_path).expanduser()
-        public_path = Path(public_key_path).expanduser()
+    def install_shared_ssh_key(self, local_key_path: str) -> None:
+        """Upload shared SSH keypair to Pi (without overwriting)."""
+        self.ssh._log("🔑 Installing shared SSH key on Pi...")
+        private_path = Path(local_key_path).expanduser()
+        public_path = Path(str(private_path) + ".pub")
 
         if not private_path.is_file():
-            self.ssh._log(f"⚠️ EC2 private key not found: {private_path}")
+            self.ssh._log(f"⚠️ SSH private key not found: {private_path}")
             return
         if not public_path.is_file():
-            self.ssh._log(f"⚠️ EC2 public key not found: {public_path}")
+            self.ssh._log(f"⚠️ SSH public key not found: {public_path}")
             return
 
-        remote_dir = posixpath.dirname(remote_path)
+        key_name = private_path.name
+        remote_dir = f"/home/{self.config.pi_user}/.ssh"
+        remote_key = posixpath.join(remote_dir, key_name)
+
         self.ssh.run(f"mkdir -p '{remote_dir}'", sudo=True)
-        self.ssh.write_file(remote_path, private_path.read_text(encoding="utf-8"), sudo=True)
-        self.ssh.write_file(f"{remote_path}.pub", public_path.read_text(encoding="utf-8"), sudo=True)
-        self.ssh.run(f"chmod 600 '{remote_path}'", sudo=True)
-        self.ssh.run(f"chmod 644 '{remote_path}.pub'", sudo=True)
+
+        if not self.ssh.exists(remote_key):
+            self.ssh.write_file(remote_key, private_path.read_text(encoding="utf-8"), sudo=True)
+            self.ssh.run(f"chmod 600 '{remote_key}'", sudo=True)
+        else:
+            self.ssh._log(f"ℹ️ SSH key already exists on Pi: {remote_key}")
+
+        if not self.ssh.exists(f"{remote_key}.pub"):
+            self.ssh.write_file(
+                f"{remote_key}.pub", public_path.read_text(encoding="utf-8"), sudo=True
+            )
+            self.ssh.run(f"chmod 644 '{remote_key}.pub'", sudo=True)
+
+        public_key = public_path.read_text(encoding="utf-8").strip()
+        if public_key:
+            self.ssh.run(
+                f"grep -qxF {json.dumps(public_key)} '{remote_dir}/authorized_keys' || "
+                f"echo {json.dumps(public_key)} >> '{remote_dir}/authorized_keys'",
+                sudo=True,
+                check=False,
+            )
+        self.ssh.run(f"chmod 700 '{remote_dir}'", sudo=True, check=False)
+        self.ssh.run(f"chmod 600 '{remote_dir}/authorized_keys'", sudo=True, check=False)
         self.ssh.run(f"chown -R {self.config.pi_user}:{self.config.pi_user} '{remote_dir}'", sudo=True)
-        self.ssh._log("✅ EC2 key installed on Pi.")
+        self.ssh._log("✅ Shared SSH key ready on Pi.")
 
     def install_streamer(self, elk_ip: str, elastic_password: str) -> None:
         """Install Suricata log streamer."""

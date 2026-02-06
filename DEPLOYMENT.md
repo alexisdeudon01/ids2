@@ -11,6 +11,7 @@
 ## Configuration
 
 ### Default Values
+
 - **AWS Region**: `eu-west-1`
 - **Pi Hostname**: `sinik`
 - **Pi IP**: `192.168.178.66`
@@ -19,19 +20,20 @@
 - **Sudo Password**: `pi`
 - **Remote Directory**: `/opt/ids2`
 - **Mirror Interface**: `eth0` (network interface for port mirroring)
-- **SSH Key Path**: `/home/tor/.ssh/pi_key` (private key path for SSH auth)
+- **SSH Key Path**: `/home/tor/.ssh/pi_key` (shared SSH key for PC/Pi/EC2)
 - **AWS AMI ID**: *(optional)* (override AMI, else auto from SSM)
 - **AWS Instance Fields**: *(optional)* (type, keypair, subnet, VPC, volume, IAM profile in `config.json`)
-- **AWS Key Paths**: *(optional)* (`aws_private_key_path`, `aws_public_key_path` for EC2)
 
 Vous pouvez surcharger ces valeurs via `config.json` à la racine.
 
 ### Required
+
 - **Elastic Password**: Must be provided (no default)
 
 ## Mirror Interface
 
 The **Mirror Interface** is the network interface on your Raspberry Pi that receives mirrored/SPAN traffic from your network switch. This is typically:
+
 - `eth0` for wired Ethernet
 - `wlan0` for WiFi (not recommended for IDS)
 
@@ -39,7 +41,7 @@ Configure your network switch to mirror traffic to the port where your Pi is con
 
 ## Architecture
 
-```
+```text
 ids/deploy/
 ├── config.py          # Configuration dataclass
 ├── ssh_client.py      # SSH/SFTP operations

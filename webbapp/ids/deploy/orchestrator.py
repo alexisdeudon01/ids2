@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import socket
 import threading
-import time
 from typing import Callable, TYPE_CHECKING
 
 
@@ -41,7 +39,7 @@ class DeploymentOrchestrator:
     def full_deploy(self, config: DeployConfig, progress_callback: Callable[[float, str], None]) -> str:
         """Execute full deployment, returns ELK IP."""
         step = 0
-        total_steps = 11 + sum([config.reset_first, config.remove_docker, config.install_docker])
+        total_steps = 13 + sum([config.reset_first, config.remove_docker, config.install_docker])
 
         progress_bar = _tqdm(total=total_steps, desc="Deployment", unit="step")
 
@@ -100,23 +98,41 @@ class DeploymentOrchestrator:
                     vpc_id=config.aws_vpc_id,
                     security_group_id=config.aws_security_group_id,
                     iam_instance_profile=config.aws_iam_instance_profile,
-                    aws_private_key_path=config.aws_private_key_path,
-                    aws_public_key_path=config.aws_public_key_path,
                     root_volume_gb=config.aws_root_volume_gb,
                     root_volume_type=config.aws_root_volume_type,
                     associate_public_ip=config.aws_associate_public_ip,
+                    ssh_key_path=config.ssh_key_path,
                 )
                 instance = aws.ensure_instance()
-                aws.log_ssh_access(instance, config.aws_private_key_path)
+                aws.log_ssh_access(instance)
 
-                if aws.sync_instance_public_key(getattr(instance, "id", "")):
-                    self._log("✅ EC2 public key synced to instance.")
+                self._log("🔑 Syncing SSH keys...")
+                advance("Syncing SSH keys")
+                instance_ip = aws._wait_for_instance(instance)
+                if aws.sync_instance_ssh_keys(getattr(instance, "id", "")):
+                    self._log("✅ SSH keys synced to EC2.")
                 else:
-                    self._log("⚠️ EC2 public key not synced to instance.")
-                pi.install_ec2_key(
-                    config.aws_private_key_path,
-                    config.aws_public_key_path,
-                    config.pi_ec2_key_path,
+                    self._log("⚠️ SSH keys not synced to EC2.")
+                pi.install_shared_ssh_key(config.ssh_key_path)
+
+                self._log("🔐 Testing SSH connectivity...")
+                advance("Testing SSH")
+                ec2_ok, ec2_msg = aws.test_ssh_connection(instance_ip, config.ssh_key_path)
+                if ec2_ok:
+                    self._log(f"✅ EC2 SSH OK: {ec2_msg}")
+                else:
+                    self._log(f"⚠️ EC2 SSH failed: {ec2_msg}")
+
+                pi_ok, pi_msg = self._test_pi_ssh_key(config)
+                if pi_ok:
+                    self._log(f"✅ Pi SSH OK: {pi_msg}")
+                else:
+                    self._log(f"⚠️ Pi SSH failed: {pi_msg}")
+
+                monitor_stop = self._start_ssh_health_monitor(
+                    aws,
+                    instance_ip,
+                    config.ssh_key_path,
                 )
 
                 if self._decision_callback:
@@ -154,12 +170,6 @@ class DeploymentOrchestrator:
                 aws.log_access_info(elk_ip)
                 if not aws.verify_services(elk_ip):
                     raise RuntimeError("ELK services not healthy (Elasticsearch/Kibana).")
-
-                monitor_stop = self._start_connectivity_monitor(
-                    pi_host=config.pi_host,
-                    pi_ip=config.pi_ip,
-                    ec2_ip=elk_ip,
-                )
 
                 self._log("📊 Configuring Elasticsearch...")
                 advance("Configuring Elasticsearch")
@@ -243,30 +253,38 @@ class DeploymentOrchestrator:
             pi.remove_docker()
         progress_callback(100, "Docker removed")
 
-    def _start_connectivity_monitor(self, pi_host: str, pi_ip: str, ec2_ip: str) -> threading.Event:
+    def _start_ssh_health_monitor(
+        self, aws: AWSDeployer, ec2_ip: str, ssh_key_path: str
+    ) -> threading.Event:
         stop_event = threading.Event()
-        pi_target = pi_host or pi_ip
 
         def _loop() -> None:
             while not stop_event.is_set():
-                pi_ok = self._check_tcp(pi_target, 22)
-                ec2_ok = self._check_tcp(ec2_ip, 22)
-                self._log(
-                    f"🔁 SSH check (Pi: {pi_target}) "
-                    f"{'✅' if pi_ok else '❌'} | "
-                    f"(EC2: {ec2_ip}) {'✅' if ec2_ok else '❌'}"
-                )
+                ok, msg = aws.test_ssh_connection(ec2_ip, ssh_key_path)
+                status = "✅" if ok else "❌"
+                self._log(f"🔁 EC2 SSH health {status}: {msg}")
                 stop_event.wait(10)
 
         thread = threading.Thread(target=_loop, daemon=True)
         thread.start()
         return stop_event
 
-    def _check_tcp(self, host: str, port: int) -> bool:
+    def _test_pi_ssh_key(self, config: DeployConfig) -> tuple[bool, str]:
+        host = config.pi_host or config.pi_ip
         if not host:
-            return False
+            return False, "missing Pi host"
+        if not config.ssh_key_path:
+            return False, "missing SSH key path"
+
         try:
-            with socket.create_connection((host, port), timeout=3):
-                return True
-        except OSError:
-            return False
+            with SSHClient(
+                host,
+                config.pi_user,
+                "",
+                config.sudo_password,
+                self._log,
+                ssh_key_path=config.ssh_key_path,
+            ):
+                return True, "ok"
+        except Exception as exc:
+            return False, str(exc)

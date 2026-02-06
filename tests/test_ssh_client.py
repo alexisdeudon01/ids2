@@ -72,7 +72,8 @@ class TestSSHClient(unittest.TestCase):
         fake_client.open_sftp.return_value = fake_sftp
 
         key_path = "~/.ssh/pi_key"
-        module.SSHClient("host", "user", "", "sudo", lambda msg: None, ssh_key_path=key_path)
+        with mock.patch.object(module.Path, "is_file", return_value=True):
+            module.SSHClient("host", "user", "", "sudo", lambda msg: None, ssh_key_path=key_path)
 
         fake_client.connect.assert_called_once_with(
             hostname="host",
