@@ -4,44 +4,135 @@
 
 ```
 AWS/
-├── datas/              # Données persistantes (*.db, volumes MySQL)
-│   └── .gitkeep
-├── mysql/              # MySQL Database (déployé sur Raspberry Pi)
+├── datas/                      # Données AWS extraites → SQL
+│   ├── 01_aws_account.sql
+│   ├── 02_iam_users.sql
+│   ├── 03_api_keys.sql
+│   ├── 04_ec2_instances.sql
+│   ├── 05_elk_credentials.sql  # ← Credentials Elasticsearch/Kibana
+│   └── 06_deployment_config.sql
+├── mysql/                      # MySQL Database (sur Raspberry Pi)
 │   ├── Dockerfile
 │   └── init.sql
-├── app/                # Application backend
+├── app/                        # Application backend
 │   ├── Dockerfile
 │   └── ...
-├── deploy_db_to_pi.sh  # Script de déploiement MySQL sur Pi via SSH
+├── extract_aws_data.sh         # Extrait données AWS → datas/*.sql
+├── deploy_db_to_pi.sh          # Deploy MySQL sur Pi via SSH
+├── deploy_suricata_to_pi.sh    # Deploy Suricata IDS sur Pi via SSH
+├── deploy_all.sh               # MASTER: déploie tout
+├── monitor_db_coherence.py     # Monitor cohérence DB ↔ réalité
 └── README.md
 ```
 
-## Déploiement de la base de données sur Raspberry Pi
+## 🚀 Déploiement Complet (Automatique)
 
-La base de données MySQL est déployée **sur le Raspberry Pi**, pas sur l'instance EC2.
-
-### Prérequis
-
-- Raspberry Pi accessible via SSH
-- Docker et docker-compose installés sur le Pi
-- Clé SSH configurée dans `config.json`
-
-### Déploiement automatique
+### Script Master - Tout en un
 
 ```bash
 cd /home/tor/Downloads/ids2/AWS
+./deploy_all.sh
+```
+
+Ce script exécute dans l'ordre :
+1. **Extract AWS data** → génère fichiers SQL dans `datas/`
+2. **Deploy MySQL** → sur Pi avec données AWS préchargées
+3. **Deploy Suricata** → IDS sur Pi
+
+### Déploiement par Étapes
+
+#### Étape 1 : Extraire données AWS
+
+```bash
+./extract_aws_data.sh
+```
+
+Génère 6 fichiers SQL dans `datas/` :
+- Account AWS
+- Utilisateurs IAM
+- Clés API
+- Instances EC2
+- **Credentials Elasticsearch/Kibana** (elastic/admin)
+- Configuration déploiement
+
+#### Étape 2 : Déployer MySQL sur Pi
+
+```bash
 ./deploy_db_to_pi.sh
 ```
 
 Le script va :
-1. ✅ Charger la configuration depuis `config.json`
-2. ✅ Tester la connexion SSH au Pi
-3. ✅ Copier les fichiers MySQL (Dockerfile, init.sql)
-4. ✅ Créer docker-compose.yml sur le Pi
-5. ✅ Installer Docker/docker-compose si nécessaire
-6. ✅ Build et démarrer le container MySQL
-7. ✅ Vérifier que la DB est prête
-8. ✅ Afficher les infos de connexion
+1. ✅ Charger configuration depuis `config.json`
+2. ✅ Tester connexion SSH au Pi
+3. ✅ Copier Dockerfile + init.sql + tous les SQL de `datas/`
+4. ✅ Installer Docker/docker-compose si nécessaire
+5. ✅ Build + démarrer container MySQL
+6. ✅ Charger toutes les données automatiquement
+7. ✅ Vérifier que DB est prête
+
+#### Étape 3 : Déployer Suricata IDS
+
+```bash
+./deploy_suricata_to_pi.sh
+```
+
+Le script va :
+1. ✅ Installer Suricata
+2. ✅ Mettre à jour les règles
+3. ✅ Configurer l'interface réseau (`eth0` par défaut)
+4. ✅ Créer service systemd
+5. ✅ Démarrer Suricata
+
+## 📊 Monitoring de Cohérence
+
+Le script `monitor_db_coherence.py` vérifie **en continu** la cohérence entre :
+- Base de données (Pi)
+- AWS réel (instances EC2)
+- Services Pi (SSH, Suricata, MySQL, Webapp)
+
+### Utilisation
+
+```bash
+# Check unique
+./monitor_db_coherence.py --once
+
+# Monitoring continu (toutes les 10s)
+./monitor_db_coherence.py
+
+# Intervalle personnalisé (30s)
+./monitor_db_coherence.py --interval 30
+```
+
+### Vérifications effectuées
+
+Le monitor vérifie **automatiquement** :
+- ✅ Health DB MySQL
+- ✅ SSH Pi accessible
+- ✅ SSH EC2 accessible
+- ✅ Services actifs (Suricata, MySQL, Webapp)
+- ✅ Cohérence instances DB ↔ AWS
+- ✅ Auto-cleanup instances orphelines en DB
+- ✅ Auto-ajout instances manquantes en DB
+- ✅ Auto-update états/IPs
+
+### Exemple de sortie
+
+```
+🔍 Coherence Check #1 - 2026-02-06 22:52:10
+============================================================
+📊 Database: ✅ OK
+🔌 Pi SSH (192.168.178.66): ✅ OK
+🛡️  Suricata: ✅ active
+💾 MySQL: ✅ active
+🌐 Webapp: ✅ active
+
+🔄 Reconciliation:
+   DB instances: 1
+   AWS instances: 1
+   ✅ DB and AWS are in sync
+
+🔌 EC2 SSH (i-05ac0e0b0bc782cbd): ✅ OK
+```
 
 ### Déploiement manuel
 
@@ -82,10 +173,22 @@ mysql -h 192.168.178.66 -P 3306 -uids_user -padmin ids_db
 
 ### Credentials
 
+**MySQL Database:**
 - **Database**: `ids_db`
 - **User**: `ids_user`
 - **Password**: `admin`
 - **Root password**: `admin`
+- **Host**: `192.168.178.66:3306` (Raspberry Pi)
+
+**Elasticsearch:**
+- **User**: `elastic`
+- **Password**: `admin`
+- **URL**: `http://[EC2_IP]:9200`
+
+**Kibana:**
+- **User**: `elastic`
+- **Password**: `admin`
+- **URL**: `http://[EC2_IP]:5601`
 
 ## Tables créées
 

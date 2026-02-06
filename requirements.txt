@@ -19,5 +19,8 @@ requests==2.32.3
 psutil==5.9.0
 tqdm==4.66.4
 
+# Database (MySQL connector for Pi monitoring)
+pymysql==1.1.0
+
 # Type hints
 types-requests>=2.31.0
