@@ -110,7 +110,7 @@ services:
       dockerfile: Dockerfile
     container_name: ids2-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: ids_db
       MYSQL_USER: ids_user
       MYSQL_PASSWORD: admin
@@ -120,7 +120,7 @@ services:
       - ./mysql/data:/var/lib/mysql
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-padmin"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -171,7 +171,7 @@ success "MySQL container started"
 log "Waiting for MySQL to be ready..."
 for i in {1..30}; do
     if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "${PI_USER}@${PI_TARGET}" \
-        "sudo docker exec ids2-mysql mysqladmin ping -h localhost -uroot -padmin &>/dev/null"; then
+        "sudo docker exec ids2-mysql mysqladmin ping -h localhost -uroot -proot &>/dev/null"; then
         success "MySQL is ready!"
         break
     fi
