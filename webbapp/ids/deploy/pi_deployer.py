@@ -105,6 +105,28 @@ class PiDeployer:
         self.ssh.run("systemctl daemon-reload", sudo=True)
         self.ssh.run("systemctl enable --now webbapp", sudo=True)
 
+    def install_ec2_key(self, private_key_path: str, public_key_path: str, remote_path: str) -> None:
+        """Upload EC2 keypair to Pi for SSH to instance."""
+        self.ssh._log("🔑 Installing EC2 SSH key on Pi...")
+        private_path = Path(private_key_path).expanduser()
+        public_path = Path(public_key_path).expanduser()
+
+        if not private_path.is_file():
+            self.ssh._log(f"⚠️ EC2 private key not found: {private_path}")
+            return
+        if not public_path.is_file():
+            self.ssh._log(f"⚠️ EC2 public key not found: {public_path}")
+            return
+
+        remote_dir = posixpath.dirname(remote_path)
+        self.ssh.run(f"mkdir -p '{remote_dir}'", sudo=True)
+        self.ssh.write_file(remote_path, private_path.read_text(encoding="utf-8"), sudo=True)
+        self.ssh.write_file(f"{remote_path}.pub", public_path.read_text(encoding="utf-8"), sudo=True)
+        self.ssh.run(f"chmod 600 '{remote_path}'", sudo=True)
+        self.ssh.run(f"chmod 644 '{remote_path}.pub'", sudo=True)
+        self.ssh.run(f"chown -R {self.config.pi_user}:{self.config.pi_user} '{remote_dir}'", sudo=True)
+        self.ssh._log("✅ EC2 key installed on Pi.")
+
     def install_streamer(self, elk_ip: str, elastic_password: str) -> None:
         """Install Suricata log streamer."""
         self.ssh._log("📡 Installing streamer...")

@@ -82,40 +82,46 @@ class OrchestratorGUI(tk.Tk):
             6,
             self._config_default("aws_private_key_path", ""),
         )
+        self.aws_public_key_path = self._add_entry(
+            creds,
+            "AWS Public Key Path (optional)",
+            7,
+            self._config_default("aws_public_key_path", ""),
+        )
         self.aws_subnet_id = self._add_entry(
             creds,
             "AWS Subnet ID (optional)",
-            7,
+            8,
             self._config_default("aws_subnet_id", ""),
         )
         self.aws_vpc_id = self._add_entry(
             creds,
             "AWS VPC ID (optional)",
-            8,
+            9,
             self._config_default("aws_vpc_id", ""),
         )
         self.aws_security_group_id = self._add_entry(
             creds,
             "AWS Security Group ID (optional)",
-            9,
+            10,
             self._config_default("aws_security_group_id", ""),
         )
         self.aws_iam_instance_profile = self._add_entry(
             creds,
             "AWS IAM Instance Profile (optional)",
-            10,
+            11,
             self._config_default("aws_iam_instance_profile", ""),
         )
         self.aws_root_volume_gb = self._add_entry(
             creds,
             "AWS Root Volume (GB)",
-            11,
+            12,
             self._config_default("aws_root_volume_gb", "30"),
         )
         self.aws_root_volume_type = self._add_entry(
             creds,
             "AWS Root Volume Type",
-            12,
+            13,
             self._config_default("aws_root_volume_type", "gp3"),
         )
         self.aws_public_ip_var = tk.BooleanVar(
@@ -123,48 +129,54 @@ class OrchestratorGUI(tk.Tk):
         )
         ttk.Checkbutton(
             creds, text="AWS Associate Public IP", variable=self.aws_public_ip_var
-        ).grid(row=13, column=0, columnspan=2, sticky="w", pady=4)
+        ).grid(row=14, column=0, columnspan=2, sticky="w", pady=4)
 
         self.elastic_password = self._add_entry(
             creds,
             "Elastic Password (required)",
-            14,
+            15,
             self._config_default("elastic_password", ""),
             show=True,
         )
-        self.pi_host = self._add_entry(creds, "Pi Hostname", 15, self._config_default("pi_host", "sinik"))
-        self.pi_ip = self._add_entry(creds, "Pi IP (optional)", 16, self._config_default("pi_ip", "192.168.178.66"))
-        self.pi_user = self._add_entry(creds, "Pi User", 17, self._config_default("pi_user", "pi"))
-        self.pi_password = self._add_entry(creds, "Pi Password", 18, self._config_default("pi_password", "pi"), show=True)
+        self.pi_host = self._add_entry(creds, "Pi Hostname", 16, self._config_default("pi_host", "sinik"))
+        self.pi_ip = self._add_entry(creds, "Pi IP (optional)", 17, self._config_default("pi_ip", "192.168.178.66"))
+        self.pi_user = self._add_entry(creds, "Pi User", 18, self._config_default("pi_user", "pi"))
+        self.pi_password = self._add_entry(creds, "Pi Password", 19, self._config_default("pi_password", "pi"), show=True)
         self.ssh_key_path = self._add_entry(
             creds,
             "SSH Key Path (optional)",
-            19,
+            20,
             self._config_default("ssh_key_path", self._default_ssh_key_path()),
         )
-        self.sudo_password = self._add_entry(
-            creds, "Sudo Password", 20, self._config_default("sudo_password", "pi"), show=True
+        self.pi_ec2_key_path = self._add_entry(
+            creds,
+            "Pi EC2 Key Path (optional)",
+            21,
+            self._config_default("pi_ec2_key_path", "/home/pi/.ssh/ids2_ec2_key"),
         )
-        self.remote_dir = self._add_entry(creds, "Remote Directory", 21, self._config_default("remote_dir", "/opt/ids2"))
+        self.sudo_password = self._add_entry(
+            creds, "Sudo Password", 22, self._config_default("sudo_password", "pi"), show=True
+        )
+        self.remote_dir = self._add_entry(creds, "Remote Directory", 23, self._config_default("remote_dir", "/opt/ids2"))
         self.mirror_interface = self._add_entry(
             creds,
             "Mirror Interface (network port for traffic capture)",
-            22,
+            24,
             self._config_default("mirror_interface", "eth0"),
         )
 
         self.instances_count_var = tk.StringVar(value="0")
-        ttk.Label(creds, text="ELK Instances (all regions)").grid(row=23, column=0, sticky="w", pady=4)
-        ttk.Label(creds, textvariable=self.instances_count_var).grid(row=23, column=1, sticky="w", pady=4)
+        ttk.Label(creds, text="ELK Instances (all regions)").grid(row=25, column=0, sticky="w", pady=4)
+        ttk.Label(creds, textvariable=self.instances_count_var).grid(row=25, column=1, sticky="w", pady=4)
 
         self.reset_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=24, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=26, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         self.install_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=25, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=27, column=0, columnspan=2, sticky="w")
 
         self.remove_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=26, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=28, column=0, columnspan=2, sticky="w")
 
         # Actions
         action_frame = ttk.Frame(main_frame)
@@ -243,15 +255,17 @@ class OrchestratorGUI(tk.Tk):
             aws_ami_id=self.aws_ami_id.get().strip(),
             aws_instance_type=self.aws_instance_type.get().strip() or "t3.medium",
             aws_key_name=self.aws_key_name.get().strip(),
+            aws_private_key_path=self.aws_private_key_path.get().strip(),
+            aws_public_key_path=self.aws_public_key_path.get().strip(),
             aws_subnet_id=self.aws_subnet_id.get().strip(),
             aws_vpc_id=self.aws_vpc_id.get().strip(),
             aws_security_group_id=self.aws_security_group_id.get().strip(),
             aws_iam_instance_profile=self.aws_iam_instance_profile.get().strip(),
-            aws_private_key_path=self.aws_private_key_path.get().strip(),
             aws_root_volume_gb=int(self.aws_root_volume_gb.get().strip() or "30"),
             aws_root_volume_type=self.aws_root_volume_type.get().strip() or "gp3",
             aws_associate_public_ip=bool(self.aws_public_ip_var.get()),
             ssh_key_path=self.ssh_key_path.get().strip(),
+            pi_ec2_key_path=self.pi_ec2_key_path.get().strip() or "/home/pi/.ssh/ids2_ec2_key",
             pi_host=pi_host,
             pi_ip=self.pi_ip.get().strip() or "192.168.178.66",
             pi_user=self.pi_user.get().strip() or "pi",
@@ -468,6 +482,16 @@ class OrchestratorGUI(tk.Tk):
                         "AWS Key Pair",
                         f"Key pair '{config.aws_key_name}' not found in AWS.",
                     )
+            if config.aws_private_key_path and not Path(config.aws_private_key_path).expanduser().is_file():
+                messagebox.showwarning(
+                    "AWS Private Key",
+                    f"AWS private key file not found: {config.aws_private_key_path}",
+                )
+            if config.aws_public_key_path and not Path(config.aws_public_key_path).expanduser().is_file():
+                messagebox.showwarning(
+                    "AWS Public Key",
+                    f"AWS public key file not found: {config.aws_public_key_path}",
+                )
             if config.ssh_key_path and not Path(config.ssh_key_path).expanduser().is_file():
                 messagebox.showwarning(
                     "SSH Key",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 import urllib.request
 from datetime import datetime
@@ -9,6 +10,7 @@ from pathlib import Path
 from typing import Callable
 
 import boto3
+import paramiko
 import requests
 from elasticsearch import Elasticsearch
 
@@ -51,6 +53,7 @@ class AWSDeployer:
         security_group_id: str | None = None,
         iam_instance_profile: str | None = None,
         aws_private_key_path: str | None = None,
+        aws_public_key_path: str | None = None,
         root_volume_gb: int | None = None,
         root_volume_type: str | None = None,
         associate_public_ip: bool | None = None,
@@ -66,6 +69,7 @@ class AWSDeployer:
         self.security_group_id = (security_group_id or "").strip()
         self.iam_instance_profile = (iam_instance_profile or "").strip()
         self.aws_private_key_path = (aws_private_key_path or "").strip()
+        self.aws_public_key_path = (aws_public_key_path or "").strip()
         self.root_volume_gb = int(root_volume_gb or 30)
         self.root_volume_type = (root_volume_type or "gp3").strip()
         self.associate_public_ip = True if associate_public_ip is None else bool(associate_public_ip)
@@ -154,6 +158,8 @@ class AWSDeployer:
     def _create_instance(self):
         my_ip = urllib.request.urlopen("https://checkip.amazonaws.com").read().decode("utf-8").strip()
         sg_id = self.security_group_id or self._ensure_security_group(my_ip)
+
+        self._ensure_key_pair()
 
         compose = self._build_docker_compose()
         user_data = self._build_user_data(compose)
@@ -361,6 +367,57 @@ class AWSDeployer:
         except Exception:
             return False
 
+    def _ensure_key_pair(self) -> None:
+        if not self.key_name:
+            self._log("⚠️ No AWS key pair name provided.")
+            return
+
+        key_exists = self.keypair_exists(self.key_name)
+        private_path = Path(self.aws_private_key_path).expanduser() if self.aws_private_key_path else None
+        public_path = Path(self.aws_public_key_path).expanduser() if self.aws_public_key_path else None
+
+        if private_path and private_path.exists():
+            if public_path and not public_path.exists():
+                pub = self._derive_public_key(private_path)
+                if pub:
+                    public_path.write_text(pub + "\n", encoding="utf-8")
+                    self._log(f"✅ Derived public key: {public_path}")
+            if not key_exists and public_path and public_path.exists():
+                self._log("🔐 Importing key pair to AWS...")
+                self._ec2_client.import_key_pair(
+                    KeyName=self.key_name,
+                    PublicKeyMaterial=public_path.read_bytes(),
+                )
+            return
+
+        if key_exists:
+            self._log("⚠️ AWS key pair exists but local private key is missing.")
+            return
+
+        self._log("🔐 Creating new AWS key pair...")
+        response = self._ec2_client.create_key_pair(KeyName=self.key_name)
+        key_material = response.get("KeyMaterial", "")
+        if private_path:
+            private_path.parent.mkdir(parents=True, exist_ok=True)
+            private_path.write_text(key_material, encoding="utf-8")
+            private_path.chmod(0o600)
+            self._log(f"✅ Saved private key: {private_path}")
+
+        if public_path:
+            pub = self._derive_public_key(private_path) if private_path else ""
+            if pub:
+                public_path.write_text(pub + "\n", encoding="utf-8")
+                self._log(f"✅ Saved public key: {public_path}")
+
+    def _derive_public_key(self, private_path: Path) -> str:
+        for key_cls in (paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key):
+            try:
+                key = key_cls.from_private_key_file(str(private_path))
+                return f"{key.get_name()} {key.get_base64()}"
+            except Exception:
+                continue
+        return ""
+
     def log_ssh_access(self, instance, key_path: str) -> None:
         public_ip = getattr(instance, "public_ip_address", None)
         key_name = getattr(instance, "key_name", None)
@@ -385,6 +442,26 @@ class AWSDeployer:
                 self._log("⚠️ SSH port 22 not reachable.")
         except Exception as exc:
             self._log(f"⚠️ SSH port test failed: {exc}")
+
+    def sync_instance_public_key(self, instance_id: str) -> bool:
+        public_path = Path(self.aws_public_key_path).expanduser() if self.aws_public_key_path else None
+        if not public_path or not public_path.is_file():
+            self._log("⚠️ AWS public key file not found; cannot sync to instance.")
+            return False
+
+        public_key = public_path.read_text(encoding="utf-8").strip()
+        if not public_key:
+            self._log("⚠️ AWS public key file is empty.")
+            return False
+
+        commands = [
+            "mkdir -p /home/ubuntu/.ssh",
+            f"grep -qxF {json.dumps(public_key)} /home/ubuntu/.ssh/authorized_keys || echo {json.dumps(public_key)} >> /home/ubuntu/.ssh/authorized_keys",
+            "chmod 700 /home/ubuntu/.ssh",
+            "chmod 600 /home/ubuntu/.ssh/authorized_keys",
+            "chown -R ubuntu:ubuntu /home/ubuntu/.ssh",
+        ]
+        return self._send_ssm_commands(instance_id, commands, log_output=True)
 
     def _test_tcp_port(self, host: str, port: int, timeout: int = 3) -> bool:
         import socket
