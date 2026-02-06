@@ -73,7 +73,24 @@ class Database:
                     pi_password TEXT,
                     sudo_password TEXT,
                     remote_dir TEXT,
-                    mirror_interface TEXT
+                    mirror_interface TEXT,
+                    ssh_key_path TEXT
+                )
+            """)
+            
+            # EC2 instances table for tracking
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS ec2_instances (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    instance_id TEXT UNIQUE NOT NULL,
+                    region TEXT NOT NULL,
+                    instance_type TEXT,
+                    public_ip TEXT,
+                    private_ip TEXT,
+                    state TEXT,
+                    elk_deployed INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
             """)
 
@@ -88,6 +105,7 @@ class Database:
         sudo_password: str,
         remote_dir: str,
         mirror_interface: str,
+        ssh_key_path: str = "",
     ) -> None:
         """Persist deployment configuration to the database."""
         with self.locked_connection() as conn:
@@ -103,8 +121,9 @@ class Database:
                     pi_password,
                     sudo_password,
                     remote_dir,
-                    mirror_interface
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    mirror_interface,
+                    ssh_key_path
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     aws_region,
@@ -116,8 +135,102 @@ class Database:
                     sudo_password,
                     remote_dir,
                     mirror_interface,
+                    ssh_key_path,
                 ),
             )
+    
+    def get_latest_deployment_config(self) -> dict | None:
+        """Get the most recent deployment configuration."""
+        with self.locked_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT aws_region, elk_ip, elastic_password, pi_host, pi_user,
+                       pi_password, sudo_password, remote_dir, mirror_interface, ssh_key_path
+                FROM deployment_config
+                ORDER BY created_at DESC
+                LIMIT 1
+                """
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return {
+                "aws_region": row[0],
+                "elk_ip": row[1],
+                "elastic_password": row[2],
+                "pi_host": row[3],
+                "pi_user": row[4],
+                "pi_password": row[5],
+                "sudo_password": row[6],
+                "remote_dir": row[7],
+                "mirror_interface": row[8],
+                "ssh_key_path": row[9],
+            }
+    
+    def upsert_ec2_instance(
+        self,
+        instance_id: str,
+        region: str,
+        instance_type: str = "",
+        public_ip: str = "",
+        private_ip: str = "",
+        state: str = "",
+        elk_deployed: bool = False,
+    ) -> None:
+        """Insert or update EC2 instance information."""
+        with self.locked_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO ec2_instances (
+                    instance_id, region, instance_type, public_ip, private_ip, state, elk_deployed, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(instance_id) DO UPDATE SET
+                    region=excluded.region,
+                    instance_type=excluded.instance_type,
+                    public_ip=excluded.public_ip,
+                    private_ip=excluded.private_ip,
+                    state=excluded.state,
+                    elk_deployed=excluded.elk_deployed,
+                    updated_at=CURRENT_TIMESTAMP
+                """,
+                (instance_id, region, instance_type, public_ip, private_ip, state, 1 if elk_deployed else 0),
+            )
+    
+    def get_ec2_instances(self) -> list[dict]:
+        """Get all tracked EC2 instances."""
+        with self.locked_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT instance_id, region, instance_type, public_ip, private_ip, state, elk_deployed, created_at, updated_at
+                FROM ec2_instances
+                ORDER BY updated_at DESC
+                """
+            )
+            rows = cursor.fetchall()
+        return [
+            {
+                "instance_id": row[0],
+                "region": row[1],
+                "instance_type": row[2],
+                "public_ip": row[3],
+                "private_ip": row[4],
+                "state": row[5],
+                "elk_deployed": bool(row[6]),
+                "created_at": row[7],
+                "updated_at": row[8],
+            }
+            for row in rows
+        ]
+    
+    def delete_ec2_instance(self, instance_id: str) -> None:
+        """Delete EC2 instance from tracking."""
+        with self.locked_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM ec2_instances WHERE instance_id = ?", (instance_id,))
     
     def check_health(self) -> bool:
         """Check database health."""
