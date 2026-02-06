@@ -1,27 +1,41 @@
-credentialsAWS.json
-*$py.class
-architecture_docs/*.json
-architecture_docs/*.png
-build/
-# Build artifacts
-.coverage
-data/
-dist/
-*.egg-info/
-frontend/node_modules/
-# Generated architecture documentation
-htmlcov/
-# IDE
-.idea/
+# Python
 __pycache__/
 *.py[cod]
-.pytest_cache/
-# Python cache
-scripts/actions_secrets.map
-secret.json
 *.so
-# Test and coverage artifacts
-tests/pytest.log
 .venv/
 venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+.cursor/
+
+# Build
+build/
+dist/
+
+# Data & Secrets
+data/
+*.db
+credentialsAWS.json
+secret.json
+scripts/actions_secrets.map
+
+# Frontend
+frontend/node_modules/
 webapp/frontend/node_modules/
+webbapp/frontend/node_modules/
+webbapp/frontend/dist/
+
+# Docs
+architecture_docs/*.json
+architecture_docs/*.png
+tests/pytest.log
+
+# Docker
+.dockerignore
