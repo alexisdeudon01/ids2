@@ -14,16 +14,18 @@ class DeployConfig:
     aws_secret_access_key: str = field(default_factory=lambda: os.getenv("AWS_SECRET_ACCESS_KEY", ""))
     aws_ami_id: str = field(default_factory=lambda: os.getenv("IDS_AWS_AMI_ID", ""))
     aws_instance_type: str = "t3.medium"
-    aws_key_name: str = ""
+    aws_key_name: str = "ids2-ec2-key"
+    aws_private_key_path: str = "/home/tor/.ssh/ids2_ec2_key"
+    aws_public_key_path: str = "/home/tor/.ssh/ids2_ec2_key.pub"
     aws_subnet_id: str = ""
     aws_vpc_id: str = ""
     aws_security_group_id: str = ""
     aws_iam_instance_profile: str = ""
-    aws_private_key_path: str = ""
     aws_root_volume_gb: int = 30
     aws_root_volume_type: str = "gp3"
     aws_associate_public_ip: bool = True
     ssh_key_path: str = field(default_factory=lambda: os.getenv("IDS_SSH_KEY_PATH", "/home/tor/.ssh/pi_key"))
+    pi_ec2_key_path: str = "/home/pi/.ssh/ids2_ec2_key"
     pi_host: str = "sinik"
     pi_ip: str = "192.168.178.66"
     pi_user: str = "pi"

@@ -47,6 +47,7 @@ class TestDeploymentIntegration(unittest.TestCase):
             aws_vpc_id="vpc-456",
             aws_security_group_id="sg-123",
             aws_iam_instance_profile="Profile",
+            aws_private_key_path="/home/test/.ssh/aws.pem",
             aws_root_volume_gb=40,
             aws_root_volume_type="gp2",
             aws_associate_public_ip=False,
@@ -71,6 +72,7 @@ class TestDeploymentIntegration(unittest.TestCase):
         self.assertEqual(config.aws_vpc_id, "vpc-456")
         self.assertEqual(config.aws_security_group_id, "sg-123")
         self.assertEqual(config.aws_iam_instance_profile, "Profile")
+        self.assertEqual(config.aws_private_key_path, "/home/test/.ssh/aws.pem")
         self.assertEqual(config.aws_root_volume_gb, 40)
         self.assertEqual(config.aws_root_volume_type, "gp2")
         self.assertFalse(config.aws_associate_public_ip)

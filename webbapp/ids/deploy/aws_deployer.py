@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 import urllib.request
 from datetime import datetime
+from pathlib import Path
 from typing import Callable
 
 import boto3
@@ -222,6 +223,7 @@ class AWSDeployer:
         self._log(f"   - AMI: {ami_id}")
         self._log(f"   - InstanceType: {self.instance_type}")
         self._log(f"   - KeyName: {self.key_name or 'none'}")
+        self._log(f"   - LocalKeyPath: {self.aws_private_key_path or 'none'}")
         self._log(f"   - SubnetId: {self.subnet_id or 'default'}")
         self._log(f"   - VpcId: {self.vpc_id or 'default'}")
         self._log(f"   - SecurityGroupId: {sg_id}")
@@ -358,6 +360,37 @@ class AWSDeployer:
             return True
         except Exception:
             return False
+
+    def log_ssh_access(self, instance, key_path: str) -> None:
+        public_ip = getattr(instance, "public_ip_address", None)
+        key_name = getattr(instance, "key_name", None)
+        self._log(f"🔐 SSH KeyPair: {key_name or 'none'}")
+        self._log(f"🌐 Instance Public IP: {public_ip or 'none'}")
+        if key_path:
+            self._log(f"📁 Local key path: {key_path}")
+        if key_name and key_path and not Path(key_path).expanduser().is_file():
+            self._log(f"⚠️ Local key file not found: {key_path}")
+
+        if not public_ip:
+            self._log("⚠️ No public IP associated; SSH will not work.")
+            return
+        if not key_name:
+            self._log("⚠️ No AWS key pair attached; SSH will not work.")
+            return
+
+        try:
+            if self._test_tcp_port(public_ip, 22, timeout=3):
+                self._log("✅ SSH port 22 is reachable.")
+            else:
+                self._log("⚠️ SSH port 22 not reachable.")
+        except Exception as exc:
+            self._log(f"⚠️ SSH port test failed: {exc}")
+
+    def _test_tcp_port(self, host: str, port: int, timeout: int = 3) -> bool:
+        import socket
+
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
 
     def list_tagged_instances_all_regions(self) -> list[dict[str, object]]:
         """List tagged ELK instances across all regions."""
@@ -510,7 +543,7 @@ class AWSDeployer:
         filters = [{"Name": "group-name", "Values": ["ids2-elk-sg"]}]
         if self.vpc_id:
             filters.append({"Name": "vpc-id", "Values": [self.vpc_id]})
-        groups = self._ec2_client.describe_security_groups(Filters=filters).get("SecurityGroups", [])
+        groups = self._ec2_client.describe_security_groups(Filters=filters).get("SecurityGroups", [])  # type: ignore[arg-type]
         if groups:
             sg_id = groups[0]["GroupId"]
             self._log(f"✅ Reusing security group {sg_id}")
@@ -521,7 +554,7 @@ class AWSDeployer:
             }
             if self.vpc_id:
                 params["VpcId"] = self.vpc_id
-            sg = self.ec2.create_security_group(**params)
+            sg = self.ec2.create_security_group(**params)  # type: ignore[arg-type]
             sg_id = sg.id
             self._log(f"✅ Created security group {sg_id}")
 
