@@ -37,6 +37,9 @@ services:
         sleep 300
       done
       "
+    depends_on:
+      mysql:
+        condition: service_healthy
     restart: unless-stopped
 
   db-monitor:
