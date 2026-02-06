@@ -17,7 +17,17 @@ curl -X PUT "http://elasticsearch:9200/alexis" -H 'Content-Type: application/jso
     "dynamic": true,
     "properties": {
       "@timestamp": { "type": "date" },
-      "message": { "type": "text" }
+      "message": { "type": "text" },
+      "severity": { "type": "keyword" },
+      "source_ip": { "type": "ip" },
+      "dest_ip": { "type": "ip" },
+      "source_port": { "type": "integer" },
+      "dest_port": { "type": "integer" },
+      "protocol": { "type": "keyword" },
+      "event_type": { "type": "keyword" },
+      "signature": { "type": "text" },
+      "category": { "type": "keyword" },
+      "action": { "type": "keyword" }
     }
   }
 }'
