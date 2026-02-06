@@ -64,51 +64,106 @@ class OrchestratorGUI(tk.Tk):
             3,
             self._config_default("aws_ami_id", ""),
         )
+        self.aws_instance_type = self._add_entry(
+            creds,
+            "AWS Instance Type",
+            4,
+            self._config_default("aws_instance_type", "t3.medium"),
+        )
+        self.aws_key_name = self._add_entry(
+            creds,
+            "AWS Key Pair Name (optional)",
+            5,
+            self._config_default("aws_key_name", ""),
+        )
+        self.aws_subnet_id = self._add_entry(
+            creds,
+            "AWS Subnet ID (optional)",
+            6,
+            self._config_default("aws_subnet_id", ""),
+        )
+        self.aws_vpc_id = self._add_entry(
+            creds,
+            "AWS VPC ID (optional)",
+            7,
+            self._config_default("aws_vpc_id", ""),
+        )
+        self.aws_security_group_id = self._add_entry(
+            creds,
+            "AWS Security Group ID (optional)",
+            8,
+            self._config_default("aws_security_group_id", ""),
+        )
+        self.aws_iam_instance_profile = self._add_entry(
+            creds,
+            "AWS IAM Instance Profile (optional)",
+            9,
+            self._config_default("aws_iam_instance_profile", ""),
+        )
+        self.aws_root_volume_gb = self._add_entry(
+            creds,
+            "AWS Root Volume (GB)",
+            10,
+            self._config_default("aws_root_volume_gb", "30"),
+        )
+        self.aws_root_volume_type = self._add_entry(
+            creds,
+            "AWS Root Volume Type",
+            11,
+            self._config_default("aws_root_volume_type", "gp3"),
+        )
+        self.aws_public_ip_var = tk.BooleanVar(
+            value=str(self._config_default("aws_associate_public_ip", "true")).lower() == "true"
+        )
+        ttk.Checkbutton(
+            creds, text="AWS Associate Public IP", variable=self.aws_public_ip_var
+        ).grid(row=12, column=0, columnspan=2, sticky="w", pady=4)
+
         self.elastic_password = self._add_entry(
             creds,
             "Elastic Password (required)",
-            4,
+            13,
             self._config_default("elastic_password", ""),
             show=True,
         )
-        self.pi_host = self._add_entry(creds, "Pi Hostname", 5, self._config_default("pi_host", "sinik"))
-        self.pi_ip = self._add_entry(creds, "Pi IP (optional)", 6, self._config_default("pi_ip", "192.168.178.66"))
-        self.pi_user = self._add_entry(creds, "Pi User", 7, self._config_default("pi_user", "pi"))
-        self.pi_password = self._add_entry(creds, "Pi Password", 8, self._config_default("pi_password", "pi"), show=True)
+        self.pi_host = self._add_entry(creds, "Pi Hostname", 14, self._config_default("pi_host", "sinik"))
+        self.pi_ip = self._add_entry(creds, "Pi IP (optional)", 15, self._config_default("pi_ip", "192.168.178.66"))
+        self.pi_user = self._add_entry(creds, "Pi User", 16, self._config_default("pi_user", "pi"))
+        self.pi_password = self._add_entry(creds, "Pi Password", 17, self._config_default("pi_password", "pi"), show=True)
         self.ssh_key_path = self._add_entry(
             creds,
             "SSH Key Path (optional)",
-            9,
+            18,
             self._config_default("ssh_key_path", self._default_ssh_key_path()),
         )
         self.sudo_password = self._add_entry(
-            creds, "Sudo Password", 10, self._config_default("sudo_password", "pi"), show=True
+            creds, "Sudo Password", 19, self._config_default("sudo_password", "pi"), show=True
         )
-        self.remote_dir = self._add_entry(creds, "Remote Directory", 11, self._config_default("remote_dir", "/opt/ids2"))
+        self.remote_dir = self._add_entry(creds, "Remote Directory", 20, self._config_default("remote_dir", "/opt/ids2"))
         self.mirror_interface = self._add_entry(
             creds,
             "Mirror Interface (network port for traffic capture)",
-            12,
+            21,
             self._config_default("mirror_interface", "eth0"),
         )
 
         self.instances_count_var = tk.StringVar(value="0")
-        ttk.Label(creds, text="ELK Instances (all regions)").grid(row=13, column=0, sticky="w", pady=4)
-        ttk.Label(creds, textvariable=self.instances_count_var).grid(row=13, column=1, sticky="w", pady=4)
+        ttk.Label(creds, text="ELK Instances (all regions)").grid(row=22, column=0, sticky="w", pady=4)
+        ttk.Label(creds, textvariable=self.instances_count_var).grid(row=22, column=1, sticky="w", pady=4)
 
         self.reset_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=14, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        ttk.Checkbutton(creds, text="Reset complete", variable=self.reset_var).grid(row=23, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
         self.install_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=15, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Install Docker", variable=self.install_docker_var).grid(row=24, column=0, columnspan=2, sticky="w")
 
         self.remove_docker_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=16, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(creds, text="Remove Docker", variable=self.remove_docker_var).grid(row=25, column=0, columnspan=2, sticky="w")
 
         # Actions
         action_frame = ttk.Frame(main_frame)
         action_frame.grid(row=1, column=0, sticky="ew", pady=10)
-        action_frame.columnconfigure(4, weight=1)
+        action_frame.columnconfigure(5, weight=1)
 
         self.deploy_button = ttk.Button(action_frame, text="Deploy", command=self.start_deploy)
         self.deploy_button.grid(row=0, column=0, padx=(0, 10))
@@ -122,8 +177,13 @@ class OrchestratorGUI(tk.Tk):
         self.remove_docker_button = ttk.Button(action_frame, text="Remove Docker", command=self.start_remove_docker_only)
         self.remove_docker_button.grid(row=0, column=3)
 
+        self.delete_instance_button = ttk.Button(
+            action_frame, text="Delete Instance", command=self.start_delete_instance_only
+        )
+        self.delete_instance_button.grid(row=0, column=4, padx=(10, 0))
+
         self.progress_label = ttk.Label(action_frame, text="Idle")
-        self.progress_label.grid(row=0, column=4, sticky="e")
+        self.progress_label.grid(row=0, column=5, sticky="e")
 
         # Progress
         self.progress = ttk.Progressbar(main_frame, mode="determinate")
@@ -175,6 +235,15 @@ class OrchestratorGUI(tk.Tk):
             aws_access_key_id=self.aws_access_key_id.get().strip(),
             aws_secret_access_key=self.aws_secret_access_key.get().strip(),
             aws_ami_id=self.aws_ami_id.get().strip(),
+            aws_instance_type=self.aws_instance_type.get().strip() or "t3.medium",
+            aws_key_name=self.aws_key_name.get().strip(),
+            aws_subnet_id=self.aws_subnet_id.get().strip(),
+            aws_vpc_id=self.aws_vpc_id.get().strip(),
+            aws_security_group_id=self.aws_security_group_id.get().strip(),
+            aws_iam_instance_profile=self.aws_iam_instance_profile.get().strip(),
+            aws_root_volume_gb=int(self.aws_root_volume_gb.get().strip() or "30"),
+            aws_root_volume_type=self.aws_root_volume_type.get().strip() or "gp3",
+            aws_associate_public_ip=bool(self.aws_public_ip_var.get()),
             ssh_key_path=self.ssh_key_path.get().strip(),
             pi_host=pi_host,
             pi_ip=self.pi_ip.get().strip() or "192.168.178.66",
@@ -241,8 +310,20 @@ class OrchestratorGUI(tk.Tk):
         config = self._collect_config()
         self._start_worker(lambda: self._run_remove_docker(config))
 
+    def start_delete_instance_only(self) -> None:
+        if self.worker and self.worker.is_alive():
+            return
+        config = self._collect_config()
+        self._start_worker(lambda: self._run_delete_instance(config))
+
     def _start_worker(self, target) -> None:
-        for btn in [self.deploy_button, self.reset_button, self.install_docker_button, self.remove_docker_button]:
+        for btn in [
+            self.deploy_button,
+            self.reset_button,
+            self.install_docker_button,
+            self.remove_docker_button,
+            self.delete_instance_button,
+        ]:
             btn.config(state="disabled")
         self.progress["value"] = 0
         self.log_text.delete("1.0", "end")
@@ -250,7 +331,13 @@ class OrchestratorGUI(tk.Tk):
         self.worker.start()
 
     def _finish_worker(self) -> None:
-        for btn in [self.deploy_button, self.reset_button, self.install_docker_button, self.remove_docker_button]:
+        for btn in [
+            self.deploy_button,
+            self.reset_button,
+            self.install_docker_button,
+            self.remove_docker_button,
+            self.delete_instance_button,
+        ]:
             btn.config(state="normal")
 
     def _run_deploy(self, config: DeployConfig) -> None:
@@ -294,6 +381,56 @@ class OrchestratorGUI(tk.Tk):
         finally:
             self._finish_worker()
 
+    def _run_delete_instance(self, config: DeployConfig) -> None:
+        try:
+            self.set_progress(10, "Checking instances")
+            aws = AWSDeployer(
+                config.aws_region,
+                config.elastic_password,
+                self.log,
+                aws_access_key_id=config.aws_access_key_id,
+                aws_secret_access_key=config.aws_secret_access_key,
+                ami_id=config.aws_ami_id,
+                instance_type=config.aws_instance_type,
+                key_name=config.aws_key_name,
+                subnet_id=config.aws_subnet_id,
+                vpc_id=config.aws_vpc_id,
+                security_group_id=config.aws_security_group_id,
+                iam_instance_profile=config.aws_iam_instance_profile,
+                root_volume_gb=config.aws_root_volume_gb,
+                root_volume_type=config.aws_root_volume_type,
+                associate_public_ip=config.aws_associate_public_ip,
+            )
+            instances = aws.list_tagged_instances_all_regions()
+            if not instances:
+                self.log("ℹ️ No ELK instances found.")
+                self.set_progress(100, "No instance")
+                return
+            current = aws.select_instance_to_keep(instances)
+            if not current:
+                self.log("⚠️ Unable to select instance to delete.")
+                self.set_progress(0, "Error")
+                return
+
+            instance_id = current.get("id")
+            region = current.get("region")
+            confirm = messagebox.askyesno(
+                "Delete instance",
+                f"Delete instance {instance_id} in {region}?",
+            )
+            if not confirm:
+                self.log("ℹ️ Delete cancelled.")
+                self.set_progress(0, "Cancelled")
+                return
+            aws.terminate_instances_across_regions([current])
+            self.log(f"✅ Deleted instance {instance_id}.")
+            self.set_progress(100, "Instance deleted")
+        except Exception as exc:
+            self.log(f"❌ Delete instance error: {exc}")
+            self.set_progress(0, "Error")
+        finally:
+            self._finish_worker()
+
     def _preflight_check_instances(self, config: DeployConfig) -> bool:
         """Ensure we have at most one ELK instance across regions."""
         try:
@@ -304,7 +441,29 @@ class OrchestratorGUI(tk.Tk):
                 aws_access_key_id=config.aws_access_key_id,
                 aws_secret_access_key=config.aws_secret_access_key,
                 ami_id=config.aws_ami_id,
+                instance_type=config.aws_instance_type,
+                key_name=config.aws_key_name,
+                subnet_id=config.aws_subnet_id,
+                vpc_id=config.aws_vpc_id,
+                security_group_id=config.aws_security_group_id,
+                iam_instance_profile=config.aws_iam_instance_profile,
+                root_volume_gb=config.aws_root_volume_gb,
+                root_volume_type=config.aws_root_volume_type,
+                associate_public_ip=config.aws_associate_public_ip,
             )
+            if config.aws_key_name:
+                if aws.keypair_exists(config.aws_key_name):
+                    self.log(f"✅ AWS key pair found: {config.aws_key_name}")
+                else:
+                    messagebox.showwarning(
+                        "AWS Key Pair",
+                        f"Key pair '{config.aws_key_name}' not found in AWS.",
+                    )
+            if config.ssh_key_path and not Path(config.ssh_key_path).expanduser().is_file():
+                messagebox.showwarning(
+                    "SSH Key",
+                    f"SSH key file not found: {config.ssh_key_path}",
+                )
             instances = aws.list_tagged_instances_all_regions()
             self.instances_count_var.set(str(len(instances)))
             if len(instances) <= 1:
@@ -345,6 +504,7 @@ class OrchestratorGUI(tk.Tk):
             instance_id = cost_info.get("instance_id", "")
             instance_type = cost_info.get("instance_type", "")
             region = cost_info.get("region", "")
+            public_ip = cost_info.get("public_ip", "")
             ec2_hour = cost_info.get("ec2_hourly_usd", 0)
             ec2_month = cost_info.get("ec2_monthly_usd", 0)
             elastic_hour = cost_info.get("elastic_hourly_usd", 0)
@@ -355,6 +515,7 @@ class OrchestratorGUI(tk.Tk):
             info = (
                 f"Instance: {instance_id} ({instance_type})\n"
                 f"Region: {region}\n\n"
+                f"Public IP: {public_ip or 'n/a'}\n\n"
                 f"EC2: ${ec2_hour:.4f}/h (~${ec2_month:.2f}/mois)\n"
                 f"Elastic (Docker): ${elastic_hour:.4f}/h (~${elastic_month:.2f}/mois)\n"
                 f"Total: ${total_hour:.4f}/h (~${total_month:.2f}/mois)"

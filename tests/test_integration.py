@@ -41,6 +41,15 @@ class TestDeploymentIntegration(unittest.TestCase):
             aws_secret_access_key="secret",
             ssh_key_path="/home/test/.ssh/id_rsa",
             aws_ami_id="ami-abc",
+            aws_instance_type="t3.large",
+            aws_key_name="key",
+            aws_subnet_id="subnet-123",
+            aws_vpc_id="vpc-456",
+            aws_security_group_id="sg-123",
+            aws_iam_instance_profile="Profile",
+            aws_root_volume_gb=40,
+            aws_root_volume_type="gp2",
+            aws_associate_public_ip=False,
         )
         
         self.assertEqual(config.elastic_password, "my_password")
@@ -56,6 +65,15 @@ class TestDeploymentIntegration(unittest.TestCase):
         self.assertEqual(config.aws_secret_access_key, "secret")
         self.assertEqual(config.ssh_key_path, "/home/test/.ssh/id_rsa")
         self.assertEqual(config.aws_ami_id, "ami-abc")
+        self.assertEqual(config.aws_instance_type, "t3.large")
+        self.assertEqual(config.aws_key_name, "key")
+        self.assertEqual(config.aws_subnet_id, "subnet-123")
+        self.assertEqual(config.aws_vpc_id, "vpc-456")
+        self.assertEqual(config.aws_security_group_id, "sg-123")
+        self.assertEqual(config.aws_iam_instance_profile, "Profile")
+        self.assertEqual(config.aws_root_volume_gb, 40)
+        self.assertEqual(config.aws_root_volume_type, "gp2")
+        self.assertFalse(config.aws_associate_public_ip)
 
     def test_lazy_import_config(self):
         """Test that config can be imported via lazy loading."""

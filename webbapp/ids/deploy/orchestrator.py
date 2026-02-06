@@ -38,7 +38,7 @@ class DeploymentOrchestrator:
     def full_deploy(self, config: DeployConfig, progress_callback: Callable[[float, str], None]) -> str:
         """Execute full deployment, returns ELK IP."""
         step = 0
-        total_steps = 10 + sum([config.reset_first, config.remove_docker, config.install_docker])
+        total_steps = 11 + sum([config.reset_first, config.remove_docker, config.install_docker])
 
         progress_bar = _tqdm(total=total_steps, desc="Deployment", unit="step")
 
@@ -90,6 +90,15 @@ class DeploymentOrchestrator:
                     aws_access_key_id=config.aws_access_key_id,
                     aws_secret_access_key=config.aws_secret_access_key,
                     ami_id=config.aws_ami_id,
+                    instance_type=config.aws_instance_type,
+                    key_name=config.aws_key_name,
+                    subnet_id=config.aws_subnet_id,
+                    vpc_id=config.aws_vpc_id,
+                    security_group_id=config.aws_security_group_id,
+                    iam_instance_profile=config.aws_iam_instance_profile,
+                    root_volume_gb=config.aws_root_volume_gb,
+                    root_volume_type=config.aws_root_volume_type,
+                    associate_public_ip=config.aws_associate_public_ip,
                 )
                 instance = aws.ensure_instance()
 
@@ -104,6 +113,7 @@ class DeploymentOrchestrator:
                             "instance_id": getattr(instance, "id", ""),
                             "instance_type": getattr(instance, "instance_type", ""),
                             "region": config.aws_region,
+                            "public_ip": getattr(instance, "public_ip_address", ""),
                         }
                     )
                     action = self._decision_callback(costs)
@@ -121,6 +131,12 @@ class DeploymentOrchestrator:
                 self._log("🔍 Waiting for ELK to be ready...")
                 advance("Waiting for ELK")
                 elk_ip = aws.ensure_elk_ready(instance)
+
+                self._log("🌐 ELK access info...")
+                advance("Verifying ELK services")
+                aws.log_access_info(elk_ip)
+                if not aws.verify_services(elk_ip):
+                    raise RuntimeError("ELK services not healthy (Elasticsearch/Kibana).")
 
                 self._log("📊 Configuring Elasticsearch...")
                 advance("Configuring Elasticsearch")

@@ -29,6 +29,15 @@ class TestDeployConfig(unittest.TestCase):
         self.assertEqual(config.elastic_password, "test123")
         self.assertEqual(config.ssh_key_path, "/home/tor/.ssh/pi_key")
         self.assertEqual(config.aws_ami_id, "")
+        self.assertEqual(config.aws_instance_type, "t3.medium")
+        self.assertEqual(config.aws_key_name, "")
+        self.assertEqual(config.aws_subnet_id, "")
+        self.assertEqual(config.aws_vpc_id, "")
+        self.assertEqual(config.aws_security_group_id, "")
+        self.assertEqual(config.aws_iam_instance_profile, "")
+        self.assertEqual(config.aws_root_volume_gb, 30)
+        self.assertEqual(config.aws_root_volume_type, "gp3")
+        self.assertTrue(config.aws_associate_public_ip)
 
     def test_custom_values(self):
         """Test that custom values override defaults."""
@@ -40,6 +49,15 @@ class TestDeployConfig(unittest.TestCase):
             remote_dir="/custom/path",
             ssh_key_path="/home/test/.ssh/id_ed25519",
             aws_ami_id="ami-123",
+            aws_instance_type="t3.large",
+            aws_key_name="my-key",
+            aws_subnet_id="subnet-123",
+            aws_vpc_id="vpc-456",
+            aws_security_group_id="sg-123",
+            aws_iam_instance_profile="MyProfile",
+            aws_root_volume_gb=50,
+            aws_root_volume_type="gp2",
+            aws_associate_public_ip=False,
         )
         
         self.assertEqual(config.aws_region, "us-east-1")
@@ -49,6 +67,15 @@ class TestDeployConfig(unittest.TestCase):
         self.assertEqual(config.elastic_password, "custom_pwd")
         self.assertEqual(config.ssh_key_path, "/home/test/.ssh/id_ed25519")
         self.assertEqual(config.aws_ami_id, "ami-123")
+        self.assertEqual(config.aws_instance_type, "t3.large")
+        self.assertEqual(config.aws_key_name, "my-key")
+        self.assertEqual(config.aws_subnet_id, "subnet-123")
+        self.assertEqual(config.aws_vpc_id, "vpc-456")
+        self.assertEqual(config.aws_security_group_id, "sg-123")
+        self.assertEqual(config.aws_iam_instance_profile, "MyProfile")
+        self.assertEqual(config.aws_root_volume_gb, 50)
+        self.assertEqual(config.aws_root_volume_type, "gp2")
+        self.assertFalse(config.aws_associate_public_ip)
 
     def test_boolean_flags(self):
         """Test boolean flags default to False."""

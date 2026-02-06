@@ -6,6 +6,7 @@ import DatabaseRoute from "./routes/Database";
 import AlertsRoute from "./routes/Alerts";
 import NetworkRoute from "./routes/Network";
 import PipelineRoute from "./routes/Pipeline";
+import CostsRoute from "./routes/Costs";
 
 const navItems = [
   { to: "/", label: "Dashboard" },
@@ -14,6 +15,7 @@ const navItems = [
   { to: "/alerts", label: "Alerts" },
   { to: "/network", label: "Network" },
   { to: "/pipeline", label: "Pipeline" },
+  { to: "/costs", label: "Costs" },
 ];
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -46,6 +48,7 @@ export default function App() {
           <Route path="/alerts" element={<AlertsRoute />} />
           <Route path="/network" element={<NetworkRoute />} />
           <Route path="/pipeline" element={<PipelineRoute />} />
+          <Route path="/costs" element={<CostsRoute />} />
         </Routes>
       </div>
     </div>

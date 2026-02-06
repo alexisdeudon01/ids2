@@ -11,6 +11,7 @@ from api.db_health import router as db_router
 from api.alerts import router as alerts_router
 from api.network import router as network_router
 from api.pipeline import router as pipeline_router
+from api.costs import router as costs_router
 
 
 def create_app() -> FastAPI:
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(alerts_router)
     app.include_router(network_router)
     app.include_router(pipeline_router)
+    app.include_router(costs_router)
     
     # Serve frontend if built
     frontend_dist = Path(__file__).parent / "frontend" / "dist"
