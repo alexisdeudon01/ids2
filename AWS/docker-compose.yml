@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  mysql:
+    build: ./mysql
+    container_name: ids2-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ids_db
+      MYSQL_USER: ids_user
+      MYSQL_PASSWORD: admin
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./datas:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: mysqladmin ping -h localhost -u root -proot
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  aws-monitor:
+    build:
+      context: ..
+      dockerfile: AWS/monitoring/Dockerfile
+    container_name: ids2-aws-monitor
+    volumes:
+      - ./monitoring:/app/monitoring:ro
+      - ../webbapp:/app/webbapp:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      sh -c "
+      while true; do
+        python3 /app/monitoring/aws_monitor.py
+        sleep 300
+      done
+      "
+    restart: unless-stopped
+
+  db-monitor:
+    build:
+      context: ..
+      dockerfile: AWS/monitoring/Dockerfile
+    container_name: ids2-db-monitor
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./monitoring:/app/monitoring:ro
+      - ../webbapp:/app/webbapp:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      sh -c "
+      while true; do
+        python3 /app/monitoring/db_monitor.py
+        sleep 300
+      done
+      "
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
